@@ -2,3 +2,7 @@ Flask==2.3.3
 Jinja2==3.1.2
 Werkzeug==2.3.7
 gunicorn==21.2.0
+flask-talisman==1.1.0
+Flask-Login==0.6.2
+google-cloud-ndb==2.3.3
+coolname==2.2.0

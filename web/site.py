@@ -16,5 +16,6 @@ def sitemap():
 
 # main route
 @site.route('/')
-def main():
-    return 'Hello world.'
+def index():
+    return 'Hello world. <a href="/login">login</a>'
+
