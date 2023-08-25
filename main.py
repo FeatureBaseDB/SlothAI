@@ -6,8 +6,11 @@ from flask import Flask, session, request, render_template, make_response, redir
 from flask_talisman import Talisman
 import flask_login
 
+from google.cloud import ndb
+
 from web.site import site
 from web.auth import auth
+from web.models import User
 
 import config
 
@@ -20,6 +23,9 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.session_protection = "strong"
 login_manager.login_message = u""
+
+# client connection
+client = ndb.Client()
 
 def get_uid():
     try:
@@ -64,8 +70,9 @@ def load_user(uid):
     return user
 
 # blueprints
-app.register_blueprint(site)
-app.register_blueprint(auth)
+with app.app_context():
+    app.register_blueprint(site)
+    app.register_blueprint(auth)
 
 
 login_manager.blueprint_login_views = {

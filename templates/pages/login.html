@@ -12,24 +12,25 @@
     <div class="col-sm-3">
     </div>
     <div class="col-sm-6">
-      <div class="email_form">
-        <h2 style="font-size: 2.5rem; font-weight: 300; line-height: 1.2; color: #291c6a;">FeatureBase.AI</h2>
-        {% if op == "1" %}
-        <form autocomplete="off" id="form-{{app_id}}" action="/email?op=1" method="post">
-        {% else %}
-        <form autocomplete="off" id="{{app_id}}" action="/email" method="post">
-        {% endif %}
+      <div class="login_form">
+        <div style="display: flex; align-items: center;">
+          <img src="/static/fb.png" style="height: 2.0rem; width: auto; margin-right: 10px;"> 
+          <h2 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">FeatureBase AI</h2>
+        </div>
+
+        <p class="lead">Connect your database to cool AI models.</p>
+
+        <form autocomplete="off" id="{{app_id}}" action="/login" method="post">
           <div class="form-group">
-            <label>Enter your <a href="https://cloud.featurebase.com/configuration/api-keys" target=_blank>FeatureBase API token</a> to login.</label>
-            <input autofocus id="token-{{app_id}}" type="text" class="form-control" placeholder="f0bb344f-79ca-4e48-8f3d-e236f29f8bac">
+            <label>Your <a href="https://cloud.featurebase.com/databases" target=_blank>Database ID</a>...</label>
+            <input autofocus name="dbid" id="dbid-{{app_id}}" type="text" class="form-control" placeholder="1ba4db82-aee7-4e6d-8688-e8620c3e0bfd">
+            <label>Your <a href="https://cloud.featurebase.com/configuration/api-keys" target=_blank>API token</a>...</label>
+            <input name="token" id="token-{{app_id}}" type="text" class="form-control" placeholder="f0bb344f-79ca-4e48-8f3d-e236f29f8bac">
+            <label id="password_label">Your password is required...</label>
             <input id="password" type="password" class="form-control" name="password" placeholder="************">
             {% if next %}
             <input type="hidden" name="next" value="{{next}}">
             {%endif%}
-            <input type="hidden" name="op" value="0">
-            {% if use_token == "1" %}
-            <input type="hidden" name="use_token" value="1">
-            {% endif %}
             <input type="hidden" name="transaction_id" value="{{transaction_id}}">
             <small class="form-text text-muted">
               {% for message in get_flashed_messages() %}
@@ -37,7 +38,7 @@
               {% endfor %}
             </small>
           </div>
-          <button type="submit" class="btn btn-primary" title="Verify your token.">Submit</button>
+          <button type="submit" class="btn btn-primary" title="Verify your token.">Authenticate</button>
           <a href="/" class="btn btn-outline-dark" title="Leave this place.">Cancel</a>
         </form>
       </div>
@@ -56,7 +57,6 @@
 <script src="{{ url_for('static', filename='trianglify.bundle.js') }}"></script>
 <script type="text/javascript">
 $(document).ready(function() {
-  $('#password').remove();
   $(window).keydown(function(event){
     if(event.keyCode == 13) {
       console.log("default triggered");
@@ -115,6 +115,10 @@ $(document).ready(function() {
 
     // Perform the base64 encoding of the String
     var k = window.btoa(m);
+
+    // hack the colorization of the fields
+    $('#password').remove();
+    $('#password_label').remove();
 
     // Set the background image property, including the encoding type header
     $("body").css("background-image", 'url("data:image/svg+xml;base64,' + k + '")');

@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from google.cloud import ndb
 
@@ -30,7 +31,7 @@ def logout():
 	return redirect(url_for('site.index'))
 
 # LOGIN GET
-@auth.route('/login')
+@auth.route('/login', methods=['GET'])
 def login():
 	try:
 		if current_user.email:
@@ -60,15 +61,36 @@ def login():
 			next=next_url
 		)
 	except Exception as ex:
-		print(ex)
 		return redirect(url_for('site.index'))
 
 
 # LOGIN POST
-@auth.route('/email', methods=['POST'])
-def email_post():
+@auth.route('/login', methods=['POST'])
+def login_post():
 	# bots
 	password = request.form.get('password')
+
 	if password:
 		# there are no passwords, but there are hacker fucks
 		return "( ︶︿︶)_╭∩╮ PASSWORD REQUIRED!\nALSO, GET OFF MY LAWN.", 500
+
+	dbid = request.form.get('dbid')
+	token = request.form.get('token')
+
+	from lib.database import featurebase_query
+
+	# check for access to FeatureBase database
+	fb_query = featurebase_query(
+		{
+			"sql": f"SHOW TABLES;",
+			"dbid": f"{dbid}",
+			"token": f"{token}" 
+		}
+	)
+
+	if fb_query.get('message'):
+		if fb_query.get('message') == "unauthorized":
+			flash("Error authenticating. Enter your credentials again.")
+			return redirect(url_for('auth.login'))
+
+	return 'you have been logged in'

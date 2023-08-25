@@ -6,7 +6,7 @@ html {
 body {
   background: #333;
   font-size: 18px; 
-  font-family: monospace;
+  font-family: Roboto,sans-serif;
   height: 99%; 
   margin: 0px;
   padding-left: 3px;
@@ -37,6 +37,10 @@ br {
 
 img.rounded {
   max-width: 100%;
+}
+
+label {
+  margin-top: 12px;
 }
 
 table { 
@@ -136,8 +140,13 @@ div.flash {
   color: red;
 }
 
-div.email_form {
+div.login_form {
   margin-top: 160px;
+}
+
+div.login_form h2 {
+  font-size: 48px;
+  font-weight: 700;
 }
 
 /* footer */
