@@ -22,12 +22,10 @@
 
         <form autocomplete="off" id="{{app_id}}" action="/login" method="post">
           <div class="form-group">
-            <label>Your <a href="https://cloud.featurebase.com/databases" target=_blank>Database ID</a>...</label>
-            <input autofocus name="dbid" id="dbid-{{app_id}}" type="text" class="form-control" placeholder="1ba4db82-aee7-4e6d-8688-e8620c3e0bfd">
-            <label>Your <a href="https://cloud.featurebase.com/configuration/api-keys" target=_blank>API token</a>...</label>
-            <input name="token" id="token-{{app_id}}" type="text" class="form-control" placeholder="f0bb344f-79ca-4e48-8f3d-e236f29f8bac">
-            <label id="password_label">Your password is required...</label>
-            <input id="password" type="password" class="form-control" name="password" placeholder="************">
+            <label>Get your <a href="https://cloud.featurebase.com/databases" target=_blank>database ID</a>...</label>
+            <input autofocus name="dbid" id="dbid-{{app_id}}" type="text" class="form-control" placeholder="Enter your database ID">
+            <label>Get your <a href="https://cloud.featurebase.com/configuration/api-keys" target=_blank>API token</a>...</label>
+            <input name="token" type="password" id="token-{{app_id}}" type="text" class="form-control" placeholder="Enter your API key (token)">
             {% if next %}
             <input type="hidden" name="next" value="{{next}}">
             {%endif%}
@@ -115,10 +113,6 @@ $(document).ready(function() {
 
     // Perform the base64 encoding of the String
     var k = window.btoa(m);
-
-    // hack the colorization of the fields
-    $('#password').remove();
-    $('#password_label').remove();
 
     // Set the background image property, including the encoding type header
     $("body").css("background-image", 'url("data:image/svg+xml;base64,' + k + '")');

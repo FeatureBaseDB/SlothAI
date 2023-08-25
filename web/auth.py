@@ -77,6 +77,22 @@ def login_post():
 	dbid = request.form.get('dbid')
 	token = request.form.get('token')
 
+	# handle bots filling out forms
+	transaction_id = request.form.get('transaction_id')
+
+	# only allow posts with transaction IDs
+	if transaction_id:
+		with client.context():
+			transaction = Transaction.query().filter(Transaction.tid==transaction_id).get()
+
+			# if we find it, delete it and proceed
+			if transaction:
+				transaction.key.delete()
+			else:
+				return redirect(url_for('auth.login'))
+	else:
+		return redirect(url_for('auth.login'))
+
 	from lib.database import featurebase_query
 
 	# check for access to FeatureBase database
@@ -93,4 +109,14 @@ def login_post():
 			flash("Error authenticating. Enter your credentials again.")
 			return redirect(url_for('auth.login'))
 
+	# look the user up (here we know they are telling the truth)
+	user = User.get_by_dbid(dbid)
+
+	if not user:
+		# no user, create user and set both dbid and token
+		user = User.create(dbid=dbid, db_token=token)
+
+	# just log them in
+	login_user(user)
+	
 	return 'you have been logged in'

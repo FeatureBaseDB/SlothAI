@@ -6,7 +6,7 @@ from google.cloud import ndb
 
 import flask_login
 
-from lib.util import random_name, random_string
+from lib.util import random_name, random_string, generate_token
 
 import config
 
@@ -50,14 +50,10 @@ class User(flask_login.UserMixin, ndb.Model):
 	expires = ndb.DateTimeProperty()
 
 	# auth settings and log
-	email = ndb.StringProperty()
-	phone = ndb.StringProperty()
-	phone_code = ndb.StringProperty(default=False)
-	failed_2fa_attempts = ndb.IntegerProperty(default=0)
+	dbid = ndb.StringProperty()
+	db_token = ndb.StringProperty()
+	admin = ndb.BooleanProperty()
 
-	# featurebase auth
-	fb_token = ndb.StringProperty()
-	
 	# status
 	authenticated = ndb.BooleanProperty(default=False)
 	active = ndb.BooleanProperty(default=True)
@@ -89,38 +85,23 @@ class User(flask_login.UserMixin, ndb.Model):
 			return user
 
 	@classmethod
-	def create(cls, email="noreply@featurebase.com", phone="+1"):
+	def create(cls, dbid="", db_token=""):
 		name = random_name(3)
 		uid = random_string(size=17)
 		with client.context():
 			cls(
 				uid = uid,
 				name = name,
-				email = email,
-				account_type = "free",
-				phone = phone,
-				phone_code = generate_token(),
 				created = datetime.datetime.utcnow(),
 				updated = datetime.datetime.utcnow(),
 				expires = datetime.datetime.utcnow() + datetime.timedelta(days=15),
 				admin = False,
-				mail_token = generate_token(),
+				dbid = dbid,
+				db_token = db_token,
 				api_token = generate_token()
 			).put()
 
-			return cls.query(cls.phone == phone, cls.email == email).get()
-
-	@classmethod
-	def get_old(cls, timestamp):
-		with client.context():
-			# return cls.query(cls.updated < timestamp).fetch(10000)
-			return cls.query(cls.updated < timestamp).fetch(10000)
-
-	@classmethod
-	def get_all_for_tasks(cls):
-		with client.context():
-			# return cls.query(cls.updated < timestamp).fetch(10000)
-			return cls.query().fetch(10000)
+			return cls.query(cls.dbid == dbid).get()
 
 	@classmethod
 	def get_by_name(cls, name):
@@ -128,19 +109,9 @@ class User(flask_login.UserMixin, ndb.Model):
 			return cls.query(cls.name == name).get()
 
 	@classmethod
-	def get_by_email(cls, email):
+	def get_by_dbid(cls, dbid):
 		with client.context():
-			return cls.query(cls.email == email).get()
-
-	@classmethod
-	def get_by_phone(cls, phone):
-		with client.context():
-			return cls.query(cls.phone == phone).get()
-
-	@classmethod
-	def get_by_mail_token(cls, mail_token):
-		with client.context():
-			return cls.query(cls.mail_token == mail_token).get()
+			return cls.query(cls.dbid == dbid).get()
 
 	@classmethod
 	def get_by_uid(cls, uid):
