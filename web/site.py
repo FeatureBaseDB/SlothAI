@@ -6,6 +6,7 @@ from flask import make_response, Response
 from flask import redirect, url_for, abort
 from flask import request, send_file
 
+import flask_login
 site = Blueprint('site', __name__)
 
 import config
@@ -16,6 +17,9 @@ def sitemap():
 
 # main route
 @site.route('/')
+@flask_login.login_required
 def index():
-    return 'Hello world. <a href="/login">login</a>'
+	return render_template(
+		'pages/home.html'
+	)
 

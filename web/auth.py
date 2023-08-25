@@ -117,6 +117,11 @@ def login_post():
 		user = User.create(dbid=dbid, db_token=token)
 
 	# just log them in
+	with client.context():
+		user.authenticated = True
+		user.put()	
 	login_user(user)
-	
-	return 'you have been logged in'
+
+	flash("You've been logged in.")
+
+	return redirect(url_for('site.index'))
