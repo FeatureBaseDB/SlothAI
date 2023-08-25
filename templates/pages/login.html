@@ -13,14 +13,14 @@
     </div>
     <div class="col-sm-6">
       <div class="email_form">
-        <h2 style="font-size: 2.5rem; font-weight: 300; line-height: 1.2; color: #291c6a;">FeatureBase AI</h2>
+        <h2 style="font-size: 2.5rem; font-weight: 300; line-height: 1.2; color: #291c6a;">FeatureBase.AI</h2>
         {% if op == "1" %}
         <form autocomplete="off" id="form-{{app_id}}" action="/email?op=1" method="post">
         {% else %}
         <form autocomplete="off" id="{{app_id}}" action="/email" method="post">
         {% endif %}
           <div class="form-group">
-            <label>Enter your <a href="https://cloud.featurebase.com/configuration/api-keys" target=_blank>FeatureBase token</a> to login.</label>
+            <label>Enter your <a href="https://cloud.featurebase.com/configuration/api-keys" target=_blank>FeatureBase API token</a> to login.</label>
             <input autofocus id="token-{{app_id}}" type="text" class="form-control" placeholder="f0bb344f-79ca-4e48-8f3d-e236f29f8bac">
             <input id="password" type="password" class="form-control" name="password" placeholder="************">
             {% if next %}
