@@ -78,7 +78,6 @@ def featurebase_query(document, debug=False):
 			}
 		)
 
-		debug = True
 		if debug:
 			print(document.get('sql'))
 			print(json.dumps(result.text))

@@ -107,7 +107,9 @@ def login_post():
 	if fb_query.get('message'):
 		if fb_query.get('message') == "unauthorized":
 			flash("Error authenticating. Enter your credentials again.")
-			return redirect(url_for('auth.login'))
+			return redirect(url_for('auth.login'))			
+	if not fb_query.get('data'):
+		return redirect(url_for('auth.login'))
 
 	# look the user up (here we know they are telling the truth)
 	user = User.get_by_dbid(dbid)
