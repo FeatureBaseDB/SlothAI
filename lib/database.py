@@ -77,6 +77,7 @@ def featurebase_query(document, debug=False):
 				'X-API-Key': f"{token}",
 			}
 		)
+		print(result.text)
 
 		if debug:
 			print(document.get('sql'))
@@ -102,10 +103,11 @@ def featurebase_query(document, debug=False):
 		document['error'] = result.get('error')
 		document['data'] = result.get('data')
 
-	elif result.get('data', []):
+	elif 'data' in result:
 		# got some data back from featurebase
 		document['data'] = result.get('data')
 		document['schema'] = result.get('schema')
+		document['execution-time'] = result.get('execution-time')
 
 		field_names = []
 

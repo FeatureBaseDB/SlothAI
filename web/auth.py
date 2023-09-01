@@ -77,6 +77,8 @@ def login_post():
 	dbid = request.form.get('dbid')
 	token = request.form.get('token')
 
+	print(dbid,token)
+
 	# handle bots filling out forms
 	transaction_id = request.form.get('transaction_id')
 
@@ -107,8 +109,9 @@ def login_post():
 	if fb_query.get('message'):
 		if fb_query.get('message') == "unauthorized":
 			flash("Error authenticating. Enter your credentials again.")
-			return redirect(url_for('auth.login'))			
-	if not fb_query.get('data'):
+			return redirect(url_for('auth.login'))		
+	
+	if not fb_query.get('execution-time'):
 		return redirect(url_for('auth.login'))
 
 	# look the user up (here we know they are telling the truth)
@@ -126,4 +129,4 @@ def login_post():
 
 	flash("You've been logged in.")
 
-	return redirect(url_for('site.index'))
+	return redirect(url_for('site.dash'))

@@ -29,24 +29,25 @@
 
 <body>
   <div class="container mt-5">
-	<p>WELCOME LLAMA! <a href="/logout">LLAMA OUT?</a></p>
-	<form action="/" method="POST">
-	  <div class="form-group">
-		<label for="largeTextArea">Enter Text:</label>
-		<textarea class="form-control" id="largeTextArea" name="text" rows="5"></textarea>
-	  </div>
-	  <button type="submit" class="btn btn-primary">Submit</button>
-	</form>
-	{% if embeddings %}
-	<h2>Embeddings:</h2>
-	<ul>
-		{% for embedding in embeddings %}
-		<li>{{ embedding }}</li>
-		{% endfor %}
-	</ul>
-	{% endif %}
+    <p>WELCOME LLAMA! <a href="/logout">LLAMA OUT?</a></p>
+    <form action="/" method="POST">
+      <div class="form-group">
+        <label for="largeTextArea">Enter Text:</label>
+        <textarea class="form-control" id="largeTextArea" name="text" rows="5"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+    {% if results %}
+    <h2>results:</h2>
+    <ul>
+      {% for result in results %}
+      <li>{{ result }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
   </div>
 </body>
+
 </html>
 
 

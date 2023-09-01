@@ -1,0 +1,9 @@
+# complete dict task
+1. Build an entry for the dictionary that has a 'text' key for the following text:
+"""
+$text
+"""
+2. Build an entry for the dictionary that has a 'question' key for an array of (1) question from the text: in step 1.
+3. Build an entry for the dictionary that has a 'keyterms' key for an array of up to (5) keyterms from the text: in step 1.
+4. Build an entry for the dictionary that has a 'graph' key for an array of arrays of up to (5) relationships which exist between keyterms in step 3. and are described in the question in step 2. and the text in step 1.
+python_dict =

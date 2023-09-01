@@ -6,3 +6,4 @@ flask-talisman==1.1.0
 Flask-Login==0.6.2
 google-cloud-ndb==2.2.0
 coolname==2.2.0
+openai==0.27.2
