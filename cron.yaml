@@ -1,0 +1,4 @@
+cron:
+- description: "daily transaction job"
+  url: /boxes/status/all/753bs0842ec109
+  schedule: every 5 minutes

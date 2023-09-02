@@ -10,6 +10,8 @@ from google.cloud import ndb
 
 from web.site import site
 from web.auth import auth
+from web.cron import cron
+from web.table import table
 from web.models import User
 
 import config
@@ -73,7 +75,8 @@ def load_user(uid):
 with app.app_context():
     app.register_blueprint(site)
     app.register_blueprint(auth)
-
+    app.register_blueprint(cron)
+    app.register_blueprint(table)
 
 login_manager.blueprint_login_views = {
     'site': "/login",

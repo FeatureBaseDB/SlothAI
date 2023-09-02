@@ -51,25 +51,34 @@
     {% endfor %}
 
 
-    <h2 class="bg-dark text-white p-2" style="border-radius: 10px;">Active Tables</h2>
+    <h2>Active Tables</h2>
 
 
     <div class="container mt-5 mb-5">
-    {% if tables and tables.length > 0 %}
+    {% if tables %}
         <table class="table table-bordered">
             <thead>
                 <tr>
                     <th>Name</th>
+                    <th>Endpoint</th>
+                    <th>Model</th>
+                    <th>Keyterms</th>
                 </tr>
             </thead>
             <tbody>
                 {% for table in tables %}
                     <tr>
                         <td>{{ table.name }}</td>
+                        <td>{{ table.tid }}</td>
+                        <td>{{ table.model }}</td>
+                        <td>{{ table.extract }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+                    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
+                        Add Table
+                    </button>
     {% else %}
         <div class="container mt-5">
             <div class="card rounded-lg">
@@ -175,7 +184,8 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
 </div>
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
 
@@ -186,23 +196,61 @@ $(document).ready(function() {
     // Show the notice
     $('#tempNotice').removeClass('d-none');
 
-        // Event listener for when the radio buttons change
-        function checkSelections() {
-            if ($('#modelSelect').val() === 'ada-002 (requires OpenAI token)' || $('#extractYes').is(':checked')) {
-                $('#tokenField').removeClass('d-none');
-            } else {
-                $('#tokenField').addClass('d-none');
-            }
+    // Event listener for when the radio buttons change
+    function checkSelections() {
+        if ($('#modelSelect').val() === 'ada-002 (requires OpenAI token)' || $('#extractYes').is(':checked')) {
+            $('#tokenField').removeClass('d-none');
+        } else {
+            $('#tokenField').addClass('d-none');
         }
+    }
 
-        // Event listeners for when the model dropdown or the radio buttons change
-        $('#modelSelect').on('change', checkSelections);
-        $('input[name="keyTermsOptions"]').on('change', checkSelections);
+    // Event listeners for when the model dropdown or the radio buttons change
+    $('#modelSelect').on('change', checkSelections);
+    $('input[name="keyTermsOptions"]').on('change', checkSelections);
 
     // After 5 seconds, hide the notice
     setTimeout(function() {
         $('#tempNotice').addClass('d-none');
     }, 5000); // 5000 milliseconds = 5 seconds
+
+    // When the "Create" button is clicked
+    $("#modelFormModal").on("click", ".btn-dark", function() {
+        // Get form data
+        var formData = {
+            tableName: $("#tableName").val(),
+            modelSelect: $("#modelSelect").val(),
+            keyTermsOptions: $("input[name='keyTermsOptions']:checked").val(),
+            openaiToken: $("#openaiToken").val()
+            // Add more form fields as needed
+        };
+
+        // move this to a notice in the form
+        if (!/^[a-z-]+$/.test(formData.tableName)) {
+            alert("Invalid table name. Table name should only contain lowercase letters and '-'");
+        } else if ((formData.keyTermsOptions === 'yes' || formData.modelSelect === 'ada-002') && formData.openaiToken === "") {
+            alert("OpenAI Token is required for selected options.");
+        } else {
+
+            // Send a POST request to the /table endpoint
+            $.ajax({
+                type: "POST",
+                url: "/tables",  // Change this to your actual endpoint
+                data: JSON.stringify(formData),  // Send data as JSON
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function(response) {
+                    // reload the page
+                    location.reload();
+                },
+                error: function(error) {
+                    // Handle error if needed
+                    console.error("Error submitting form:", error);
+                }
+            });
+        }
+    });
+
 });
 </script>
 </body>

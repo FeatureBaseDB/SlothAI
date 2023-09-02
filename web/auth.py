@@ -77,8 +77,6 @@ def login_post():
 	dbid = request.form.get('dbid')
 	token = request.form.get('token')
 
-	print(dbid,token)
-
 	# handle bots filling out forms
 	transaction_id = request.form.get('transaction_id')
 
@@ -129,4 +127,4 @@ def login_post():
 
 	flash("You've been logged in.")
 
-	return redirect(url_for('site.dash'))
+	return redirect(url_for('table.tables'))
