@@ -25,7 +25,7 @@ def drop_database(name):
 		{
 			"sql": f"DROP TABLE {name};",
 			"dbid": f"{auth.get('dbid')}",
-			"token": f"{auth.get('token')}" 
+			"db_token": f"{auth.get('db_token')}" 
 		}
 	)
 
@@ -36,7 +36,7 @@ def create_database(name, schema, auth):
 		{
 			"sql": f"CREATE TABLE {name} {schema};",
 			"dbid": f"{auth.get('dbid')}",
-			"token": f"{auth.get('token')}" 
+			"db_token": f"{auth.get('db_token')}" 
 		}
 	)
 
@@ -67,17 +67,19 @@ def featurebase_query(document, debug=False):
 	try:
 		sql = document.get("sql")
 		dbid = document.get('dbid')
-		token = document.get('token')
-		
+		db_token = document.get('db_token')
+
 		result = requests.post(
 			url=f"{config.featurebase_endpoint}{dbid}/query/sql",
 			data=sql.encode('utf-8'),
 			headers={
 				'Content-Type': 'text/plain',
-				'X-API-Key': f"{token}",
+				'X-API-Key': f"{db_token}",
 			}
 		)
+		print("database response")
 		print(result.text)
+		print("end database response")
 
 		if debug:
 			print(document.get('sql'))

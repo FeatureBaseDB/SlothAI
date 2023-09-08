@@ -3,6 +3,7 @@ private-key.json
 *.swp
 /learned-settings
 .vscode
+development/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

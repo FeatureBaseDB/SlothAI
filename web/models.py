@@ -49,39 +49,56 @@ class Table(ndb.Model):
 	model = ndb.StringProperty()
 	schema = ndb.JsonProperty()
 	extract = ndb.BooleanProperty()
-	token = ndb.StringProperty()
+	openai_token = ndb.StringProperty()
 
 	@classmethod
-	def create(cls, uid, name, model, extract, token):
+	def create(cls, uid, name, model, extract, openai_token):
 		with ndb.Client().context():
 			current_utc_time = datetime.datetime.utcnow()
 			table = cls.query(cls.uid == uid,cls.name == name).get()
 			if not table:
 				tid = random_string(size=17)
-				table = cls(tid=tid, uid=uid, name=name, model=model, extract=extract, token=token)
+				table = cls(tid=tid, uid=uid, name=name, model=model, extract=extract, openai_token=openai_token)
 				table.put()
 
 			return table.to_dict()
 
 	@classmethod
+	def delete(cls, tid):
+		with ndb.Client().context():
+			table = cls.query(cls.tid == tid).get()
+			if table:
+				table.key.delete()
+				return True
+			else:
+				return False
+
+	@classmethod
 	def get_all_by_uid(cls, uid):
 		with ndb.Client().context():
 			tables = cls.query(cls.uid == uid).fetch()
-		return tables
-
+		if tables:
+			return tables
+		else:
+			return False
 
 	@classmethod
 	def get_by_uid_name(cls, uid, name):
 		with ndb.Client().context():
 			table = cls.query(cls.uid == uid, cls.name == name).get()
-		return table.to_dict()
+		if table:
+			return table.to_dict()
+		else:
+			return False
 
 	@classmethod
 	def get_by_uid_tid(cls, uid, tid):
 		with ndb.Client().context():
 			table = cls.query(cls.uid == uid, cls.tid == tid).get()
-		return table.to_dict()
-
+		if table:
+			return table.to_dict()
+		else:
+			return False
 
 class Box(ndb.Model):
 	box_id = ndb.StringProperty()
@@ -108,13 +125,14 @@ class Box(ndb.Model):
 			return cls.query(cls.box_id == box_id).get()
 
 	@classmethod
-	def get_available_box(cls):
+	def get_boxes(cls):
 		with ndb.Client().context():
-			available_box = cls.query(cls.status == 'available').get()
-			if available_box:
-				available_box.status = 'busy'
-				available_box.put()
-			return available_box
+			boxes = cls.query().fetch()
+			try:
+				return boxes
+			except Exception as ex:
+				print(ex)
+				return False
 							
 	def start_box(self):
 		# Code to start the box or spot instance
@@ -126,65 +144,6 @@ class Box(ndb.Model):
 		self.status = 'stopped'
 		self.put()
 
-
-class Jobs(ndb.Model):
-	jid = ndb.StringProperty()
-	uid = ndb.StringProperty()
-	created = ndb.DateTimeProperty()
-	expires = ndb.DateTimeProperty()
-	document = ndb.JsonProperty()  # document object (contains the model mid)
-	status = ndb.StringProperty(default='pending')  # Adding a status field
-	running_at = ndb.StringProperty(default='nowhere')  # Reference to the Box where the model is running
-
-	@classmethod
-	def create(cls, uid, document):
-		with ndb.Client().context():
-			jid = generate_token(size=10)  # Assuming generate_token is defined elsewhere
-			current_utc_time = datetime.datetime.utcnow()
-			expiration_time = current_utc_time + datetime.timedelta(hours=1)  # Expiry in 1 hours
-			
-			job = cls(
-				jid=jid,
-				uid=uid,
-				created=current_utc_time,
-				expires=expiration_time,
-				document=document
-			)
-			job.put()
-			return cls.query(cls.jid == jid).get()
-
-	@classmethod
-	def delete(cls, jid):
-		with ndb.Client().context():
-			job = cls.query(cls.jid == jid).get()
-			if job:
-				job.key.delete()
-				return True
-			else:
-				return False
-
-	@classmethod
-	def select_next_scheduled_job(cls):
-		with ndb.Client().context():
-			current_utc_time = datetime.datetime.utcnow()
-
-			# Check if there's another job already processing
-			processing_job = cls.query(cls.status == 'processing').get()
-			if processing_job:
-				return None  # Another job is already processing
-			
-			# Remove expired jobs
-			expired_jobs = cls.query(cls.expires < current_utc_time).fetch(keys_only=True)
-			ndb.delete_multi(expired_jobs)
-			
-			# Select the next pending job
-			next_job = cls.query(cls.status == 'pending', cls.expires >= current_utc_time).order(cls.expires).get()
-			if next_job:
-				next_job.status = 'processing'
-				next_job.put()
-				return next_job.to_dict()
-			else:
-				return False
 
 # user inherits from flask_login and ndb
 class User(flask_login.UserMixin, ndb.Model):
@@ -227,7 +186,7 @@ class User(flask_login.UserMixin, ndb.Model):
 			user = cls.query(cls.uid == uid).get()
 			user.api_token = generate_token()
 			user.put()
-			return user
+			return user.to_dict()
 
 	@classmethod
 	def create(cls, dbid="", db_token=""):
@@ -246,24 +205,48 @@ class User(flask_login.UserMixin, ndb.Model):
 				api_token = generate_token()
 			).put()
 
-			return cls.query(cls.dbid == dbid).get()
+			return cls.query(cls.dbid == dbid).get().to_dict()
+
+	@classmethod
+	def authenticate(cls, uid):
+		with client.context():
+			user = cls.query(cls.uid == uid).get()
+			user.authenticated = True
+			user.put()
+			return user
 
 	@classmethod
 	def get_by_name(cls, name):
 		with client.context():
-			return cls.query(cls.name == name).get()
+			result = cls.query(cls.name == name).get()
+			if result:
+				return result.to_dict()
+			else:
+				return None
 
 	@classmethod
 	def get_by_dbid(cls, dbid):
 		with client.context():
-			return cls.query(cls.dbid == dbid).get()
+			result = cls.query(cls.dbid == dbid).get()
+			if result:
+				return result.to_dict()
+			else:
+				return None
 
 	@classmethod
 	def get_by_uid(cls, uid):
 		with client.context():
-			return cls.query(cls.uid == uid).get()
+			result = cls.query(cls.uid == uid).get()
+			if result:
+				return result.to_dict()
+			else:
+				return None
 
 	@classmethod
 	def get_by_token(cls, api_token):
 		with client.context():
-			return cls.query(cls.api_token == api_token).get()
+			result = cls.query(cls.api_token == api_token).get()
+			if result:
+				return result.to_dict()
+			else:
+				return None

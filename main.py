@@ -12,6 +12,8 @@ from web.site import site
 from web.auth import auth
 from web.cron import cron
 from web.table import table
+from web.tasks import tasks
+
 from web.models import User
 
 import config
@@ -51,11 +53,6 @@ def load_request(request):
 
 @login_manager.user_loader 
 def load_user(uid):
-    # timestamps are everything
-    now = datetime.datetime.utcnow()
-    timestring = "%Y-%m-%dT%H:%M:%SZ"
-    timestamp = now.strftime(timestring)
-
     try:
         # get the user
         with client.context():
@@ -76,6 +73,7 @@ with app.app_context():
     app.register_blueprint(site)
     app.register_blueprint(auth)
     app.register_blueprint(cron)
+    app.register_blueprint(tasks)
     app.register_blueprint(table)
 
 login_manager.blueprint_login_views = {

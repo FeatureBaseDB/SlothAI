@@ -75,7 +75,7 @@ def login_post():
 		return "( ︶︿︶)_╭∩╮ PASSWORD REQUIRED!\nALSO, GET OFF MY LAWN.", 500
 
 	dbid = request.form.get('dbid')
-	token = request.form.get('token')
+	db_token = request.form.get('db_token')
 
 	# handle bots filling out forms
 	transaction_id = request.form.get('transaction_id')
@@ -100,7 +100,7 @@ def login_post():
 		{
 			"sql": f"SHOW TABLES;",
 			"dbid": f"{dbid}",
-			"token": f"{token}" 
+			"db_token": f"{db_token}" 
 		}
 	)
 
@@ -117,14 +117,12 @@ def login_post():
 
 	if not user:
 		# no user, create user and set both dbid and token
-		user = User.create(dbid=dbid, db_token=token)
+		user = User.create(dbid=dbid, db_token=db_token)
 
 	# just log them in
-	with client.context():
-		user.authenticated = True
-		user.put()	
-	login_user(user)
+	_user = User.authenticate(user.get('uid'))
+	login_user(_user)
 
 	flash("You've been logged in.")
 
-	return redirect(url_for('table.tables'))
+	return redirect(url_for('site.tables'))

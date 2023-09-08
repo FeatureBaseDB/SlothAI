@@ -4,6 +4,8 @@ import json
 
 import requests
 
+from google.cloud import ndb
+
 from flask import Blueprint, render_template, flash
 from flask import make_response, Response
 from flask import redirect, url_for, abort
@@ -15,10 +17,14 @@ from flask_login import current_user
 from lib.util import random_string
 from lib.ai import ai
 
+from web.models import Table
 
 site = Blueprint('site', __name__)
 
 import config
+
+# client connection
+client = ndb.Client()
 
 @site.route('/sitemap.txt')
 def sitemap():
@@ -33,40 +39,33 @@ def index():
 	)
 
 
-	"""
-	sentence = request.form.get('text').replace("\n", " ").replace("\r", " ").replace("'", "''")
+# PAGE HANDLERS
+@site.route('/tables', methods=['GET'])
+@flask_login.login_required
+def tables():
+	# get the user and their tables
+	username = current_user.name
 
-	data = {
-		"sentences": [sentence]
-	}
-	print("getting vectors")
-	response = requests.post(url, headers=headers, json=data)
+	tables = Table.get_all_by_uid(uid=current_user.uid)
+	_tables = []
+	with client.context():
+		if tables:
+			for table in tables:
+				_tables.append(table)
 
-	if response.status_code == 200:
-		print("Request successful")
-		# print("Response:", response.text)
-	else:
-		print("Request failed")
-		print("Status Code:", response.status_code)
-	
-	response_data = json.loads(response.text)
-	embeddings = response_data.get('embeddings', [])
+	return render_template('pages/tables.html', username=username, tables=_tables)
 
-	document = ai("chatgpt_complete_dict", {"text": sentence})
-	print(document.get('keyterms'))
-	from lib.database import featurebase_query, create_database
-	auth = {"dbid": current_user.dbid, "token": current_user.db_token}
-	create_database('sample', f'(_id string, keyterm stringset, sentence string, embedding vector(768))', auth)
 
-	sql = f"INSERT INTO sample VALUES('{random_string(6)}', {document.get('keyterms')}, '{sentence}', {embeddings[0]});"
-	result = featurebase_query({"sql": sql, "dbid": current_user.dbid, "token": current_user.db_token})
+@site.route('/tables/<tid>', methods=['GET'])
+@flask_login.login_required
+def table_view(tid):
+	# get the user and their tables
+	username = current_user.name
+	token = current_user.api_token
+	print(token)
 
-	sql = f"select _id, sentence, keyterm, cosine_distance(select embedding from sample where sentence = '{sentence}', embedding) AS distance FROM sample ORDER BY distance ASC;"
+	_table = Table.get_by_uid_tid(uid=current_user.uid, tid=tid)
+	print(_table)
+	return render_template('pages/table.html', username=username, token=token, table=_table)
 
-	result = featurebase_query({"sql": sql, "dbid": current_user.dbid, "token": current_user.db_token})
-	results = result.get('results')
 
-	# Return a response, redirect, or render a template as needed
-		
-	return render_template('pages/home.html', results=results)
-	"""
