@@ -61,7 +61,7 @@ def login():
 			next=next_url
 		)
 	except Exception as ex:
-		return redirect(url_for('site.index'))
+		return redirect(url_for('site.tables'))
 
 
 # LOGIN POST
