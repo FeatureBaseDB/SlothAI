@@ -1,38 +1,74 @@
-import os
-import sys
-import random
-import string
-import time
-import json
-
-import requests
-from string import Template
+"""
+database.py provides function to interact with FeatureBase cloud. It wraps the
+featurebase client library.
+"""
 
 import config
-
-# random strings
-def random_string(size=6, chars=string.ascii_letters + string.digits):
-	return ''.join(random.choice(chars) for _ in range(size))
-
+import featurebase
+from urllib.error import HTTPError, URLError, ContentTooShortError
 
 ###############
 # FeatureBase #
 ###############
 
-def drop_database(name):
-	# create FeatureBase database
-	fb_query = featurebase_query(
-		{
-			"sql": f"DROP TABLE {name};",
-			"dbid": f"{auth.get('dbid')}",
-			"db_token": f"{auth.get('db_token')}" 
-		}
+def featurebase_query(document, debug=False):
+	"""
+    Execute a query against FeatureBase cloud and return the response and any query errors.
+
+    Args:
+    - document (dict): A dictionary containing the query information.
+        - 'sql' (str): The SQL query to be executed.
+        - 'dbid' (str): The database ID in FeatureBase cloud.
+        - 'db_token' (str): The API key/token for authentication.
+
+    - debug (bool, optional): If True, enables debug mode for additional logging (default is False).
+
+    Returns:
+    Tuple:
+        - resp (object): The response from the Featurebase query.
+        - query_error (str): Any error message from the query execution, or None if there were no errors.
+    """
+	sql = document.get("sql")
+	dbid = document.get('dbid')
+	db_token = document.get('db_token')
+
+	fb_client = featurebase.client(
+		hostport=config.featurebase_endpoint,
+		database=dbid,
+		apikey=db_token
 	)
 
+	if debug:
+		print(f"dbid: {fb_client.database}")
+		print(f"apikey: {fb_client.apikey}")
+		print(f"hostport: {fb_client.hostport}")
 
-def create_database(name, schema, auth):
-	# create FeatureBase database
-	fb_query = featurebase_query(
+	try:
+		resp = fb_client.query(sql=sql)
+		if resp.error:
+			return None, f"featurebase_query: {resp.error}"
+		return resp, None
+	except (HTTPError, URLError, ContentTooShortError)  as err:
+		return None, f"featurebase_query: {err.reason}"
+	except Exception as e:
+		return None, f"featurebase_query: unhandled excpetion while running query"
+
+def create_table(name, schema, auth):
+	"""
+    Create a table in Featurebase Cloud with the specified name and schema.
+
+    Args:
+    - name (str): The name of the table to be created.
+    - schema (str): The schema definition for the table in SQL format.
+    - auth (dict): A dictionary containing authentication information.
+        - 'dbid' (str): The database ID in Featurebase.
+        - 'db_token' (str): The API key/token for authentication.
+
+    Returns:
+    str or None: If an error occurs during table creation, it returns an error message. Otherwise, it returns None.
+	"""
+
+	_, err = featurebase_query(
 		{
 			"sql": f"CREATE TABLE {name} {schema};",
 			"dbid": f"{auth.get('dbid')}",
@@ -40,84 +76,39 @@ def create_database(name, schema, auth):
 		}
 	)
 
-	# check status
-	if fb_query.get('error'):
-		if "exists" in fb_query.get('error'):
-			print(f"FeatureBase database `{name}` already exists.")
-		else:
-			print(fb_query.get("explain"))
-			print("FeatureBase returned an error. Check your credentials or create statement!")
+	if err:
+		print(f"Error creating table named {name}: {err}")
 	else:
-		print(f"Created `{name}` database on FeatureBase Cloud.")
-
-
-def apply_schema(list_of_lists, schema):
-	result = []
-	for row in list_of_lists:
-		dict_row = {}
-		for i, val in enumerate(row):
-			dict_row[schema[i]] = val
-		result.append(dict_row)
-	return result
-
-
-# "sql" key in document should have a valid query
-def featurebase_query(document, debug=False):
-	# try to run the query
-	try:
-		sql = document.get("sql")
-		dbid = document.get('dbid')
-		db_token = document.get('db_token')
-
-		result = requests.post(
-			url=f"{config.featurebase_endpoint}{dbid}/query/sql",
-			data=sql.encode('utf-8'),
-			headers={
-				'Content-Type': 'text/plain',
-				'X-API-Key': f"{db_token}",
-			}
-		)
-		print("database response")
-		print(result.text)
-		print("end database response")
-
-		if debug:
-			print(document.get('sql'))
-			print(json.dumps(result.text))
+		print(f"Successfully created table `{name}` on FeatureBase Cloud.")
 		
-		if json.loads(result.text).get('message'):
-			if json.loads(result.text).get('message') == "unauthorized":
-				document['message'] = "unauthorized"
-				return document
-		
-		result = result.json()
+	return err
 
-	except Exception as ex:
-		# bad query?
-		print("error: ", ex)
-		exc_type, exc_obj, exc_tb = sys.exc_info()
-		document['error'] = "%s: %s" % (exc_tb.tb_lineno, ex)
-		return document
+def drop_table(name, auth):
+	"""
+    Drop a table in Featurebase Cloud with the specified name.
 
-	if result.get('error', ""):
-		# featurebase reports and error
-		document['explain'] = "Error returned by FeatureBase: %s" % result.get('error')
-		document['error'] = result.get('error')
-		document['data'] = result.get('data')
+    Args:
+    - name (str): The name of the table to be dropped.
+    - auth (dict): A dictionary containing authentication information.
+        - 'dbid' (str): The database ID in Featurebase.
+        - 'db_token' (str): The API key/token for authentication.
 
-	elif 'data' in result:
-		# got some data back from featurebase
-		document['data'] = result.get('data')
-		document['schema'] = result.get('schema')
-		document['execution-time'] = result.get('execution-time')
+    Returns:
+    str or None: If an error occurs while dropping the table, it returns an error message. Otherwise, it returns None.
+	"""
 
-		field_names = []
+	_, err = featurebase_query(
+		{
+			"sql": f"DROP TABLE {name};",
+			"dbid": f"{auth.get('dbid')}",
+			"db_token": f"{auth.get('db_token')}" 
+		}
+	)
 
-		for field in result.get('schema').get('fields'):
-			field_names.append(field.get('name'))
-
-		document['results'] = apply_schema(result.get('data'), field_names)
+	if err:
+		print(f"Error dropping table {name} on FeatureBase Cloud: {err}")
 	else:
-		document['explain'] = "Query was successful, but returned no data."
-
-	return document
+		print(f"Successfully dropped table `{name}` on FeatureBase Cloud.")
+		
+	return err
+	

@@ -13,7 +13,7 @@ from flask import request, send_file
 from lib.util import random_string
 from lib.gcloud import box_status, box_start
 from lib.ai import ai
-from lib.database import featurebase_query, create_database
+from lib.database import featurebase_query, create_table
 from lib.tasks import create_task
 
 from web.models import Box, User
@@ -85,9 +85,9 @@ def process_tasks(cron_key):
 
 	document = ai("chatgpt_complete_dict", {"text": sentence})
 	print(document.get('keyterms'))
-	from lib.database import featurebase_query, create_database
+	from lib.database import featurebase_query, create_table
 	auth = {"dbid": current_user.dbid, "token": current_user.db_token}
-	create_database('sample', f'(_id string, keyterm stringset, sentence string, embedding vector(768))', auth)
+	create_table('sample', f'(_id string, keyterm stringset, sentence string, embedding vector(768))', auth)
 
 	sql = f"INSERT INTO sample VALUES('{random_string(6)}', {document.get('keyterms')}, '{sentence}', {embeddings[0]});"
 	result = featurebase_query({"sql": sql, "dbid": current_user.dbid, "token": current_user.db_token})
@@ -103,7 +103,8 @@ def process_tasks(cron_key):
 	"""
 	
 	# create table
-	create_database(document.get('name'), "(_id string, keyterms stringset, text string, embedding vector(768))", {"dbid": user.get('dbid'), "db_token": user.get('db_token')})
+	err = create_table(document.get('name'), "(_id string, keyterms stringset, text string, embedding vector(768))", {"dbid": user.get('dbid'), "db_token": user.get('db_token')})
+	# TODO: unhandled error
 
 	values = ""
 	for i, text in enumerate(ai_document.get('text')):
@@ -118,6 +119,7 @@ def process_tasks(cron_key):
 	sql = f"INSERT INTO {document.get('name')} VALUES {values};"
 	
 	document = {"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')}
-	result = featurebase_query(document)
+	resp, err = featurebase_query(document)
+	# TODO: unhandled error
 
 	return "success", 200
