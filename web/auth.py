@@ -96,7 +96,7 @@ def login_post():
 	from lib.database import featurebase_query
 
 	# check for access to FeatureBase database
-	fb_query = featurebase_query(
+	resp, err = featurebase_query(
 		{
 			"sql": f"SHOW TABLES;",
 			"dbid": f"{dbid}",
@@ -104,12 +104,15 @@ def login_post():
 		}
 	)
 
-	if fb_query.get('message'):
-		if fb_query.get('message') == "unauthorized":
+	if err:
+		if "Unauthorized" in err:
 			flash("Error authenticating. Enter your credentials again.")
-			return redirect(url_for('auth.login'))		
+		else:
+			flash(f"Unhandled error while authenticating: {err}. Try again.")
+
+		return redirect(url_for('auth.login'))
 	
-	if not fb_query.get('execution-time'):
+	if not resp.execution_time:
 		return redirect(url_for('auth.login'))
 
 	# look the user up (here we know they are telling the truth)

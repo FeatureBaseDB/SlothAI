@@ -8,3 +8,4 @@ google-cloud-ndb==2.2.0
 google-cloud-tasks==2.14.1
 coolname==2.2.0
 openai==0.27.2
+featurebase==0.0.2
