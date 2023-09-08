@@ -23,7 +23,7 @@ def create_task(document):
 	target_url = f"/tasks/process/{config.cron_key}"
 
 	# Create a task
-	parent = client.queue_path(project_id, "us-east1", f"sloth-bot")
+	parent = client.queue_path(project_id, "us-east1", f"sloth-line")
 
 	task = {
 		"app_engine_http_request": {

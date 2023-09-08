@@ -23,12 +23,14 @@ login_manager.session_protection = "strong"
 # blueprints for auth, money and code endpoints
 auth = Blueprint('auth', __name__)
 
+
 # logout
 @auth.route('/logout')
 def logout():
 	logout_user()
 	flash("You are logged out.")
 	return redirect(url_for('site.index'))
+
 
 # LOGIN GET
 @auth.route('/login', methods=['GET'])
