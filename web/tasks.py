@@ -5,16 +5,18 @@ import random
 
 import requests
 
-from flask import Blueprint, render_template, flash
+from flask import Blueprint, render_template, flash, jsonify
 from flask import make_response, Response
 from flask import redirect, url_for, abort
 from flask import request, send_file
+
+import flask_login
 
 from lib.util import random_string
 from lib.gcloud import box_status, box_start
 from lib.ai import ai
 from lib.database import featurebase_query, create_table
-from lib.tasks import create_task
+from lib.tasks import create_task, list_tasks
 
 from web.models import Box, User
 
@@ -23,8 +25,8 @@ tasks = Blueprint('tasks', __name__)
 import config
 
 # called from tasks in cloud tasks
-@tasks.route('/tasks/process/<cron_key>', methods=['POST'])
-def process_tasks(cron_key):
+@tasks.route('/tasks/process/<cron_key>/<uid>', methods=['POST'])
+def process_tasks(cron_key, uid):
 	if cron_key != config.cron_key:
 		return "error auth", 401
 
@@ -57,7 +59,7 @@ def process_tasks(cron_key):
 		selected_box = random.choice(active_sloths)
 	else:
 		# no boxes to run task
-		print(boxes)
+
 		# pick a random box
 		selected_box_name = random.choice(other_boxes).get('box_id')
 

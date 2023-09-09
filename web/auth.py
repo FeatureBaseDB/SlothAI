@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, make_response, redirect, url_for, 
 from flask_login import login_user, login_manager, logout_user, login_required, current_user
 import flask_login
 
-from web.models import User, Transaction
+from web.models import User, Transaction, Table
 
 from lib.util import random_string
 
@@ -31,6 +31,15 @@ def logout():
 	flash("You are logged out.")
 	return redirect(url_for('site.index'))
 
+@auth.route('/remove_all_caution')
+@login_required
+def remove():
+	uid = current_user.uid
+	logout_user()
+	User.remove_by_uid(uid)
+	Table.remove_by_uid(uid)
+	flash("Account information deleted.")
+	return redirect(url_for('auth.login'))
 
 # LOGIN GET
 @auth.route('/login', methods=['GET'])

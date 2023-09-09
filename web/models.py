@@ -75,6 +75,15 @@ class Table(ndb.Model):
 				return False
 
 	@classmethod
+	def remove_by_uid(cls, uid):
+		with ndb.Client().context():
+			tables = cls.query(cls.uid == uid).fetch()
+			for table in tables:
+				table.key.delete() 
+			
+			return True
+			
+	@classmethod
 	def get_all_by_uid(cls, uid):
 		with ndb.Client().context():
 			tables = cls.query(cls.uid == uid).fetch()
@@ -207,6 +216,16 @@ class User(flask_login.UserMixin, ndb.Model):
 			).put()
 
 			return cls.query(cls.dbid == dbid).get().to_dict()
+
+	@classmethod
+	def remove_by_uid(cls, uid):
+		with ndb.Client().context():
+			user = cls.query(cls.uid == uid).get()
+			if user:
+				user.key.delete() 
+			else:
+				return False
+			return True
 
 	@classmethod
 	def authenticate(cls, uid):

@@ -63,15 +63,16 @@
 
     <div class="card rounded-lg">
         <div class="card-body">
-            <h4 class="card-title card-callout">{{ username }}</h4>
+            <h4 class="card-title card-callout">Welcome, {{ username }}</h4>
 			<p class="card-text"></p>
 
-			<h5 class="card-title">API Token:</h5>
+			<h5 class="card-title">This is your API Token:</h5>
             <p class="card-text"><pre><span></span>{{api_token}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre></p>
-
+            <p class="card-text">You may delete your "account" here at anytime. Any secure tokens you have given us will be permanently deleted. This process is irrevokable.</p>
 			<p class="card-text">
                 <button class="btn btn-danger delete-button" data-table-id="{{ dbid }}">Delete Login</button>
         	</p>
+        	<p class="card-text"><strong>Note:</strong> Your data on FeatureBase Cloud will be left intact, and you may elect to remove it manually there.</p>
         </div>
     </div>
 
@@ -100,6 +101,12 @@ $(document).ready(function() {
 			$('span.command-copy').removeClass('flash');
 		}, 500);
 	});
+   $(".delete-button").click(function() {
+        if (confirm("Are you sure you want to delete your account? This action is irreversible.")) {
+            // If confirmed, navigate to the /remove_all_caution path
+            window.location.href = "/remove_all_caution";
+        }
+    });
 });
 </script>
 

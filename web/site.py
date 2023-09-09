@@ -16,6 +16,7 @@ from flask_login import current_user
 
 from lib.util import random_string
 from lib.ai import ai
+from lib.tasks import list_tasks
 
 from web.models import Table
 
@@ -36,6 +37,16 @@ def sitemap():
 def index():
 	return render_template(
 		'pages/home.html'
+	)
+
+@site.route('/tasks')
+@site.route('/jobs')
+@flask_login.login_required
+def get_all_tasks():
+	_tasks = list_tasks(current_user.uid)
+	username = current_user.name
+	return render_template(
+		'pages/tasks.html', tasks=_tasks, username=username
 	)
 
 # main route

@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,10 +45,10 @@
     <a href="/tables">
         <i class="fas fa-table"></i> Tables
     </a>
-    <a href="/models" class="highlighted-link">
+    <a href="/models">
         <i class="fas fa-cogs"></i> Models
     </a>
-    <a href="/jobs">
+    <a href="/jobs" class="highlighted-link">
         <i class="fas fa-tasks"></i> Jobs
     </a>
     <a href="/settings">
@@ -58,57 +61,41 @@
     {% for message in get_flashed_messages() %}
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
-    
-    <h2 class="page_heading">Models</h2>
 
-    <div class="card rounded-lg">
-        <div class="card-body">
-            <h4 class="card-title card-callout">Embedding Models</h4>
-			<p class="card-text">FeatureBase AI transparently supports calculating dense vectors for text sent to table endpoints. Our current embeddings models for producing these vectors (numeric arrays) include:</p>
-			<p class="card-text">
-				<ul>
-				    <li>Ada-002-Similarity by OpenAI</li>
-				    <li>Instructor Large</li>
-				    <li>Instructor XL</li>
-				</ul>
-			</p>
-			<p class="card-text">A common application of text embeddings is measuring text similarity. The resulting vectors from these types of models can be weighted to quantify how similar or dissimilar texts are to each other.</p>
-        </div>
-        <div class="card-body">
-            <h4 class="card-title card-callout">Keyterm Models</h4>
-			<p class="card-text">FeatureBase AI supports transparent keyterm extraction for text sent to table endpoints. Our current keyterm models include:</p>
-			<p class="card-text">
-				<ul>
-				    <li>GPT-4</li>
-				    <li>GPT-3.5-turbo</li>
-				    <li>BERTopic</li>
-				</ul>
-			</p>
-			<p class="card-text">Keyterm extraction is used by FeatureBaseAI in conjunction with embeddings to create a balanced graph of entries in FeatureBase using a technique called SlothANN. Because FeatureBase can scale to millions or billions of entries, these graphs can be used to segment the vector space for efficent similarity searches.</p>
-			<p class="card-text">
-	        <button type="button" class="btn btn-dark" data-toggle="modal" id="modelFormModal">
-	            Add Table
-	        </button>
-        </div>
-        <div class="card-body">
-            <h4 class="card-title card-callout">Other Models</h4>
-			<p class="card-text">In the near term, FeatureBaseAI is planning on supporting many different types of models for processing text and other data sent to its endpoints. Templates will become available for models added to the system, which will likely include:</p>
-			<p class="card-text">
-				<ul>
-				    <li>CodeLLaMa Instruct</li>
-				    <li>LLaMa 2
-				    <li>Claude v2</li>
-				    <li>OpenAI's GPT</li>
-				    <li>Bard</li>
-				    <li>
-				</ul>
-			</p>
-			<p class="card-text">Models may be considered a union of templates, data storage for prompting, and a specific trained model. Additionally, FeatureBaseAI will also provide support for training models in the near future, using datasets created by training the models on the data ingested previously.</p>
-			<p class="card-text">
-        </div>
-    </div>
+    <h2 class="page_heading">Active Jobs</h2>
 
+    {% if tasks %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Dispatch Count</th>
+                    <th>Next Run</th>
+                    <th>Log</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                    <tr>
+                        <td>{{ task.name }}</td>
+                        <td>{{ task.dispatch_count }}</td>
+                        <td>{{ task.schedule_time }}</td>
+                        <td>{{ task.log }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button class="reload-button btn btn-success" onclick="location.reload()">
+            <i class="fas fa-sync-alt"></i> Reload
+        </button>
+    {% else %}
+        <p>The job queue is empty.</p>
+      	<button type="button" class="btn btn-dark" data-toggle="modal" id="modelFormModal">
+	        View Tables
+	    </button>
+    {% endif %}
 </div>
+
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -121,9 +108,16 @@ $(document).ready(function() {
 	$("#modelFormModal").on("click", function() {
 	    window.location.href = "/tables";
 	});
+    function reloadPage() {
+        location.reload();
+    }
+
+    // Reload the page once per minute (60,000 milliseconds)
+    setInterval(reloadPage, 60000);
 });
 </script>
 
 </script>
 </body>
 </html>
+
