@@ -19,26 +19,28 @@
         </div>
 
         <p class="lead">An experimental tool connecting your <a href="https://cloud.featurebase.com/">FeatureBase Cloud</a> account with AI models to enable advanced <a href="https://en.wikipedia.org/wiki/Enterprise_search">enterprise search</a> & <a href="https://www.promptingguide.ai/techniques/rag">RAG</a>.</p>
-
         <form autocomplete="off" id="{{app_id}}" action="/login" method="post">
           <div class="form-group">
-            <label>Get your <a href="https://cloud.featurebase.com/databases" target=_blank>database ID</a>...</label>
-            <input autofocus name="dbid" id="dbid-{{app_id}}" type="text" class="form-control" placeholder="Enter your database ID">
-            <label>Get your <a href="https://cloud.featurebase.com/configuration/api-keys" target=_blank>API token</a>...</label>
-            <input name="db_token" type="password" id="token-{{app_id}}" type="text" class="form-control" placeholder="Enter your API key (token)">
-            {% if next %}
-            <input type="hidden" name="next" value="{{next}}">
-            {%endif%}
-            <input type="hidden" name="transaction_id" value="{{transaction_id}}">
-            <small class="form-text text-muted">
-              {% for message in get_flashed_messages() %}
-              <div class="flash">{{ message }}</div>
-              {% endfor %}
-            </small>
+            <label for="dbid">Get your <a href="https://cloud.featurebase.com/databases" target="_blank">database ID</a>...</label>
+            <input autocomplete="off" id="dbid-{{app_id}}" name="dbid" type="text" class="form-control" placeholder="Enter your database ID" data-1p-ignore>
           </div>
+          <div class="form-group">
+            <label for="db_token">Get your <a href="https://cloud.featurebase.com/configuration/api-keys" target="_blank">API token</a>...</label>
+            <input autocomplete="off" id="token-{{app_id}}" name="db_token" type="password" class="form-control" placeholder="Enter your API key (token)" data-1p-ignore>
+          </div>
+          {% if next %}
+          <input type="hidden" name="next" value="{{next}}">
+          {% endif %}
+          <input type="hidden" name="transaction_id" value="{{transaction_id}}">
+          <small class="form-text text-muted">
+            {% for message in get_flashed_messages() %}
+            <div class="flash">{{ message }}</div>
+            {% endfor %}
+          </small>
           <button type="submit" class="btn btn-primary" title="Verify your token.">Authenticate</button>
           <a href="/" class="btn btn-outline-dark" title="Leave this place.">Cancel</a>
         </form>
+
       </div>
     </div>
     <div class="col-sm-3">

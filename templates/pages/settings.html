@@ -21,7 +21,7 @@
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center" href="/logout" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{username}}
                 </a>
                 <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
@@ -34,7 +34,12 @@
 
 <!-- Left Sidebar Navigation -->
 <div class="sidebar">
-    <a href="/tables" class="highlighted-link">
+    <!-- Include your sidebar links here -->
+</div>
+
+<!-- Left Sidebar Navigation -->
+<div class="sidebar">
+    <a href="/tables">
         <i class="fas fa-table"></i> Tables
     </a>
     <a href="/models">
@@ -43,7 +48,7 @@
     <a href="/jobs">
         <i class="fas fa-tasks"></i> Jobs
     </a>
-    <a href="/settings">
+    <a href="/settings" class="highlighted-link">
         <i class="fas fa-cog"></i> Settings
     </a>
 </div>
@@ -54,42 +59,18 @@
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
     
-    <h2 class="page_heading">Table Details</h2>
+    <h2 class="page_heading">Settings</h2>
 
-    <!-- Display Table Details -->
     <div class="card rounded-lg">
         <div class="card-body">
-            <h4 class="card-title card-callout">{{ table.name }}</h4>
-
-			<p class="card-text">
-			    This table is running the <strong>{{ table.model }}</strong> and <strong>{{ table.keyterm_model }}</strong> models.
-			</p>
-
-            <p class="card-text"></p>
-
-			<pre><span></span>https://ai.featurebase.com/ingest/{{ table.tid }}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
-
-            <p class="card-text">
-                Use curl to test:
-            </p>
-
-<pre><span></span>curl -X POST \
--H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."]}' \
-"https://ai.featurebase.com/tables/ingest/{{table.tid}}?token={{token}}"
-<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
-
-            <p class="card-text"></p>
-            <p class="card-text">Sample results:</p>
-<pre><span></span>{
-  "_id": "FladzA",
-  "keyterms": ['door', 'silence', 'sudden', 'knock'],
-  "text": "There was a sudden knock at the door, then silence.",
-  "embedding": [0.05333335, 0.020197952, 0.012141972, -0.041954238, -0.055371083, ...]
-}</span></pre>
+            <h4 class="card-title card-callout">{{ username }}</h4>
 			<p class="card-text"></p>
+
+			<h5 class="card-title">API Token:</h5>
+            <p class="card-text"><pre><span></span>{{api_token}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre></p>
+
 			<p class="card-text">
-                <button class="btn btn-danger delete-button" data-table-id="{{ table.tid }}">Delete {{table.id}}</button>
+                <button class="btn btn-danger delete-button" data-table-id="{{ dbid }}">Delete Login</button>
         	</p>
         </div>
     </div>
@@ -104,26 +85,7 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-    // delete button
-    $(".delete-button").on("click", function () {
-        var tableId = $(this).data("table-id");
-        console.log(tableId);
-        var $this = $(this);
-        $this.addClass("blinking");
-        // Send an AJAX request to delete the table with the DELETE method
-        $.ajax({
-            url: '/tables/' + tableId,
-            type: 'DELETE',
-            success: function (response) {
-                window.location.href = "/tables";
-            },
-            error: function (error) {
-                console.error("Error deleting table:", error);
-            }
-        });
-    });
-
-    // copy things
+	// copy things
 	$('span.command-copy').click(function(e) {
 		var preElement = $(this).closest('pre');
 		var text = preElement.text().trim();

@@ -47,18 +47,19 @@ class Table(ndb.Model):
 	uid = ndb.StringProperty()
 	name = ndb.StringProperty()
 	model = ndb.StringProperty()
+	keyterm_model = ndb.StringProperty()
 	schema = ndb.JsonProperty()
-	extract = ndb.BooleanProperty()
 	openai_token = ndb.StringProperty()
 
 	@classmethod
-	def create(cls, uid, name, model, extract, openai_token):
+	def create(cls, uid, name, model, keyterm_model, openai_token):
+		print(keyterm_model)
 		with ndb.Client().context():
 			current_utc_time = datetime.datetime.utcnow()
 			table = cls.query(cls.uid == uid,cls.name == name).get()
 			if not table:
 				tid = random_string(size=17)
-				table = cls(tid=tid, uid=uid, name=name, model=model, extract=extract, openai_token=openai_token)
+				table = cls(tid=tid, uid=uid, name=name, model=model, keyterm_model=keyterm_model, openai_token=openai_token)
 				table.put()
 
 			return table.to_dict()

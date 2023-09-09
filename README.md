@@ -1,6 +1,8 @@
 # SlothAI: Model API Manager
 SlothAI serves various models from a Google AppEngine project. Job deployment is managed using a Button box.
 
+SlothAI implements [SlothANN](https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothANN.md), a new type of approximate nearest neighbor indexing and search strategy for efficiently handling large volumes of high-dimensional data in data analysis and information retrieval tasks.
+
 Authentication is currently limited to FeatureBase tokens ONLY. You must have a FeatureBase cloud account to use the application.
 
 ## Configuration

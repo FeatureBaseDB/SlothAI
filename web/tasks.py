@@ -57,7 +57,7 @@ def process_tasks(cron_key):
 		selected_box = random.choice(active_sloths)
 	else:
 		# no boxes to run task
-
+		print(boxes)
 		# pick a random box
 		selected_box_name = random.choice(other_boxes).get('box_id')
 

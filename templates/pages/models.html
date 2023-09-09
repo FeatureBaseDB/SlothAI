@@ -21,7 +21,7 @@
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center" href="/logout" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{username}}
                 </a>
                 <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
@@ -34,10 +34,15 @@
 
 <!-- Left Sidebar Navigation -->
 <div class="sidebar">
-    <a href="/tables" class="highlighted-link">
+    <!-- Include your sidebar links here -->
+</div>
+
+<!-- Left Sidebar Navigation -->
+<div class="sidebar">
+    <a href="/tables">
         <i class="fas fa-table"></i> Tables
     </a>
-    <a href="/models">
+    <a href="/models" class="highlighted-link">
         <i class="fas fa-cogs"></i> Models
     </a>
     <a href="/jobs">
@@ -54,43 +59,47 @@
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
     
-    <h2 class="page_heading">Table Details</h2>
+    <h2 class="page_heading">Models</h2>
 
-    <!-- Display Table Details -->
     <div class="card rounded-lg">
         <div class="card-body">
-            <h4 class="card-title card-callout">{{ table.name }}</h4>
-
+            <h4 class="card-title card-callout">Embedding Models</h4>
+			<p class="card-text">FeatureBase AI transparently supports calculating dense vectors for text sent to table endpoints. Our current embeddings models for producing these vectors (numeric arrays) include:</p>
 			<p class="card-text">
-			    This table is running the <strong>{{ table.model }}</strong> and <strong>{{ table.keyterm_model }}</strong> models.
+				<ul>
+				    <li>Ada-002-Similarity by OpenAI</li>
+				    <li>Instructor Large</li>
+				    <li>Instructor XL</li>
+				</ul>
 			</p>
-
-            <p class="card-text"></p>
-
-			<pre><span></span>https://ai.featurebase.com/ingest/{{ table.tid }}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
-
-            <p class="card-text">
-                Use curl to test:
-            </p>
-
-<pre><span></span>curl -X POST \
--H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."]}' \
-"https://ai.featurebase.com/tables/ingest/{{table.tid}}?token={{token}}"
-<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
-
-            <p class="card-text"></p>
-            <p class="card-text">Sample results:</p>
-<pre><span></span>{
-  "_id": "FladzA",
-  "keyterms": ['door', 'silence', 'sudden', 'knock'],
-  "text": "There was a sudden knock at the door, then silence.",
-  "embedding": [0.05333335, 0.020197952, 0.012141972, -0.041954238, -0.055371083, ...]
-}</span></pre>
-			<p class="card-text"></p>
+			<p class="card-text">A common application of text embeddings is measuring text similarity. The resulting vectors from these types of models can be weighted to quantify how similar or dissimilar texts are to each other.</p>
+        </div>
+        <div class="card-body">
+            <h4 class="card-title card-callout">Keyterm Models</h4>
+			<p class="card-text">FeatureBase AI supports transparent keyterm extraction for text sent to table endpoints. Our current keyterm models include:</p>
 			<p class="card-text">
-                <button class="btn btn-danger delete-button" data-table-id="{{ table.tid }}">Delete {{table.id}}</button>
-        	</p>
+				<ul>
+				    <li>GPT-4</li>
+				    <li>GPT-3.5-turbo</li>
+				    <li>BERTopic</li>
+				</ul>
+			</p>
+			<p class="card-text">Keyterm extraction is used by FeatureBaseAI in conjunction with embeddings to create a balanced graph of entries in FeatureBase. Because FeatureBase can scale to millions or billions of entries, these graphs can be used to segment the vector space and make all of these vectors searchable.</p>
+			<p class="card-text">
+        </div>
+        <div class="card-body">
+            <h4 class="card-title card-callout">Other Models</h4>
+			<p class="card-text">In the near term, FeatureBaseAI is planning on supporting many different types of models for processing text and other data sent to its endpoints. Models added to the system will likely include:</p>
+			<p class="card-text">
+				<ul>
+				    <li>CodeLlama</li>
+				    <li>Claude v2</li>
+				    <li>OpenAI (templated)</li>
+				    <
+				</ul>
+			</p>
+			<p class="card-text">Models may be considered a union of templates, data storage for prompting, and a specific trained model. Additionally, FeatureBaseAI will also provide support for training models in the near future, using datasets created by chaining the models on the data ingested.</p>
+			<p class="card-text">
         </div>
     </div>
 
@@ -104,26 +113,7 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-    // delete button
-    $(".delete-button").on("click", function () {
-        var tableId = $(this).data("table-id");
-        console.log(tableId);
-        var $this = $(this);
-        $this.addClass("blinking");
-        // Send an AJAX request to delete the table with the DELETE method
-        $.ajax({
-            url: '/tables/' + tableId,
-            type: 'DELETE',
-            success: function (response) {
-                window.location.href = "/tables";
-            },
-            error: function (error) {
-                console.error("Error deleting table:", error);
-            }
-        });
-    });
-
-    // copy things
+	// copy things
 	$('span.command-copy').click(function(e) {
 		var preElement = $(this).closest('pre');
 		var text = preElement.text().trim();

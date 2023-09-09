@@ -76,6 +76,7 @@ def table_delete(tid):
 	if table:
 		# delete table
 		Table.delete(table.get('tid'))
+		flash(f"Deleted table `{table.get('name')}`.")
 		return jsonify(json_data), 200
 	else:
 		json_data['response'] = "error"
@@ -94,14 +95,15 @@ def tables_add():
 	if request.is_json:
 			json_data = request.get_json()
 
-			if 'yes' in json_data.get('keyTermsOptions'):
-				extract = True
-			else:
-				extract = False
-
-			_table = Table.create(current_user.uid, json_data.get('tableName'), json_data.get('modelSelect'), extract, json_data.get('openaiToken'))
-			
-			flash(f"Created table `{json_data.get('tableName')}`.")
-			return jsonify(_table), 200
-	else:
-		return "error", 501
+			_table = Table.create(
+				current_user.uid, 
+				json_data.get('tableName'), 
+				json_data.get('embeddingModel'),
+				json_data.get('keytermModel'),
+				json_data.get('openaiToken')
+			)
+			print(_table)			
+			if _table:
+				return jsonify(_table), 200
+	
+	return "error", 501

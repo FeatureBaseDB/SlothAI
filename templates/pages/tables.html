@@ -7,67 +7,7 @@
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <style>
-        .code-block {
-            background-color: #f5f5f5; /* Light gray background */
-            border-radius: 5px;
-            padding: 15px;
-            font-family: "Courier New", Courier, monospace;
-            white-space: pre-wrap; /* To ensure long lines of code don't overflow the container */
-        }
-        
-        .navbar {
-            background-color: #131138;
-        }
-
-        /* Customize sidebar styles */
-        .sidebar {
-            height: 100%;
-            width: 250px;
-            position: fixed;
-            top: 55px;
-            left: 0;
-            background-color: #131138;
-            padding-top: 20px;
-        }
-
-        .sidebar a {
-            padding: 10px 15px;
-            text-decoration: none;
-            font-size: 18px;
-            color: #fff;
-            display: block;
-        }
-
-        .highlighted-link {
-            background-color: #393758;
-        }
-
-        .sidebar a:hover {
-            background-color: #25346B;
-            color: #FFF;
-        }
-
-        /* Adjust content margin to avoid overlapping with sidebar */
-        .content {
-            margin-left: 260px; /* Adjust as needed */
-            padding-left: 20px;
-        }
-
-        .page_heading {
-            padding-bottom: 14px;
-            color: #0000B7;
-        }
-
-        .nav-link {
-            color: white; /* Change text color for better visibility */
-        }
-
-        .content {
-            width: 70%;
-        }
-
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.ingest-lr.com/LogRocket.min.js" crossorigin="anonymous"></script>
     <script>window.LogRocket && window.LogRocket.init('9oiipa/steve');</script>
 </head>
@@ -99,13 +39,13 @@
     <a href="#" class="highlighted-link">
         <i class="fas fa-table"></i> Tables
     </a>
-    <a href="#">
+    <a href="/models">
         <i class="fas fa-cogs"></i> Models
     </a>
-    <a href="#">
+    <a href="/jobs">
         <i class="fas fa-tasks"></i> Jobs
     </a>
-    <a href="#">
+    <a href="/settings">
         <i class="fas fa-cog"></i> Settings
     </a>
 </div>
@@ -120,12 +60,13 @@
 
 
     {% if tables %}
+
         <table class="table table-bordered">
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>Model</th>
-                    <th>Keyterms</th>
+                    <th>Embedding Model</th>
+                    <th>Keyterm Model</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -134,9 +75,9 @@
                     <tr>
                         <td><a href="/tables/{{table.tid}}">{{ table.name }}</a></td>
                         <td>{{ table.model }}</td>
-                        <td>{{ table.extract }}</td>
+                        <td>{{ table.keyterm_model }}</td>
                         <td>
-                            <button class="btn btn-sm btn-danger delete-button" data-table-id="{{ table.tid }}">X</button>
+                            <button class="delete-button btn btn-danger" data-table-id="{{ table.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
                         </td>
                     </tr>
                 {% endfor %}
@@ -147,11 +88,12 @@
         </button>
 
     {% else %}
+
         <div class="card rounded-lg">
             <div class="card-body">
-                <h5 class="card-title">Task: Create a new text storage table.</h5>
+                <h4 class="card-title card-callout">Task: Create a new text storage table.</h5>
                 <p class="card-text">
-                    Click on the "Add Table" button. When prompted, select the model you want to run on the text sent to the table and whether you want keyterms extracted by GPT-4 (requires giving us an OpenAI token).
+                    Click on the "Add Table" button. When prompted, select the models you want to run on the data sent to its endpoint.
                 </p>
                 <!-- Button trigger modal -->
                 <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
@@ -187,7 +129,7 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modelFormModalLabel">Add Table</h5>
+                    <h4 class="modal-title card-callout" id="modelFormModalLabel">Add Table</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -199,36 +141,28 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
                             <input type="text" class="form-control" id="tableName" placeholder="Enter table name">
                         </div>
                         <div class="form-group">
-                            <label for="modelSelect">Select a Model</label>
-                            <select class="form-control" id="modelSelect">
-                                <optgroup label="Embeddings">
+                            <label for="EmbeddingModel">Embedding Model</label>
+                            <select class="form-control" id="EmbeddingModel">
+                                <optgroup label="Embedding Models">
                                     <option>instructor-large</option>
                                     <option>instructor-xl</option>
                                     <option>openai-ada-002</option>
                                 </optgroup>
-                                <!-- Add more optgroups or options as needed -->
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Extract Keyterms</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="keyTermsOptions" id="extractYes" value="yes">
-                                <label class="form-check-label" for="extractYes">
-                                    Yes
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="keyTermsOptions" id="extractNo" value="no" checked> <!-- added "checked" here -->
-                                <label class="form-check-label" for="extractNo">
-                                    No
-                                </label>
-                            </div>
+                            <label for="KeytermModel">Keyterm Model</label>
+                            <select class="form-control" id="KeytermModel">
+                                <optgroup label="Keyterm Models">
+                                    <option>gpt-3.5-turbo</option>
+                                    <option>gpt-4</option>
+                                </optgroup>
+                            </select>
                         </div>
-                        <div class="form-group d-none" id="tokenField">
+                        <div class="form-group" id="tokenField">
                             <label for="openaiToken">OpenAI Token</label>
                             <input type="text" class="form-control" id="openaiToken" placeholder="Enter OpenAI Token">
                         </div>
-                        <!-- Add more form fields as needed -->
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -251,53 +185,28 @@ $(document).ready(function() {
     // Show the notice
     $('#tempNotice').removeClass('d-none');
 
-    // Event listener for when the radio buttons change
-    function checkSelections() {
-        if ($('#modelSelect').val() === 'openai-ada-002' || $('#extractYes').is(':checked')) {
-            $('#tokenField').removeClass('d-none');
-        } else {
-            $('#tokenField').addClass('d-none');
-        }
-    }
-
-    // Event listeners for when the model dropdown or the radio buttons change
-    $('#modelSelect').on('change', checkSelections);
-    $('input[name="keyTermsOptions"]').on('change', checkSelections);
-
     // After 5 seconds, hide the notice
     setTimeout(function() {
         $('#tempNotice').addClass('d-none');
     }, 5000); // 5000 milliseconds = 5 seconds
 
-
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
-        // Get the table ID or relevant information needed for the delete operation
         var tableId = $(this).data("table-id"); // Adjust this based on your data structure
-
-        // Store the current reference to $(this) in a variable to access it inside the AJAX success callback
         var $this = $(this);
-
-        // Get the total number of rows in the table
         var rowCount = $(".table tbody tr").length;
-
+        $this.addClass("blinking");
         // Send an AJAX request to delete the table with the DELETE method
         $.ajax({
-            url: '/tables/' + tableId, // Replace with your server endpoint
+            url: '/tables/' + tableId,
             type: 'DELETE',
             success: function (response) {
-                // Handle success response if needed
-                // For example, you can remove the table row from the UI
                 $this.closest("tr").remove();
-
-                // Check if the deleted row was the last row in the table
                 if (rowCount === 1) {
-                    // Reload the page after a successful delete
                     window.location.reload();
                 }
             },
             error: function (error) {
-                // Handle error if needed
                 console.error("Error deleting table:", error);
             }
         });
@@ -306,22 +215,19 @@ $(document).ready(function() {
 
     // When the "Create" button is clicked
     $("#modelFormModal").on("click", ".btn-dark", function() {
-        // Get form data
         var formData = {
             tableName: $("#tableName").val(),
-            modelSelect: $("#modelSelect").val(),
-            keyTermsOptions: $("input[name='keyTermsOptions']:checked").val(),
+            embeddingModel: $("#EmbeddingModel").val(),
+            keytermModel: $("#KeytermModel").val(),
             openaiToken: $("#openaiToken").val()
-            // Add more form fields as needed
         };
-
+        console.log(formData);
         // Move this to a notice in the form
         if (!/^[a-z-]+$/.test(formData.tableName)) {
             alert("Invalid table name. Table name should only contain lowercase letters and '-'");
         } else if ((formData.keyTermsOptions === 'yes' || formData.modelSelect === 'ada-002') && formData.openaiToken === "") {
             alert("OpenAI Token is required for selected options.");
         } else {
-            // Send a POST request to the /table endpoint
             $.ajax({
                 type: "POST",
                 url: "/tables",
@@ -329,11 +235,9 @@ $(document).ready(function() {
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function(response) {
-                    // Reload the page
-                    location.reload();
+                    window.location.href = "/tables/"+response.tid;
                 },
                 error: function(error) {
-                    // Handle error if needed
                     console.error("Error submitting form:", error);
                 }
             });

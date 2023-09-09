@@ -38,6 +38,32 @@ def index():
 		'pages/home.html'
 	)
 
+# main route
+@site.route('/settings', methods=['GET'])
+@flask_login.login_required
+def settings():
+	# get the user and their tables
+	username = current_user.name
+	api_token = current_user.api_token
+	dbid = current_user.dbid
+
+	return render_template(
+		'pages/settings.html', username=username, api_token=api_token, dbid=dbid
+	)
+
+# main route
+@site.route('/models', methods=['GET'])
+@flask_login.login_required
+def models():
+	# get the user and their tables
+	username = current_user.name
+	api_token = current_user.api_token
+	dbid = current_user.dbid
+
+	return render_template(
+		'pages/models.html', username=username, api_token=api_token, dbid=dbid
+	)
+
 
 # PAGE HANDLERS
 @site.route('/tables', methods=['GET'])
@@ -47,6 +73,7 @@ def tables():
 	username = current_user.name
 
 	tables = Table.get_all_by_uid(uid=current_user.uid)
+
 	_tables = []
 	with client.context():
 		if tables:
@@ -62,9 +89,12 @@ def table_view(tid):
 	# get the user and their tables
 	username = current_user.name
 	token = current_user.api_token
-	print(token)
 
 	_table = Table.get_by_uid_tid(uid=current_user.uid, tid=tid)
+
+	if not _table:
+		return redirect(url_for('site.tables'))
+	
 	print(_table)
 	return render_template('pages/table.html', username=username, token=token, table=_table)
 
