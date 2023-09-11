@@ -78,7 +78,7 @@ def process_tasks(cron_key, uid):
 
 
 	document['ip_address'] = selected_box.get('ip_address')
-	
+
 	try:
 		# get the dbid's token
 		user = User.get_by_uid(document.get('uid'))
@@ -89,18 +89,19 @@ def process_tasks(cron_key, uid):
 				raise Exception("embedding error")
 			else:
 				# horrible chaining, for now
-				document['embedding'] = ai_document.get('embedding')
-		else:
-			ai_document = document
+				document.update(ai_document)
+
 
 		if "gpt" in document.get('keyterm_model'):
 			ai_document = ai("chatgpt_extract_keyterms", document)
-			if 'error' in ai_document:
+			document.update(ai_document)
+
+			if 'error' in document:
 				raise Exception("keyterm extraction error")
-		else:
-			ai_document = document
 
 	except Exception as ex:
+		import traceback
+		print(traceback.format_exc())
 		print(ex)
 		return ex, 503 # return error to requeue
 
@@ -113,13 +114,14 @@ def process_tasks(cron_key, uid):
 	err = create_table(document.get('name'), "(_id string, keyterms stringset, text string, embedding vector(768))", {"dbid": user.get('dbid'), "db_token": user.get('db_token')})
 	# TODO: unhandled error
 
-	keyterms = ai_document.get('keyterms')
-
+	keyterms = document.get('keyterms')
+	embeddings = document.get('embeddings')
 	values = ""
-	for i, text in enumerate(ai_document.get('text')):
+
+	for i, text in enumerate(document.get('text')):
 		_id = random_string(6)
 		try:
-			values = values + f"('{_id}', {keyterms[i]}, '{text}', {ai_document.get('embedding')[i]}),"
+			values = values + f"('{_id}', {keyterms[i]}, '{text}', {embeddings[i]}),"
 		except Exception as ex:
 			# dump the text into the table because something went wrong
 			print(ex)
@@ -127,9 +129,12 @@ def process_tasks(cron_key, uid):
 
 	values = values.rstrip(',')
 	sql = f"INSERT INTO {document.get('name')} VALUES {values};"
-	
+
 	document = {"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')}
 	resp, err = featurebase_query(document)
-	# TODO: unhandled error
 
-	return "success", 200
+	# TODO: unhandled error
+	if err:
+		return "failed to insert data", 500
+	else:
+		return "success", 200

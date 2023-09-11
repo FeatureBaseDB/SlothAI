@@ -94,7 +94,7 @@ def instructor(document):
 
 	# Check the response status code for success
 	if response.status_code == 200:
-		document['embedding'] = response.json()
+		document['embeddings'] = response.json().get('embeddings')
 	else:
 		print(f"POST request failed with status code {response.status_code}: {response.text}")
 
@@ -119,7 +119,8 @@ def ada(document):
 	for _text in document.get('text'): 
 		texts.append(_text.replace("\n", " "))
 
-	ai_document = openai.Embedding.create(input=texts, model=model)['data'][0]['embedding']
+	ai_document = openai.Embedding.create(input=texts, model=model)['data']
+	print(ai_document)
 
 	# process and return
 	return ai_document
