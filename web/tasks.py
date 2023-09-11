@@ -30,34 +30,10 @@ def process_tasks(cron_key, uid):
 	if cron_key != config.cron_key:
 		return "error auth", 401
 
-	boxes = Box.get_boxes()
-
-	# Check if there are any active boxes
-	active_sloths = []
-	other_boxes = []
-	if boxes:
-		for box in boxes:
-			if box.to_dict().get('status') == 'RUNNING':
-				active_sloths.append(box.to_dict())
-			else:
-				other_boxes.append(box.to_dict())
-
-	if active_sloths:
-		# If there are active boxes, select one at random
-		selected_box = random.choice(active_sloths)
-	else:
-		# no boxes to run task
-
-		# pick a random box
-		selected_box = random.choice(other_boxes)
-
-		# start a box
-		box_start(selected_box.get('box_id'), selected_box.get('zone'))
-		return "starting a box", 503 # exit old task
-
 	# Parse the task payload sent in the request.
 	task_payload = request.get_data(as_text=True)
-	
+
+	# grab the document
 	try:
 		document = json.loads(task_payload)
 	except json.JSONDecodeError as e:
@@ -66,6 +42,39 @@ def process_tasks(cron_key, uid):
 	except Exception as e:
 		# Handle other exceptions that may occur during processing.
 		return f"Error processing task: {e}", 500
+
+	# hardcode models requiring boxes
+	box_required = False
+
+	# test if we need to run the model (TODO make this non-hardcoded)
+	if "instructor" in document.get('model') or "BERTable" in document.get('keyterm_model'):
+		box_required = True
+
+	if box_required:
+		boxes = Box.get_boxes()
+
+		# Check if there are any active boxes
+		active_sloths = []
+		other_boxes = []
+		if boxes:
+			for box in boxes:
+				if box.to_dict().get('status') == 'RUNNING':
+					active_sloths.append(box.to_dict())
+				else:
+					other_boxes.append(box.to_dict())
+
+		if active_sloths:
+			# If there are active boxes, select one at random
+			selected_box = random.choice(active_sloths)
+		else:
+			# no boxes to run task
+
+			# pick a random startable box
+			selected_box = random.choice(other_boxes)
+
+			# start a box
+			box_start(selected_box.get('box_id'), selected_box.get('zone'))
+			return "starting a box", 503 # requeue
 
 
 	document['ip_address'] = selected_box.get('ip_address')
@@ -77,44 +86,42 @@ def process_tasks(cron_key, uid):
 		if "instructor" in document.get('model'):
 			ai_document = ai("instructor", document)
 			if 'error' in ai_document:
-				raise Exception("AI error")
+				raise Exception("embedding error")
+			else:
+				# horrible chaining, for now
+				document['embedding'] = ai_document.get('embedding')
+		else:
+			ai_document = document
 
+		if "gpt" in document.get('keyterm_model'):
+			ai_document = ai("chatgpt_extract_keyterms", document)
+			if 'error' in ai_document:
+				raise Exception("keyterm extraction error")
+		else:
+			ai_document = document
 
 	except Exception as ex:
 		print(ex)
 		return ex, 503 # return error to requeue
 
 	"""
-
-	document = ai("chatgpt_complete_dict", {"text": sentence})
-	print(document.get('keyterms'))
-	from lib.database import featurebase_query, create_table
-	auth = {"dbid": current_user.dbid, "token": current_user.db_token}
-	create_table('sample', f'(_id string, keyterm stringset, sentence string, embedding vector(768))', auth)
-
-	sql = f"INSERT INTO sample VALUES('{random_string(6)}', {document.get('keyterms')}, '{sentence}', {embeddings[0]});"
-	result = featurebase_query({"sql": sql, "dbid": current_user.dbid, "token": current_user.db_token})
-
 	sql = f"select _id, sentence, keyterm, cosine_distance(select embedding from sample where sentence = '{sentence}', embedding) AS distance FROM sample ORDER BY distance ASC;"
 
-	result = featurebase_query({"sql": sql, "dbid": current_user.dbid, "token": current_user.db_token})
-	results = result.get('results')
-
-	# Return a response, redirect, or render a template as needed
-		
-	return render_template('pages/home.html', results=results)
 	"""
-	
+
 	# create table
 	err = create_table(document.get('name'), "(_id string, keyterms stringset, text string, embedding vector(768))", {"dbid": user.get('dbid'), "db_token": user.get('db_token')})
 	# TODO: unhandled error
+
+	keyterms = ai_document.get('keyterms')
 
 	values = ""
 	for i, text in enumerate(ai_document.get('text')):
 		_id = random_string(6)
 		try:
-			values = values + f"('{_id}', [], '{text}', {ai_document.get('embeddings')[i]}),"
+			values = values + f"('{_id}', {keyterms[i]}, '{text}', {ai_document.get('embedding')[i]}),"
 		except Exception as ex:
+			# dump the text into the table because something went wrong
 			print(ex)
 			values = values + f"('{_id}', [], '{text}', []),"
 

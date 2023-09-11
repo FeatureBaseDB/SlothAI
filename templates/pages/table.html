@@ -92,6 +92,9 @@
   ],
   "tid": "{{table.tid}}"
 }</span></pre>
+            <p class="card-text">
+                The ingestion endpoint always requries a <strong>'text'</strong> key and you may enter other keys in your POST object, given they do not use the following reserved field names: <strong>[text, keyterms, embedding, _id, model, tid, keyterm_model]</strong>.
+            </p>
 			<p class="card-text"></p>
 			<p class="card-text">
                 <button class="btn btn-danger delete-button" data-table-id="{{ table.tid }}">Delete {{table.id}}</button>

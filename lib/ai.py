@@ -23,20 +23,19 @@ warnings.filterwarnings("ignore")
 models = {}
 model = lambda f: models.setdefault(f.__name__, f)
 
-def ai(model_name="none", document={}):
-	print("in ai")
-	# get the user's API token	
-	# openai_token = config.openai_token
-	openai_token = "TODO"
+# unhardcode this # TODO
+# does not include schemer model as that uses our token, not the user's
+openai_token_required_models = ["chatgpt_extract_keyterms", "ada"]
 
-	if not openai_token:
+def ai(model_name="none", document={}):
+	# get the user's API token, if available
+	openai_token = document.get('openai_token')
+	
+	if not openai_token and document.get('model') in openai_token_required_models:
 		# rewrite to match document flow
-		document['error'] = "model %s errors with no token." % (model_name)
+		document['error'] = "model %s errors with no token" % (model_name)
 		document['explain'] = "I encountered an error talking with OpenAI."
 		return document
-	else:
-		# set token for model to use
-		document['openai_token'] = openai_token
 
 	# call the model
 	try:
@@ -83,7 +82,7 @@ def instructor(document):
 	ip_address = document.get('ip_address')
 	password = config.sloth_token
 	url = f"http://sloth:{password}@{ip_address}:9898/embed"
-	print(url)
+
 	# Set the headers to indicate that you're sending JSON data
 	headers = {
 		"Content-Type": "application/json"
@@ -95,27 +94,39 @@ def instructor(document):
 
 	# Check the response status code for success
 	if response.status_code == 200:
-		return(response.json())
+		document['embedding'] = response.json()
 	else:
 		print(f"POST request failed with status code {response.status_code}: {response.text}")
 
 
-	document['embedding'] = response.json()
+	return document
 
 @model
 def ada(document):
-	model="text-embedding-ada-002"
+	# this needs to be more dynamic, but for now it's hard coded
+	# load user's openai key then drop it from the document
+	openai.api_key = document.get('openai_token')
+	document.pop('openai_token', None)
+
+	# overide document.get('model') (until we can have those verified)
+	model = document.get('model')
+
+	# more hard coding security(TODO)
+	if model not in ["gpt-4", "gpt-3.5-turbo"]:
+		raise Exception(f"model {model} not found")
 
 	texts = []
 	for _text in document.get('text'): 
 		texts.append(_text.replace("\n", " "))
 
-	ai_document = openai.Embedding.create(input = texts, model=model)['data'][0]['embedding']
+	ai_document = openai.Embedding.create(input=texts, model=model)['data'][0]['embedding']
 
-
+	# process and return
+	return ai_document
+	
 @model
-def chatgpt_complete_dict(document):
-	# load openai key then drop it from the document
+def chatgpt_extract_keyterms(document):
+	# load user's openai key then drop it from the document
 	openai.api_key = document.get('openai_token')
 	document.pop('openai_token', None)
 
@@ -123,17 +134,23 @@ def chatgpt_complete_dict(document):
 	template = load_template("complete_dict_qkg")
 	prompt = template.substitute(document)
 
-	completion = openai.ChatCompletion.create(
-	  model = config.completion_model,
-	  messages = [
-		{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
-		{"role": "user", "content": prompt}
-	  ]
-	)
-	answer = completion.choices[0].message
+	# build a place to put them
+	document['keyterms'] = []
 
-	ai_dict = eval(answer.get('content').replace("\n", ""))
-	
-	return ai_dict
+	for _text in document.get('text'):
+		completion = openai.ChatCompletion.create(
+		  model = config.completion_model,
+		  messages = [
+			{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
+			{"role": "user", "content": prompt}
+		  ]
+		)
+		answer = completion.choices[0].message
+
+		_dict = eval(answer.get('content').replace("\n", ""))
+
+		document['keyterms'].append(_dict.get('keyterms'))
+
+	return document
 
 
