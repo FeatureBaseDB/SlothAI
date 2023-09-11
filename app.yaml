@@ -4,3 +4,8 @@ runtime: python38
 
 env_variables:
     DEV: False
+
+automatic_scaling:
+    min_instances: 5
+    max_instances: 100
+    max_concurrent_requests: 50

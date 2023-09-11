@@ -86,17 +86,18 @@ def process_tasks(cron_key, uid):
 		if "instructor" in document.get('model'):
 			ai_document = ai("instructor", document)
 			if 'error' in ai_document:
+				print("got error in embedding")
 				raise Exception("embedding error")
 			else:
 				# horrible chaining, for now
 				document.update(ai_document)
 
-
 		if "gpt" in document.get('keyterm_model'):
 			ai_document = ai("chatgpt_extract_keyterms", document)
-			document.update(ai_document)
 
+			document.update(ai_document)
 			if 'error' in document:
+				print("error in ktyerm")
 				raise Exception("keyterm extraction error")
 
 	except Exception as ex:

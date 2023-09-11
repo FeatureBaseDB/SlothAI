@@ -5,6 +5,7 @@ import random
 import string
 import requests
 import json
+import time
 
 import openai
 
@@ -120,7 +121,6 @@ def ada(document):
 		texts.append(_text.replace("\n", " "))
 
 	ai_document = openai.Embedding.create(input=texts, model=model)['data']
-	print(ai_document)
 
 	# process and return
 	return ai_document
@@ -131,14 +131,17 @@ def chatgpt_extract_keyterms(document):
 	openai.api_key = document.get('openai_token')
 	document.pop('openai_token', None)
 
-	# substitute things
-	template = load_template("complete_dict_qkg")
-	prompt = template.substitute(document)
-
 	# build a place to put them
-	document['keyterms'] = []
+	keyterms = []
 
 	for _text in document.get('text'):
+		# substitute things
+		template = load_template("complete_dict_qkg")
+		prompt = template.substitute({"text": _text})
+		
+		# hang for a few
+		time.sleep(2)
+		
 		completion = openai.ChatCompletion.create(
 		  model = config.completion_model,
 		  messages = [
@@ -146,11 +149,14 @@ def chatgpt_extract_keyterms(document):
 			{"role": "user", "content": prompt}
 		  ]
 		)
+
 		answer = completion.choices[0].message
 
 		_dict = eval(answer.get('content').replace("\n", ""))
 
-		document['keyterms'].append(_dict.get('keyterms'))
+		keyterms.append(_dict.get('keyterms'))
+
+	document['keyterms'] = keyterms
 
 	return document
 

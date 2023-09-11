@@ -1,4 +1,4 @@
-six==1.16.0
+six==1.16.
 Flask==2.3.3
 Jinja2==3.1.2
 Werkzeug==2.3.7
@@ -8,5 +8,5 @@ Flask-Login==0.6.2
 google-cloud-ndb==2.2.0
 google-cloud-tasks==2.14.1
 coolname==2.2.0
-openai==0.27.2
+openai==0.28.0
 featurebase==0.0.2
