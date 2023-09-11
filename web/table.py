@@ -56,9 +56,14 @@ def ingest_post(tid):
 		document.update(table)
 
 		# write to the job queue
-		create_task(document)
+		job_id = create_task(document)
+		document['job_id'] = job_id
 
-		return jsonify(json_data), 200
+		# pop secure info
+		document.pop('openai_token')
+		document.pop('uid')
+		
+		return jsonify(document), 200
 	else:
 		return jsonify({"response": "not found"}), 404
 

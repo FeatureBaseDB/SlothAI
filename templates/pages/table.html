@@ -62,7 +62,7 @@
             <h4 class="card-title card-callout">{{ table.name }}</h4>
 
 			<p class="card-text">
-			    This table is running the <strong>{{ table.model }}</strong> and <strong>{{ table.keyterm_model }}</strong> models.
+			    This table is running the <strong>{{ table.model }}</strong> and <strong>{{ table.keyterm_model }}</strong> models. Use the following URL to insert with a POST method:
 			</p>
 
             <p class="card-text"></p>
@@ -70,22 +70,27 @@
 			<pre><span></span>https://ai.featurebase.com/ingest/{{ table.tid }}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
 
             <p class="card-text">
-                Use curl to test:
+                Using curl, you can test ingestion:
             </p>
 
-<pre><span></span>curl -X POST \
+<pre><span>curl -X POST \
 -H "Content-Type: application/json" \
 -d '{"text":["There was a knock at the door, then silence."]}' \
-"https://ai.featurebase.com/tables/ingest/{{table.tid}}?token={{token}}"
+"https://ai.featurebase.com/tables/ingest/{{table.tid}}?token={{token}}"</span>
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
 
             <p class="card-text"></p>
             <p class="card-text">Sample results:</p>
-<pre><span></span>{
-  "_id": "FladzA",
-  "keyterms": ['door', 'silence', 'sudden', 'knock'],
-  "text": "There was a sudden knock at the door, then silence.",
-  "embedding": [0.05333335, 0.020197952, 0.012141972, -0.041954238, -0.055371083, ...]
+<pre><span>{
+  "job_id": "07594888642146387281",
+  "keyterm_model": "{{table.keyterm_model}}",
+  "model": "{{table.model}}",
+  "name": "{{table.name}}",
+  "text": [
+    "one more",
+    "There was a knock at the door, then silence."
+  ],
+  "tid": "{{table.tid}}"
 }</span></pre>
 			<p class="card-text"></p>
 			<p class="card-text">

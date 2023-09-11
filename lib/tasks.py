@@ -82,3 +82,7 @@ def create_task(document):
 
 	# Send the task to the Cloud Tasks queue
 	response = client.create_task(parent=parent, task=task)
+	task_id = response.name.split('/')[-1]
+
+	# return the task ID
+	return task_id
