@@ -135,6 +135,16 @@ class Box(ndb.Model):
 			return cls.query(cls.box_id == box_id).get()
 
 	@classmethod
+	def delete(cls, box_id):
+		with ndb.Client().context():
+			box = cls.query(cls.box_id == box_id).get()
+			if box:
+				box.key.delete()
+				return True
+			else:
+				return False
+
+	@classmethod
 	def get_boxes(cls):
 		with ndb.Client().context():
 			boxes = cls.query().fetch()

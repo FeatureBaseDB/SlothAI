@@ -42,6 +42,19 @@ def process_tasks(cron_key, uid):
 			else:
 				other_boxes.append(box.to_dict())
 
+	if active_sloths:
+		# If there are active boxes, select one at random
+		selected_box = random.choice(active_sloths)
+	else:
+		# no boxes to run task
+
+		# pick a random box
+		selected_box = random.choice(other_boxes)
+
+		# start a box
+		box_start(selected_box.get('box_id'), selected_box.get('zone'))
+		return "starting a box", 503 # exit old task
+
 	# Parse the task payload sent in the request.
 	task_payload = request.get_data(as_text=True)
 	
@@ -54,18 +67,6 @@ def process_tasks(cron_key, uid):
 		# Handle other exceptions that may occur during processing.
 		return f"Error processing task: {e}", 500
 
-	if active_sloths:
-		# If there are active boxes, select one at random
-		selected_box = random.choice(active_sloths)
-	else:
-		# no boxes to run task
-
-		# pick a random box
-		selected_box_name = random.choice(other_boxes).get('box_id')
-
-		# start a box
-		box_start(selected_box_name)
-		return "starting a box", 503 # exit old task
 
 	document['ip_address'] = selected_box.get('ip_address')
 	

@@ -1,4 +1,4 @@
 cron:
 - description: "2 minute box job"
-  url: /boxes/status/all/753bs0842ec109
+  url: /cron/boxes/all/753bs0842ec109
   schedule: every 2 minutes
