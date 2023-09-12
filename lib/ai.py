@@ -124,6 +124,7 @@ def ada(document):
 
 	# process and return
 	return ai_document
+
 	
 @model
 def chatgpt_extract_keyterms(document):
@@ -138,22 +139,22 @@ def chatgpt_extract_keyterms(document):
 		# substitute things
 		template = load_template("complete_dict_qkg")
 		prompt = template.substitute({"text": _text})
-		
-		# hang for a few
-		time.sleep(2)
-		
-		completion = openai.ChatCompletion.create(
-		  model = config.completion_model,
-		  messages = [
-			{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
-			{"role": "user", "content": prompt}
-		  ]
-		)
+
+		try:
+			completion = openai.ChatCompletion.create(
+			  model = config.completion_model,
+			  messages = [
+				{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
+				{"role": "user", "content": prompt}
+			  ]
+			)
+		except Exception as ex:
+			print("caught you! ", ex)
 
 		answer = completion.choices[0].message
-
+		
 		_dict = eval(answer.get('content').replace("\n", ""))
-
+		
 		keyterms.append(_dict.get('keyterms'))
 
 	document['keyterms'] = keyterms

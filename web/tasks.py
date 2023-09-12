@@ -30,6 +30,8 @@ def process_tasks(cron_key, uid):
 	if cron_key != config.cron_key:
 		return "error auth", 401
 
+	# TOTO check the uid exists
+
 	# Parse the task payload sent in the request.
 	task_payload = request.get_data(as_text=True)
 
@@ -82,6 +84,8 @@ def process_tasks(cron_key, uid):
 	try:
 		# get the dbid's token
 		user = User.get_by_uid(document.get('uid'))
+		if not user:
+			return "auth error", 403
 
 		if "instructor" in document.get('model'):
 			ai_document = ai("instructor", document)
@@ -97,7 +101,7 @@ def process_tasks(cron_key, uid):
 
 			document.update(ai_document)
 			if 'error' in document:
-				print("error in ktyerm")
+				print("error in keyterm")
 				raise Exception("keyterm extraction error")
 
 	except Exception as ex:
