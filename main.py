@@ -31,6 +31,10 @@ login_manager.login_message = u""
 # client connection
 client = ndb.Client()
 
+# enforce SSL on prod
+if config.dev == "False":
+    Talisman(app, content_security_policy=None) 
+
 def get_uid():
     try:
         return flask_login.current_user.uid
