@@ -2,8 +2,8 @@ import os
 import sys
 import json
 import random
-
 import requests
+import traceback
 
 from flask import Blueprint, render_template, flash, jsonify
 from flask import make_response, Response
@@ -15,7 +15,7 @@ import flask_login
 from lib.util import random_string
 from lib.gcloud import box_status, box_start
 from lib.ai import ai
-from lib.database import featurebase_query, create_table
+from lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
 from lib.tasks import create_task, list_tasks, box_required
 
 from web.models import Box, User, Table, Models
@@ -39,9 +39,15 @@ def process_tasks(cron_key, uid):
 	# Parse the task payload sent in the request.
 	task_payload = request.get_data(as_text=True)
 
-	# grab the document from the request
+	# grab the document and data
 	try:
 		document = json.loads(task_payload)
+		data = None
+		if "data" not in document.keys():
+			return 'tasks payload must contain a "data" key', 400
+		data = document['data']
+		if "text" not in data.keys():
+			return 'tasks payload must contain a "text" key in the data object', 400
 	except json.JSONDecodeError as e:
 		# Handle JSON decoding error.
 		return f"Error decoding JSON payload: {e}", 400
@@ -88,51 +94,51 @@ def process_tasks(cron_key, uid):
 				else:
 					print(document)
 
-	print("done with AI crap")
-	### SCHEMING WITH SCHEMER
-
-	"""
-	sql = f"select _id, sentence, keyterm, cosine_distance(select embedding from sample where sentence = '{sentence}', embedding) AS distance FROM sample ORDER BY distance ASC;"
-
-	"""
-	try:
-		embedding_length = len(document.get('data').get('embedding')[0])
-	except:
-		embedding_length = 768
-
-	# create table
-	err = create_table(document.get('name'), f"(_id string, keyterms stringset, text string, embedding vector({embedding_length}))", {"dbid": user.get('dbid'), "db_token": user.get('db_token')})
-	# TODO: unhandled error
-
-	keyterms = document.get('data').get('keyterms', [])
-	if keyterms == []:
-		for _text in document.get('data').get('text'):
-			keyterms.append([])
-
-	embeddings = document.get('data').get('embedding', [])
-	if embeddings == []:
-		for _text in document.get('data').get('text'):
-			embeddings.append([])
-
-	values = ""
-
-	for i, text in enumerate(document.get('data').get('text')):
-		_id = random_string(6)
-		try:
-			values = values + f"('{_id}', {keyterms[i]}, '{text}', {embeddings[i]}),"
-		except Exception as ex:
-			# dump the text into the table because something went wrong
-			print(ex)
-			values = values + f"('{_id}', [], '{text}', []),"
-
-	values = values.rstrip(',')
-	sql = f"INSERT INTO {document.get('name')} VALUES {values};"
-
-	document = {"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')}
-	resp, err = featurebase_query(document)
-	print(err)
-	# TODO: unhandled error
+	auth = {"dbid": user.get('dbid'), "db_token": user.get('db_token')}
+	tbl_exists, err = table_exists(document.get('name'), auth)
 	if err:
-		return "failed to insert data", 500
+		return err, 500
+	if "_id" not in data.keys():
+		data['_id'] = "string"
+	
+	ai_document = ai("chatgpt_table_schema", document)
+	if "error" in document.keys():
+		return document['error'], 500
+	
+	if not tbl_exists:
+		err = create_table(document.get('name'), document['create_schema_string'], auth)
+		if err:
+			return err, 500
+	else:
+		cols, err = get_columns(document.get('name'), auth)
+		if err:
+			return err, 500
+		
+		for k,v in ai_document['create_schema_dict'].items():
+			if k not in cols.keys():
+				err = add_column(document.get('name'), {'name': k, 'type':v}, auth)
+				if err:
+					return err, 500
+
+	values = []
+	for i in range(len(data['text'])):
+		value = "("
+		for column in ai_document['insert_schema_list']:
+			if column == "_id":
+				value += f"'{random_string(6)}'"
+			else:
+				v = data[column][i]
+				if isinstance(v, str):
+					v = f"'{v}'"
+				value += f"{v}"
+			value += ", "
+		values.append(value[:-2] + ")")
+
+	sql = f"INSERT INTO {document.get('name')} {ai_document['insert_schema_string']} VALUES {','.join(values)};"
+
+	_, err = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
+
+	if err:
+		return f"failed to insert data: {err}", 500
 	else:
 		return "success", 200

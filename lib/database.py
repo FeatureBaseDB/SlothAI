@@ -112,3 +112,93 @@ def drop_table(name, auth):
 		
 	return err
 	
+def table_exists(name, auth):
+	"""
+    Check if a table with the given name exists in a database using a featurebase_query.
+
+    Parameters:
+    - name (str): The name of the table to check for existence.
+    - auth (dict): A dictionary containing authentication information for the featurebase_query.
+
+    Returns:
+    - bool or None: If the table exists, returns True. If the table does not exist or an error occurs,
+      returns False. If there's an error in the featurebase_query operation, returns None.
+	"""
+
+	resp, err = featurebase_query(
+		{
+			"sql": f"SHOW TABLES;",
+			"dbid": f"{auth.get('dbid')}",
+			"db_token": f"{auth.get('db_token')}" 
+		}
+	)
+	if err:
+		return None, err
+	
+	for tbl in resp.data:
+		if tbl[0] == name:
+			return True, None
+	
+	return False, None
+
+def get_columns(table_name, auth):
+	"""
+    Retrieve column information for a specified table from a database using Featurebase.
+
+    Args:
+        table_name (str): The name of the table for which column information is needed.
+        auth (dict): A dictionary containing authentication information for Featurebase, including:
+            - 'dbid' (str): The database ID.
+            - 'db_token' (str): The database access token.
+
+    Returns:
+        dict or None: A dictionary where keys are column names, and values are column data types.
+            Returns None if there was an error during the retrieval process.
+        
+        str or None: An error message if an error occurred during the retrieval process.
+            Returns None if the retrieval was successful.
+	"""
+
+	resp, err = featurebase_query(
+		{
+			"sql": f"SHOW COLUMNS FROM {table_name};",
+			"dbid": f"{auth.get('dbid')}",
+			"db_token": f"{auth.get('db_token')}" 
+		}
+	)
+	if err:
+		return None, err
+	
+	columns = {}
+	for column in resp.data:
+		columns[column[0]] = column[2]
+		
+	return columns, None
+
+def add_column(table_name, column, auth):
+	"""
+    Add a new column to a specified table in a database using Featurebase.
+
+    Args:
+        table_name (str): The name of the table to which the column will be added.
+        column (dict): A dictionary containing information about the column to be added, including:
+            - 'name' (str): The name of the new column.
+            - 'type' (str): The data type of the new column.
+        auth (dict): A dictionary containing authentication information for Featurebase, including:
+            - 'dbid' (str): The database ID.
+            - 'db_token' (str): The database access token.
+
+    Returns:
+        str or None: An error message if an error occurred during the column addition process.
+            Returns None if the column was added successfully.
+	"""
+
+	_, err = featurebase_query(
+		{
+			"sql": f"ALTER TABLE {table_name} ADD COLUMN {column['name']} {column['type']}",
+			"dbid": f"{auth.get('dbid')}",
+			"db_token": f"{auth.get('db_token')}" 
+		}
+	)
+		
+	return err

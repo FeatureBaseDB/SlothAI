@@ -91,7 +91,7 @@ def instructor(document):
 	}
 
 	# Send the POST request with the JSON data
-	response = requests.post(url, data=json.dumps(document.get('data')), headers=headers)
+	response = requests.post(url, data=json.dumps(document.get('data')), headers=headers, timeout=30)
 
 	# Check the response status code for success
 	if response.status_code == 200:
@@ -137,7 +137,6 @@ def ada(document):
 def chatgpt_extract_keyterms(document):
 	# load user's openai key then drop it from the document
 	openai.api_key = document.get('openai_token')
-
 	# build a place to put them
 	keyterms = []
 
@@ -170,3 +169,55 @@ def chatgpt_extract_keyterms(document):
 	return document
 
 
+@model
+def chatgpt_table_schema(document):
+	prompt_doc = {}
+	for k,v in document.get('data').items():
+		if isinstance(v, list) and len(v) > 0:
+			if isinstance(v[0], list) and len(v[0]) > 16:
+				prompt_doc[k] = v[0][:16]
+			else:
+				prompt_doc[k] = v[0]
+		else:
+			prompt_doc[k] = v
+
+
+	# substitute things
+	template = load_template("table_schema")
+	prompt = template.substitute(text=json.dumps(prompt_doc))
+
+	openai.api_key = document.get('openai_token')
+	completion = openai.ChatCompletion.create(
+		  model = config.completion_model,
+		  messages = [
+			{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
+			{"role": "user", "content": prompt}
+		  ]
+		  #max_tokens=256
+		)
+
+	try:
+		schema_dict = eval(completion.choices[0].message['content'].replace("\n", ""))
+		for k,v in schema_dict.items():
+			if v == "vector":
+				schema_dict[k] = f"vector({len(document['data'][k][0])})"
+	except Exception as e:
+		document['error'] = f"decoding openai repsonse: {completion}: exception: {e}"
+		return
+
+	# build the schema
+	create_schema_list = []
+	insert_schema_list = []
+	for k,v in schema_dict.items():
+		create_schema_list.append(f"{k} {v}")
+		insert_schema_list.append(k)
+
+	create_schema_string = "(" + ", ".join(create_schema_list) + ")"
+	insert_schema_string = "(" + ", ".join(insert_schema_list) + ")"
+
+	document['create_schema_string'] = create_schema_string
+	document['create_schema_dict'] = schema_dict
+	document['insert_schema_string'] = insert_schema_string
+	document['insert_schema_list'] = insert_schema_list
+
+	return document
