@@ -80,7 +80,6 @@ def random_string(size=6, chars=string.ascii_letters + string.digits):
 # ===============
 @model 
 def instructor(document):
-	print("in instructor")
 	ip_address = document.get('ip_address')
 
 	password = config.sloth_token
@@ -90,20 +89,20 @@ def instructor(document):
 	headers = {
 		"Content-Type": "application/json"
 	}
-	print("line 98")
+
 	# Send the POST request with the JSON data
 	response = requests.post(url, data=json.dumps(document.get('data')), headers=headers)
-	print("line 96")
+
 	# Check the response status code for success
 	if response.status_code == 200:
 		document['data']['embedding'] = response.json().get('embeddings')
 	else:
 		document['error'] = f"POST request failed with status code {response.status_code}: {response.text}"
-	print("line 102")
+
 	if config.dev == "True":
 		with open("dump.txt", "w") as file:
 			json.dump(document, file, indent=4)
-	print("line 106")
+
 	return document
 
 @model
