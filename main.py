@@ -31,6 +31,7 @@ login_manager.login_message = u""
 # client connection
 client = ndb.Client()
 
+
 def get_uid():
     try:
         return flask_login.current_user.uid
@@ -80,6 +81,14 @@ login_manager.blueprint_login_views = {
     'site': "/login",
 }
 
+@app.before_request
+def before_request():
+    if request.url.startswith('http://') and config.dev == "False" and "cron" not in request.url and "tasks" not in request.url:
+        url = request.url.replace('http://', 'https://', 1)
+        code = 301
+        return redirect(url, code=code)
+
+
 @app.errorhandler(404)
 def f404_notfound(e):
     response = make_response(
@@ -92,5 +101,4 @@ def f404_notfound(e):
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080, debug=True)
-    dev = True
 

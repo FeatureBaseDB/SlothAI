@@ -81,6 +81,7 @@ def random_string(size=6, chars=string.ascii_letters + string.digits):
 @model 
 def instructor(document):
 	ip_address = document.get('ip_address')
+
 	password = config.sloth_token
 	url = f"http://sloth:{password}@{ip_address}:9898/embed"
 
@@ -89,16 +90,18 @@ def instructor(document):
 		"Content-Type": "application/json"
 	}
 
-
 	# Send the POST request with the JSON data
-	response = requests.post(url, data=json.dumps(document), headers=headers)
+	response = requests.post(url, data=json.dumps(document.get('data')), headers=headers)
 
 	# Check the response status code for success
 	if response.status_code == 200:
-		document['embeddings'] = response.json().get('embeddings')
+		document['data']['embedding'] = response.json().get('embeddings')
 	else:
-		print(f"POST request failed with status code {response.status_code}: {response.text}")
+		document['error'] = f"POST request failed with status code {response.status_code}: {response.text}"
 
+	if config.dev == "True":
+		with open("dump.txt", "w") as file:
+			json.dump(document, file, indent=4)
 
 	return document
 
@@ -107,42 +110,45 @@ def ada(document):
 	# this needs to be more dynamic, but for now it's hard coded
 	# load user's openai key then drop it from the document
 	openai.api_key = document.get('openai_token')
-	document.pop('openai_token', None)
-
-	# overide document.get('model') (until we can have those verified)
-	model = document.get('model')
-
-	# more hard coding security(TODO)
-	if model not in ["gpt-4", "gpt-3.5-turbo"]:
-		raise Exception(f"model {model} not found")
 
 	texts = []
-	for _text in document.get('text'): 
+	for _text in document.get('data').get('text'): 
 		texts.append(_text.replace("\n", " "))
 
-	ai_document = openai.Embedding.create(input=texts, model=model)['data']
+	model = document.get('models').get('embedding')
+	embedding_results = openai.Embedding.create(input=texts, model=model)['data']
+
+	embeddings = []
+	for _object in embedding_results:
+		embeddings.append(_object.get("embedding"))
+
+	document['data']['embedding'] = embeddings
 
 	# process and return
-	return ai_document
+
+	if config.dev == "True":
+		with open("dump.txt", "w") as file:
+			json.dump(document, file, indent=4)
+
+	return document
 
 	
 @model
 def chatgpt_extract_keyterms(document):
 	# load user's openai key then drop it from the document
 	openai.api_key = document.get('openai_token')
-	document.pop('openai_token', None)
 
 	# build a place to put them
 	keyterms = []
 
-	for _text in document.get('text'):
+	for _text in document.get('data').get('text'):
 		# substitute things
 		template = load_template("complete_dict_qkg")
 		prompt = template.substitute({"text": _text})
 
 		try:
 			completion = openai.ChatCompletion.create(
-			  model = config.completion_model,
+			  model = document.get('models').get('keyterms'),
 			  messages = [
 				{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
 				{"role": "user", "content": prompt}
@@ -150,6 +156,8 @@ def chatgpt_extract_keyterms(document):
 			)
 		except Exception as ex:
 			print("caught you! ", ex)
+			document['error'] = f"exception talking to OpenAI {ex}"
+			return document
 
 		answer = completion.choices[0].message
 		
@@ -157,7 +165,7 @@ def chatgpt_extract_keyterms(document):
 		
 		keyterms.append(_dict.get('keyterms'))
 
-	document['keyterms'] = keyterms
+	document['data']['keyterms'] = keyterms
 
 	return document
 

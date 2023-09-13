@@ -18,7 +18,7 @@ from lib.util import random_string
 from lib.ai import ai
 from lib.tasks import list_tasks
 
-from web.models import Table
+from web.models import Table, Models
 
 site = Blueprint('site', __name__)
 
@@ -30,14 +30,6 @@ client = ndb.Client()
 @site.route('/sitemap.txt')
 def sitemap():
 	return render_template('pages/sitemap.txt')
-
-# main route
-@site.route('/', methods=['GET'])
-@flask_login.login_required
-def index():
-	return render_template(
-		'pages/home.html'
-	)
 
 @site.route('/tasks')
 @site.route('/jobs')
@@ -62,7 +54,6 @@ def settings():
 		'pages/settings.html', username=username, api_token=api_token, dbid=dbid
 	)
 
-# main route
 @site.route('/models', methods=['GET'])
 @flask_login.login_required
 def models():
@@ -70,13 +61,13 @@ def models():
 	username = current_user.name
 	api_token = current_user.api_token
 	dbid = current_user.dbid
+	models = Models.get_all()
 
 	return render_template(
-		'pages/models.html', username=username, api_token=api_token, dbid=dbid
+		'pages/models.html', username=username, api_token=api_token, dbid=dbid, models=models
 	)
 
-
-# PAGE HANDLERS
+@site.route('/', methods=['GET'])
 @site.route('/tables', methods=['GET'])
 @flask_login.login_required
 def tables():
@@ -91,8 +82,9 @@ def tables():
 			for table in tables:
 				_tables.append(table)
 
-	return render_template('pages/tables.html', username=username, tables=_tables)
+	models = Models.get_all()
 
+	return render_template('pages/tables.html', username=username, tables=_tables, models=models)
 
 @site.route('/tables/<tid>', methods=['GET'])
 @flask_login.login_required
@@ -101,12 +93,12 @@ def table_view(tid):
 	username = current_user.name
 	token = current_user.api_token
 
+	# hack the _table (pipeline) up with the model info 
 	_table = Table.get_by_uid_tid(uid=current_user.uid, tid=tid)
 
 	if not _table:
 		return redirect(url_for('site.tables'))
 	
-	print(_table)
-	return render_template('pages/table.html', username=username, token=token, table=_table)
+	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, dev=config.dev, table=_table)
 
 

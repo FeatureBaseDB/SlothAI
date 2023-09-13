@@ -32,11 +32,13 @@
           <input type="hidden" name="next" value="{{next}}">
           {% endif %}
           <input type="hidden" name="transaction_id" value="{{transaction_id}}">
+
           <small class="form-text text-muted">
             {% for message in get_flashed_messages() %}
             <div class="flash">{{ message }}</div>
             {% endfor %}
           </small>
+
           <button type="submit" class="btn btn-primary" title="Verify your token.">Authenticate</button>
           <a href="/" class="btn btn-outline-dark" title="Leave this place.">Cancel</a>
         </form>
