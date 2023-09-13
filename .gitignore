@@ -4,7 +4,9 @@ private-key.json
 /learned-settings
 .vscode
 development/
-
+dump.txt
+.DS_Store
+test-queue.sh
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

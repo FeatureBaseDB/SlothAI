@@ -40,7 +40,7 @@
 <!-- Left Sidebar Navigation -->
 <div class="sidebar">
     <a href="/tables">
-        <i class="fas fa-table"></i> Tables
+        <i class="fas fa-code-branch"></i> Pipelines
     </a>
     <a href="/models" class="highlighted-link">
         <i class="fas fa-cogs"></i> Models
@@ -67,27 +67,36 @@
 			<p class="card-text">FeatureBase AI transparently supports calculating dense vectors for text sent to table endpoints. Our current embeddings models for producing these vectors (numeric arrays) include:</p>
 			<p class="card-text">
 				<ul>
-				    <li>Ada-002-Similarity by OpenAI</li>
-				    <li>Instructor Large</li>
-				    <li>Instructor XL</li>
+                {% for model in models %}
+                    {% if model.kind == 'embedding' %}
+                        <li>{{ model.name }}</li>
+                    {% endif %}
+                {% endfor %}
 				</ul>
 			</p>
 			<p class="card-text">A common application of text embeddings is measuring text similarity. The resulting vectors from these types of models can be weighted to quantify how similar or dissimilar texts are to each other.</p>
         </div>
         <div class="card-body">
             <h4 class="card-title card-callout">Keyterm Models</h4>
-			<p class="card-text">FeatureBase AI supports transparent keyterm extraction for text sent to table endpoints. Our current keyterm models include:</p>
+			<p class="card-text">FeatureBase AI supports transparent keyterm extraction for text sent to table endpoints and all POSTs to the system must carry a relevant <strong>`text`</strong> field to ensure proper vector balancing.</p>
 			<p class="card-text">
 				<ul>
-				    <li>GPT-4</li>
-				    <li>GPT-3.5-turbo</li>
-				    <li>BERTopic</li>
+                    {% for model in models %}
+                        {% if model.kind == 'keyterms' %}
+                            <li>{{ model.name }}</li>
+                        {% endif %}
+                    {% endfor %}
 				</ul>
 			</p>
-			<p class="card-text">Keyterm extraction is used by FeatureBaseAI in conjunction with embeddings to create a balanced graph of entries in FeatureBase using a technique called SlothANN. Because FeatureBase can scale to millions or billions of entries, these graphs can be used to segment the vector space for efficent similarity searches.</p>
+			<p class="card-text">Keyterm extraction is used by FeatureBaseAI in conjunction with embeddings to create a balanced graph of entries in FeatureBase using a technique called <a href="https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothANN.md">SlothANN</a>. Because FeatureBase can scale to millions or billions of entries, these graphs can be used to segment the vector space for efficient similarity searches.</p>
+
+            <div class="alert alert-success" role="alert">
+              <strong>sloth-extract:</strong> A FeatureBase ensemble of MiniLM, H2-keywordextractor, BERT and Fasttext models.
+            </div>
+
 			<p class="card-text">
 	        <button type="button" class="btn btn-dark" data-toggle="modal" id="modelFormModal">
-	            Add Table
+	            Add Pipeline
 	        </button>
         </div>
         <div class="card-body">

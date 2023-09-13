@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 ./main.py
+export DEV="True"; python3 ./main.py

@@ -14,26 +14,7 @@ body {
   padding-left: 3px;
 }
 
-/* Table styles */
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
 
-table tr:nth-child(odd) {
-  background-color: #f2f2f2; /* Color for odd rows */
-}
-
-table th {
-  background-color: #333;
-  color: #fff;
-}
-
-table td, table th {
-  padding: 10px;
-  text-align: center;
-  vertical-align: middle;
-}
 
 /* Form and label styles */
 form,
@@ -78,6 +59,9 @@ div.login_form h2 {
   font-weight: 700;
 }
 
+.text-muted {
+  margin-bottom: 14px;
+}
 /* Navbar and sidebar */
 .navbar,
 .sidebar {
@@ -132,6 +116,7 @@ code, pre {
   overflow: auto;
   white-space: pre-wrap;
   overflow: hidden;
+  margin-bottom: 12px;
 }
 
 .flash {

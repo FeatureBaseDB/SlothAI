@@ -43,7 +43,7 @@
 <!-- Left Sidebar Navigation -->
 <div class="sidebar">
     <a href="/tables">
-        <i class="fas fa-table"></i> Tables
+        <i class="fas fa-code-branch"></i> Pipelines
     </a>
     <a href="/models">
         <i class="fas fa-cogs"></i> Models
@@ -65,34 +65,39 @@
     <h2 class="page_heading">Active Jobs</h2>
 
     {% if tasks %}
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Dispatch Count</th>
-                    <th>Next Run</th>
-                    <th>Log</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for task in tasks %}
+    <div class="card rounded-lg">
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
                     <tr>
-                        <td>{{ task.name }}</td>
-                        <td>{{ task.dispatch_count }}</td>
-                        <td>{{ task.schedule_time }}</td>
-                        <td>{{ task.log }}</td>
+                        <th>ID</th>
+                        <th>Run #</th>
+                        <th>Next Run</th>
+                        <th>Log</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <button class="reload-button btn btn-success" onclick="location.reload()">
-            <i class="fas fa-sync-alt"></i> Reload
-        </button>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                        <tr>
+                            <td>{{ task.name }}</td>
+                            <td>{{ task.dispatch_count }}</td>
+                            <td>{{ task.schedule_time }}</td>
+                            <td>{{ task.log }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p></p>
+    <button class="reload-button btn btn-success" onclick="location.reload()">
+        <i class="fas fa-sync-alt"></i> Reload
+    </button>
     {% else %}
-        <p>The job queue is empty.</p>
-      	<button type="button" class="btn btn-dark" data-toggle="modal" id="modelFormModal">
-	        View Tables
-	    </button>
+    <p>The job queue is empty.</p>
+  	<button type="button" class="btn btn-dark" data-toggle="modal" id="modelFormModal">
+        View Pipelines
+    </button>
     {% endif %}
 </div>
 

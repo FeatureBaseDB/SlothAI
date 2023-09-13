@@ -42,24 +42,55 @@ class Transaction(ndb.Model):
 			return cls.query(cls.tid == tid).get()
 
 
+class Models(ndb.Model):
+	mid = ndb.StringProperty()
+	name = ndb.StringProperty()
+	kind = ndb.StringProperty()
+	ai_model = ndb.StringProperty()
+	field = ndb.StringProperty()
+	gpu = ndb.StringProperty()
+
+	@classmethod
+	def get_by_mid(cls, mid):
+		with client.context():
+			return cls.query(cls.mid == mid).get().to_dict()
+
+	@classmethod
+	def get_by_kind(cls, kind):
+		with client.context():
+			entities = cls.query(cls.kind == kind).fetch()
+			return [entity.to_dict() for entity in entities]
+	@classmethod
+	def get_all(cls):
+		with client.context():
+			entities = cls.query().fetch()
+			return [entity.to_dict() for entity in entities]
+
+	@classmethod
+	def get_by_name(cls, name):
+		if not name:
+			return None
+		with client.context():
+			return cls.query(cls.name == name).get().to_dict()
+			
+
 class Table(ndb.Model):
 	tid = ndb.StringProperty()
 	uid = ndb.StringProperty()
 	name = ndb.StringProperty()
-	model = ndb.StringProperty()
-	keyterm_model = ndb.StringProperty()
+	models = ndb.JsonProperty()
 	schema = ndb.JsonProperty()
 	openai_token = ndb.StringProperty()
 
 	@classmethod
-	def create(cls, uid, name, model, keyterm_model, openai_token):
-		print(keyterm_model)
+	def create(cls, uid, name, models, openai_token):
+
 		with ndb.Client().context():
 			current_utc_time = datetime.datetime.utcnow()
 			table = cls.query(cls.uid == uid,cls.name == name).get()
 			if not table:
 				tid = random_string(size=17)
-				table = cls(tid=tid, uid=uid, name=name, model=model, keyterm_model=keyterm_model, openai_token=openai_token)
+				table = cls(tid=tid, uid=uid, name=name, models=models, openai_token=openai_token)
 				table.put()
 
 			return table.to_dict()
@@ -110,12 +141,14 @@ class Table(ndb.Model):
 		else:
 			return False
 
+
 class Box(ndb.Model):
 	box_id = ndb.StringProperty()
 	ip_address = ndb.StringProperty()
 	zone = ndb.StringProperty()
 	status = ndb.StringProperty(default='available')
 	expires = ndb.DateTimeProperty()
+	runs_models = ndb.JsonProperty() # models it runs
 
 	@classmethod
 	def create(cls, box_id, ip_address, zone, status):
@@ -147,12 +180,8 @@ class Box(ndb.Model):
 	@classmethod
 	def get_boxes(cls):
 		with ndb.Client().context():
-			boxes = cls.query().fetch()
-			try:
-				return boxes
-			except Exception as ex:
-				print(ex)
-				return False
+			entities = cls.query().fetch()
+			return [entity.to_dict() for entity in entities]
 							
 	def start_box(self):
 		# Code to start the box or spot instance

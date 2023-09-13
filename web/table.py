@@ -18,7 +18,7 @@ from lib.util import random_string
 from lib.gcloud import box_status
 from lib.tasks import create_task
 
-from web.models import Table
+from web.models import Table, Models
 
 table = Blueprint('table', __name__)
 
@@ -34,23 +34,23 @@ def tables_list():
 	return None
 
 # API INGEST
-@table.route('/tables/ingest/<tid>', methods=['POST'])
+@table.route('/tables/<tid>/ingest', methods=['POST'])
 @flask_login.login_required
 def ingest_post(tid):
 	table = Table.get_by_uid_tid(current_user.uid, tid)
 
 	if table:
 		json_data = request.get_json()
+		
+		if not json_data.get('text', None):
+			return jsonify({"response": "'text' field is required"}), 406 # todo get error code
 
-		if 'text' in json_data:
-		    text_value = json_data['text']
-		    if not isinstance(text_value, list):
-		        # If 'text' is not an array, convert it to a single-element list
-		        json_data['text'] = [text_value]
-		else:
-			return jsonify({"response": "need 'text' field..."})
+		# converts string to list of strings
+		if not isinstance(json_data.get('text', None), list):
+			json_data['text'] = [json_data.get('text', None)]
 
-		document = {"text": json_data.get('text')}
+		# move to data
+		document = {"data": json_data}
 
 		# map table document to document (includes uid, etc.)
 		document.update(table)
@@ -93,21 +93,21 @@ def table_delete(tid):
 @table.route('/tables', methods=['POST'])
 @flask_login.login_required
 def tables_add():
-	username = current_user.name
 	tables = Table.get_all_by_uid(uid=current_user.uid)
 
 	# Check if the request contains JSON data
 	if request.is_json:
 			json_data = request.get_json()
 
+			models = {"embedding": json_data.get('embeddingModel'),"keyterms": json_data.get('keytermModel')}
+
 			_table = Table.create(
 				current_user.uid, 
 				json_data.get('tableName'), 
-				json_data.get('embeddingModel'),
-				json_data.get('keytermModel'),
+				models,
 				json_data.get('openaiToken')
 			)
-			print(_table)			
+		
 			if _table:
 				return jsonify(_table), 200
 	

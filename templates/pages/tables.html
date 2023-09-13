@@ -37,7 +37,7 @@
 <!-- Left Sidebar Navigation -->
 <div class="sidebar">
     <a href="#" class="highlighted-link">
-        <i class="fas fa-table"></i> Tables
+        <i class="fas fa-code-branch"></i> Pipelines
     </a>
     <a href="/models">
         <i class="fas fa-cogs"></i> Models
@@ -56,52 +56,60 @@
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
 
-    <h2 class="page_heading">Active Tables</h2>
+    <h2 class="page_heading">Pipelines</h2>
 
 
     {% if tables %}
-
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Embedding Model</th>
-                    <th>Keyterm Model</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for table in tables %}
+    <div class="card rounded-lg">
+        <div class="card-body">
+            <h4 class="card-title card-callout">Task: Create More Pipelines</h4>
+            <p class="card-body">Pipelines route your data to AI models, which interact with  and store the outcomes within your FeatureBase database. Send in your JSON and then head over to <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> to query it with SQL. Behind the scene, AI models will ensure your data is delivered into the correct table formats.</p>
+            <table class="table table-striped">
+                <thead>
                     <tr>
-                        <td><a href="/tables/{{table.tid}}">{{ table.name }}</a></td>
-                        <td>{{ table.model }}</td>
-                        <td>{{ table.keyterm_model }}</td>
-                        <td>
-                            <button class="delete-button btn btn-danger" data-table-id="{{ table.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
-                        </td>
+                        <th>Name</th>
+                        <th>Embedding Model</th>
+                        <th>Keyterm Model</th>
+                        <th>Action</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
-            Add Table
-        </button>
+                </thead>
+                <tbody>
+                    {% for table in tables %}
+                        <tr>
+                            <td><a href="/tables/{{table.tid}}">{{ table.name }}</a></td>
+                            <td>{{ table.models.get('embedding') }}</td>
+                            <td>{{ table.models.get('keyterms') }}</td>
+                            <td>
+                                <button class="delete-button btn btn-danger" data-table-id="{{ table.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+    <p></p>
+    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
+        Add Pipeline
+    </button>
+
 
     {% else %}
 
         <div class="card rounded-lg">
             <div class="card-body">
-                <h4 class="card-title card-callout">Task: Create a new text storage table.</h5>
+                <h4 class="card-title card-callout">Task: Create a new text storage table.</h4>
                 <p class="card-text">
-                    Click on the "Add Table" button. When prompted, select the models you want to run on the data sent to its endpoint.
+                    Click on the "Add Pipeline" button. When prompted, select the models you want to run on the data sent to its endpoint.
                 </p>
 
                 <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
-                    Add Table
+                    Add Pipeline
                 </button>
                 <p class="card-text"></p>
                 <p class="card-text">
-                    The endpoint for sending the text and token for authentication will be shown once the table is created.
+                    The endpoint for sending the text and token for authentication will be shown once the table for the pipeline is created.
                 </p>
                 <p class="card-text">
                     Using the endpoint will look like this:
@@ -129,7 +137,7 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title card-callout" id="modelFormModalLabel">Add Table</h4>
+                    <h4 class="modal-title card-callout" id="modelFormModalLabel">Add Pipeline</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -137,16 +145,19 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
                 <div class="modal-body">
                     <form>
                         <div class="form-group">
-                            <label for="tableName">Table Name</label>
+                            <label for="tableName">Pipeline Name</label>
                             <input type="text" class="form-control" id="tableName" placeholder="Enter table name">
                         </div>
                         <div class="form-group">
                             <label for="EmbeddingModel">Embedding Model</label>
                             <select class="form-control" id="EmbeddingModel">
                                 <optgroup label="Embedding Models">
-                                    <option>instructor-large</option>
-                                    <option>instructor-xl</option>
-                                    <option>text-embedding-ada-002</option>
+                                    {% for model in models %}
+                                        {% if model.kind == 'embedding' %}
+                                            <option>{{ model.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <optiom>none</optiom>
                                 </optgroup>
                             </select>
                         </div>
@@ -154,15 +165,18 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
                             <label for="KeytermModel">Keyterm Model</label>
                             <select class="form-control" id="KeytermModel">
                                 <optgroup label="Keyterm Models">
-                                    <option>BERTable</option>
-                                    <option>gpt-3.5-turbo</option>
-                                    <option>gpt-4</option>
+                                    {% for model in models %}
+                                        {% if model.kind == 'keyterms' %}
+                                            <option>{{ model.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <option>none</option>
                                 </optgroup>
                             </select>
                         </div>
                         <div class="form-group" id="tokenField">
                             <label for="openaiToken">OpenAI Token</label>
-                            <input type="text" class="form-control" id="openaiToken" placeholder="Enter OpenAI Token">
+                            <input type="password" class="form-control" id="openaiToken" placeholder="Enter OpenAI Token">
                         </div>
                     </form>
                 </div>
@@ -226,7 +240,7 @@ $(document).ready(function() {
         // Move this to a notice in the form
         if (!/^[a-z-]+$/.test(formData.tableName)) {
             alert("Invalid table name. Table name should only contain lowercase letters and '-'");
-        } else if ((formData.keyTermsOptions === 'yes' || formData.modelSelect === 'ada-002') && formData.openaiToken === "") {
+        } else if ((formData.keytermModel.includes('gpt') || formData.embeddingModel.includes('ada')) && formData.openaiToken === "") {
             alert("OpenAI Token is required for selected options.");
         } else {
             $.ajax({
@@ -244,20 +258,23 @@ $(document).ready(function() {
             });
         }
     });
-    // Function to toggle the visibility of the OpenAI Token field
-    function toggleOpenAITokenField() {
-        var embeddingModel = $("#EmbeddingModel").val();
-        var keytermModel = $("#KeytermModel").val();
-        var $tokenField = $("#tokenField");
 
-        // Check if either instructor model is selected along with BERTTable
-        if ((embeddingModel === 'instructor-large' || embeddingModel === 'instructor-xl') && keytermModel === 'BERTable')
-        {
-            $tokenField.hide(); // Hide the OpenAI Token field
-        } else {
-            $tokenField.show(); // Show the OpenAI Token field
-        }
+// Function to toggle the visibility of the OpenAI Token field
+function toggleOpenAITokenField() {
+    var embeddingModel = $("#EmbeddingModel").val();
+    var keytermModel = $("#KeytermModel").val();
+    var $tokenField = $("#tokenField");
+
+    // Check if "gpt" or "ada" is selected in either the embedding or keyterm models
+    var isGptOrAdaSelected = (keytermModel.includes('gpt') || embeddingModel.includes('ada'));
+
+    // Toggle visibility based on the 'isGptOrAdaSelected' variable
+    if (isGptOrAdaSelected) {
+        $tokenField.show(); // Show the OpenAI Token field
+    } else {
+        $tokenField.hide(); // Hide the OpenAI Token field
     }
+}
 
     // Initial visibility check
     toggleOpenAITokenField();

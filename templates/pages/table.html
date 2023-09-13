@@ -35,7 +35,7 @@
 <!-- Left Sidebar Navigation -->
 <div class="sidebar">
     <a href="/tables" class="highlighted-link">
-        <i class="fas fa-table"></i> Tables
+        <i class="fas fa-code-branch"></i> Pipelines
     </a>
     <a href="/models">
         <i class="fas fa-cogs"></i> Models
@@ -54,7 +54,7 @@
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
     
-    <h2 class="page_heading">Table Details</h2>
+    <h2 class="page_heading">Pipeline Details</h2>
 
     <!-- Display Table Details -->
     <div class="card rounded-lg">
@@ -62,38 +62,39 @@
             <h4 class="card-title card-callout">{{ table.name }}</h4>
 
 			<p class="card-text">
-			    This table is running the <strong>{{ table.model }}</strong> and <strong>{{ table.keyterm_model }}</strong> models. Use the following URL to insert with a POST method:
+			    Pipeline endpoint runs <strong>{{ table.models.get('embedding') }}</strong> and <strong>{{ table.models.get('keyterms') }}</strong> models. It targets the <strong>{{table.name}}</strong> table in your <a href="https://cloud.featurebase.com/databases">FeatureBase</a>. 
 			</p>
 
             <p class="card-text"></p>
 
-			<pre><span></span>https://ai.featurebase.com/ingest/{{ table.tid }}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
+			<pre><span></span>{%if dev=='True'%}http://localhost:8080{%else%}https://ai.featurebase.com{%endif%}/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
 
             <p class="card-text">
-                Using curl, you can test ingestion:
+                <strong>Task:</strong> Send data to the <strong>{{table.name}}</strong> pipeline to create a <strong>{{table.name}}</strong> table in your FeatureBase.
+            </p>
+            <p class="card-text">
+            	Using curl, initialize the pipeline's table by ingesting some data:
             </p>
 
-<pre><span>curl -X POST \
+<code>curl -X POST \
 -H "Content-Type: application/json" \
 -d '{"text":["There was a knock at the door, then silence."]}' \
-"https://ai.featurebase.com/tables/ingest/{{table.tid}}?token={{token}}"</span>
-<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
+"{%if dev=='True'%}http://localhost:8080{%else%}https://ai.featurebase.com{%endif%}/tables/{{table.tid}}/ingest?token={{token}}"</span>
+<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
-            <p class="card-text"></p>
             <p class="card-text">Sample results:</p>
-<pre><span>{
-  "job_id": "07594888642146387281",
-  "keyterm_model": "{{table.keyterm_model}}",
-  "model": "{{table.model}}",
-  "name": "{{table.name}}",
-  "text": [
-    "one more",
-    "There was a knock at the door, then silence."
-  ],
-  "tid": "{{table.tid}}"
-}</span></pre>
+<code>{"job_id": "07594888642146387281","keyterm_model": "{{table.keyterm_model}}","model": "{{table.model}}","name": "{{table.name}}","text": ["There was a knock at the door, then silence."],"tid": "{{table.tid}}"}</code>
+            <p class="card-text">Once the pipeline task has run, check your FeatureBase Cloud account for data:</p>
+<code>SELECT * FROM {{table.name}};
+
++---------+------------+-------------------+------------+
+|   _id   |  keyterms  |       text        |  embedding |
++---------+------------+-------------------+------------+
+| Oqhff1  |['knock','do| There was a knock | [0.02333,0.|
++---------+------------+-------------------+------------+
+</code>
             <p class="card-text">
-                The ingestion endpoint always requries a <strong>'text'</strong> key and you may enter other keys in your POST object, given they do not use the following reserved field names: <strong>[text, keyterms, embedding, _id, model, tid, keyterm_model]</strong>.
+                The ingestion endpoint always requires a <strong>'text'</strong> key and you may enter other keys in your POST object to have those fields automatically detected and created.
             </p>
 			<p class="card-text"></p>
 			<p class="card-text">
@@ -133,7 +134,7 @@ $(document).ready(function() {
 
     // copy things
 	$('span.command-copy').click(function(e) {
-		var preElement = $(this).closest('pre');
+		var preElement = $(this).closest('code');
 		var text = preElement.text().trim();
 		var copyTextarea = document.createElement('textarea');
 		copyTextarea.value = text;

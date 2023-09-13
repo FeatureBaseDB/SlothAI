@@ -16,9 +16,9 @@ from lib.util import random_string
 from lib.gcloud import box_status, box_start
 from lib.ai import ai
 from lib.database import featurebase_query, create_table
-from lib.tasks import create_task, list_tasks
+from lib.tasks import create_task, list_tasks, box_required
 
-from web.models import Box, User
+from web.models import Box, User, Table, Models
 
 tasks = Blueprint('tasks', __name__)
 
@@ -27,15 +27,19 @@ import config
 # called from tasks in cloud tasks
 @tasks.route('/tasks/process/<cron_key>/<uid>', methods=['POST'])
 def process_tasks(cron_key, uid):
+	# validate call with a key
 	if cron_key != config.cron_key:
 		return "error auth", 401
 
-	# TOTO check the uid exists
+	# verify user
+	user = User.get_by_uid(uid)
+	if not user:
+		return f"Not authenticated. Flushing request.", 200
 
 	# Parse the task payload sent in the request.
 	task_payload = request.get_data(as_text=True)
 
-	# grab the document
+	# grab the document from the request
 	try:
 		document = json.loads(task_payload)
 	except json.JSONDecodeError as e:
@@ -45,85 +49,74 @@ def process_tasks(cron_key, uid):
 		# Handle other exceptions that may occur during processing.
 		return f"Error processing task: {e}", 500
 
-	# hardcode models requiring boxes
-	box_required = False
+	# check we have the table still (user could delete since ingestion)
+	table = Table.get_by_uid_tid(uid, document.get('tid'))
+	if not table:
+		return f"Can't find the table specified. Flushing request.", 200
 
-	# test if we need to run the model (TODO make this non-hardcoded)
-	if "instructor" in document.get('model') or "BERTable" in document.get('keyterm_model'):
-		box_required = True
+	# models requiring boxes get deferred
+	defer, selected_box = box_required(table.get('models'))
+	if defer:
+		return f"Starting GPUs...", 418 # return resource starting 
 
-	if box_required:
-		boxes = Box.get_boxes()
+	# grab the IP for locally run models and stuff it into the document
+	if selected_box:
+		document['ip_address'] = selected_box.get('ip_address')
 
-		# Check if there are any active boxes
-		active_sloths = []
-		other_boxes = []
-		if boxes:
-			for box in boxes:
-				if box.to_dict().get('status') == 'RUNNING':
-					active_sloths.append(box.to_dict())
-				else:
-					other_boxes.append(box.to_dict())
+	#  (੭｡╹▿╹｡)੭
+	# popping ai methods called by name from document.embedding -> lib/ai.py
+	for kind in ['embedding', 'keyterms']:
 
-		if active_sloths:
-			# If there are active boxes, select one at random
-			selected_box = random.choice(active_sloths)
-		else:
-			# no boxes to run task
+		model = Models.get_by_name(document.get('models').get(kind))
 
-			# pick a random startable box
-			selected_box = random.choice(other_boxes)
+		if model:
+			# finally, simple
+			print(model)
+			ai_document = ai(model.get('ai_model'), document)
 
-			# start a box
-			box_start(selected_box.get('box_id'), selected_box.get('zone'))
-			return "starting a box", 503 # requeue
-
-
-	document['ip_address'] = selected_box.get('ip_address')
-
-	try:
-		# get the dbid's token
-		user = User.get_by_uid(document.get('uid'))
-		if not user:
-			return "auth error", 403
-
-		if "instructor" in document.get('model'):
-			ai_document = ai("instructor", document)
 			if 'error' in ai_document:
-				print("got error in embedding")
-				raise Exception("embedding error")
+				print(f"got error in {kind}")
+				print(ai_document)
+				return f"{kind} error", 400
 			else:
-				# horrible chaining, for now
+				# chaining document FTW
 				document.update(ai_document)
+				document.get('models').pop(kind) # pop the run model off the document
+				if config.dev != "True":
+					create_task(document)
+					return f"finished {kind}", 200
+				else:
+					print(document)
 
-		if "gpt" in document.get('keyterm_model'):
-			ai_document = ai("chatgpt_extract_keyterms", document)
-
-			document.update(ai_document)
-			if 'error' in document:
-				print("error in keyterm")
-				raise Exception("keyterm extraction error")
-
-	except Exception as ex:
-		import traceback
-		print(traceback.format_exc())
-		print(ex)
-		return ex, 503 # return error to requeue
+	print("done with AI crap")
+	### SCHEMING WITH SCHEMER
 
 	"""
 	sql = f"select _id, sentence, keyterm, cosine_distance(select embedding from sample where sentence = '{sentence}', embedding) AS distance FROM sample ORDER BY distance ASC;"
 
 	"""
+	try:
+		embedding_length = len(document.get('data').get('embedding')[0])
+	except:
+		embedding_length = 768
 
 	# create table
-	err = create_table(document.get('name'), "(_id string, keyterms stringset, text string, embedding vector(768))", {"dbid": user.get('dbid'), "db_token": user.get('db_token')})
+	err = create_table(document.get('name'), f"(_id string, keyterms stringset, text string, embedding vector({embedding_length}))", {"dbid": user.get('dbid'), "db_token": user.get('db_token')})
 	# TODO: unhandled error
 
-	keyterms = document.get('keyterms')
-	embeddings = document.get('embeddings')
+	keyterms = document.get('data').get('keyterms', [])
+	if keyterms == []:
+		for _text in document.get('data').get('text'):
+			keyterms.append([])
+
+	embeddings = document.get('data').get('embedding', [])
+	if embeddings == []:
+		for _text in document.get('data').get('text'):
+			embeddings.append([])
+
 	values = ""
 
-	for i, text in enumerate(document.get('text')):
+	for i, text in enumerate(document.get('data').get('text')):
 		_id = random_string(6)
 		try:
 			values = values + f"('{_id}', {keyterms[i]}, '{text}', {embeddings[i]}),"
@@ -137,7 +130,7 @@ def process_tasks(cron_key, uid):
 
 	document = {"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')}
 	resp, err = featurebase_query(document)
-
+	print(err)
 	# TODO: unhandled error
 	if err:
 		return "failed to insert data", 500

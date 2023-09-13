@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   {% block description %}
-  <meta name="description" content='{{ app_description }}' />
+  <meta name="description" content='A FeatureBase for your Models.' />
   {% endblock %}
   
   <meta property='og:image' content='https://ai.featurebase.com/static/sloth.png' />
@@ -14,8 +14,19 @@
 
   {% block title %}
   <title>{{ app_name }}</title>
-  <meta property='og:title' content='{{app_name}}' />
+  <meta property='og:title' content='FeatureBaseAI' />
   {% endblock %}
+
+  <meta property="og:image" content="https://ai.featurebase.com/static/sloth.png" />
+  <meta property="og:description" content="A FeatureBase for your Models." />
+  <meta property="og:url" content="https://ai.featurebase.com/" />
+  <meta property="og:title" content="FeatureBaseAI" />
+  
+  <meta name="twitter:card" content="summary_large_image" /> <!-- This specifies a large image card -->
+  <meta name="twitter:site" content="@FeatureBase" /> <!-- Replace with your Twitter handle -->
+  <meta name="twitter:title" content="FeatureBaseAI" />
+  <meta name="twitter:description" content="A FeatureBase for your Models." />
+  <meta name="twitter:image" content="https://ai.featurebase.com/static/sloth.png" />
 
   <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
