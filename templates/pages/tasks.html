@@ -82,7 +82,13 @@
                             <td>{{ task.name }}</td>
                             <td>{{ task.dispatch_count }}</td>
                             <td>{{ task.schedule_time }}</td>
-                            <td>{{ task.log }}</td>
+                            <td>
+                              {% if "418" in task.log %}
+                                Server start issued.
+                              {% else %}
+                                {{ task.log }}
+                              {% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
