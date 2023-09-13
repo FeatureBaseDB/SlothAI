@@ -45,12 +45,16 @@ def ingest_post(tid):
 		if not json_data.get('text', None):
 			return jsonify({"response": "'text' field is required"}), 406 # todo get error code
 
-		# converts string to list of strings
-		if not isinstance(json_data.get('text', None), list):
-			json_data['text'] = [json_data.get('text', None)]
-
 		# move to data
 		document = {"data": json_data}
+		if 'text' in json_data:
+			text_value = json_data['text']
+			if not isinstance(text_value, list):
+				# If 'text' is not an array, convert it to a single-element list
+				json_data['text'] = [text_value]
+		else:
+			return jsonify({"response": "need 'text' field..."})
+
 
 		# map table document to document (includes uid, etc.)
 		document.update(table)
