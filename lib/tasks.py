@@ -120,8 +120,8 @@ def create_task(document):
 	if document.get('run_in', None):
 		future_time = datetime.utcnow() + timedelta(seconds=int(document.get('run_in')))
 	else:
-		delay = random.randint(2, 30)
-		future_time = datetime.utcnow() + timedelta(seconds=delay)
+		delay = random.randint(500, 3000)
+		future_time = datetime.utcnow() + timedelta(milliseconds=delay)
 
 	# Set the timestamp using the calculated future time
 	timestamp.FromDatetime(future_time)

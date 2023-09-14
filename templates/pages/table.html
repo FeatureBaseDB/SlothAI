@@ -78,7 +78,7 @@
 
 <code>curl -X POST \
 -H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."], "attributes": ["frontdoor", "sound", "person"]}' \
+-d '{"text":["There was a knock at the door, then silence."], "attributes": [["frontdoor", "sound", "person"]]}' \
 "{%if dev=='True'%}http://localhost:8080{%else%}https://ai.featurebase.com{%endif%}/tables/{{table.tid}}/ingest?token={{token}}"</span>
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
