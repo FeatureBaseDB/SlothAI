@@ -79,7 +79,36 @@ def process_tasks(cron_key, uid):
 
 		if model:
 			# finally, simple
-			ai_document = ai(model.get('ai_model'), document)
+			print(model)
+			if 'gpt' in model.get('name'):
+
+				if not document.get('text_stack', None):
+					document['text_stack'] = document.get('data').get('text').copy()
+
+				target = document.get('text_stack').pop()
+				document['text_target'] = target
+
+				try:
+					ai_document = ai(model.get('ai_model'), document)
+					err = ai_document.get('error', None)
+				except Exception as e:
+					err = e
+	
+				if err:
+					# at this point w/ err let's requeue
+					print(err)
+					document['text_stack'].append(target)
+					del document['error']
+					create_task(document)
+					return err, 400
+
+				if len(document.get('text_stack')) > 0:
+					create_task(document)
+					return "", 200
+
+
+			else:
+				ai_document = ai(model.get('ai_model'), document)
 
 			if 'error' in ai_document:
 				print(f"got error in {kind}")
@@ -88,7 +117,7 @@ def process_tasks(cron_key, uid):
 				# chaining document FTW
 				document.update(ai_document)
 				document.get('models').pop(kind) # pop the run model off the document
-				if config.dev != "True":
+				if not config.dev:
 					create_task(document)
 					return f"finished {kind}", 200
 				else:
@@ -146,6 +175,7 @@ def process_tasks(cron_key, uid):
 	_, err = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
 	print(err)
 	if err:
+		print(f"failed to insert data: {err}")
 		return f"failed to insert data: {err}", 500
 	else:
 		return "success", 200

@@ -168,34 +168,32 @@ def ada(document):
 def chatgpt_extract_keyterms(document):
 	# load user's openai key then drop it from the document
 	openai.api_key = document.get('openai_token')
-	# build a place to put them
-	keyterms = []
 
-	for _text in document.get('data').get('text'):
-		# substitute things
-		template = load_template("complete_dict_qkg")
-		prompt = template.substitute({"text": _text})
+	_text = document.get('text_target')
 
-		try:
-			completion = openai.ChatCompletion.create(
-			  model = document.get('models').get('keyterms'),
-			  messages = [
-				{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
-				{"role": "user", "content": prompt}
-			  ]
-			)
-		except Exception as ex:
-			print("caught you! ", ex)
-			document['error'] = f"exception talking to OpenAI {ex}"
-			return document
+	template = load_template("complete_dict_qkg")
+	prompt = template.substitute({"text": _text})
 
-		answer = completion.choices[0].message
-		
-		_dict = eval(answer.get('content').replace("\n", ""))
-		
-		keyterms.append(_dict.get('keyterms'))
+	try:
+		completion = openai.ChatCompletion.create(
+			model = document.get('models').get('keyterms'),
+			messages = [
+			{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
+			{"role": "user", "content": prompt}
+			]
+		)
+	except Exception as ex:
+		print("caught you! ", ex)
+		document['error'] = f"exception talking to OpenAI {ex}"
+		return document
 
-	document['data']['keyterms'] = keyterms
+	answer = completion.choices[0].message
+	_dict = eval(answer.get('content').replace("\n", ""))
+	
+	if document.get('data', None).get('keyterms', None):
+		document['data']['keyterms'].insert(0, _dict.get('keyterms'))
+	else:
+		document['data']['keyterms'] = [_dict.get('keyterms')]
 
 	return document
 
