@@ -40,8 +40,11 @@ def ingest_post(tid):
 	table = Table.get_by_uid_tid(current_user.uid, tid)
 
 	if table:
-		json_data = request.get_json()
-		
+		try:
+			json_data = request.get_json()
+		except Exception as ex:
+			return jsonify({"response": f"Check your JSON! {ex}"}), 400
+
 		if not json_data.get('text', None):
 			return jsonify({"response": "'text' field is required"}), 406 # todo get error code
 

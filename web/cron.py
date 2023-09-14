@@ -41,6 +41,6 @@ def status_handler(box_id="all", cron_key=""):
 	# purge old boxes
 	for _box in _boxes:
 		if _box.get('box_id') not in box_list:
-			Box.delete(_box.box_id)
+			Box.delete(_box.get('box_id'))
 
 	return boxes

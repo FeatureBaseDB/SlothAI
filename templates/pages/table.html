@@ -78,14 +78,32 @@
 
 <code>curl -X POST \
 -H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."]}' \
+-d '{"text":["There was a knock at the door, then silence."], "attributes": ["frontdoor", "sound", "person"]}' \
 "{%if dev=='True'%}http://localhost:8080{%else%}https://ai.featurebase.com{%endif%}/tables/{{table.tid}}/ingest?token={{token}}"</span>
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
             <p class="card-text">Sample results:</p>
-<code>{"job_id": "07594888642146387281","keyterm_model": "{{table.keyterm_model}}","model": "{{table.model}}","name": "{{table.name}}","text": ["There was a knock at the door, then silence."],"tid": "{{table.tid}}"}</code>
+<code>{
+  "data": {
+    "attributes": [
+      "frontdoor",
+      "sound",
+      "person"
+    ],
+    "text": [
+      "There was a knock at the door, then silence."
+    ]
+  },
+  "job_id": "2578086926602701263",
+  "models": {
+    "embedding": "{{table.get('models').get('embedding')}}",
+    "keyterms": "{{table.get('models').get('keyterms')}}"
+  },
+  "name": "{{table.name}}",
+  "tid": "{{table.tid}}"
+}</code>
             <p class="card-text">Once the pipeline task has run, check your FeatureBase Cloud account for data:</p>
-<code>SELECT * FROM {{table.name}};
+<code>SELECT _id, keyterms, text, embedding FROM {{table.name}};
 
 +---------+------------+-------------------+------------+
 |   _id   |  keyterms  |       text        |  embedding |

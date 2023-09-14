@@ -72,17 +72,17 @@ def process_tasks(cron_key, uid):
 	#  (੭｡╹▿╹｡)੭
 	# popping ai methods called by name from document.embedding -> lib/ai.py
 	for kind in ['embedding', 'keyterms']:
-
-		model = Models.get_by_name(document.get('models').get(kind))
+		try:
+			model = Models.get_by_name(document.get('models').get(kind))
+		except:
+			model = None
 
 		if model:
 			# finally, simple
-			print(model)
 			ai_document = ai(model.get('ai_model'), document)
 
 			if 'error' in ai_document:
 				print(f"got error in {kind}")
-				print(ai_document)
 				return f"{kind} error", 400
 			else:
 				# chaining document FTW
@@ -94,6 +94,7 @@ def process_tasks(cron_key, uid):
 				else:
 					print(document)
 
+	print("out of models")
 	auth = {"dbid": user.get('dbid'), "db_token": user.get('db_token')}
 	tbl_exists, err = table_exists(document.get('name'), auth)
 	if err:
@@ -103,14 +104,20 @@ def process_tasks(cron_key, uid):
 	
 	ai_document = ai("chatgpt_table_schema", document)
 	if "error" in document.keys():
+		print("document key error")
+		print(document.get('error'))
 		return document['error'], 500
+	print(ai_document)
 	
 	if not tbl_exists:
+		print("no table")
 		err = create_table(document.get('name'), document['create_schema_string'], auth)
 		if err:
 			return err, 500
 	else:
+		print("table exists")
 		cols, err = get_columns(document.get('name'), auth)
+		print(cols)
 		if err:
 			return err, 500
 		
@@ -119,7 +126,7 @@ def process_tasks(cron_key, uid):
 				err = add_column(document.get('name'), {'name': k, 'type':v}, auth)
 				if err:
 					return err, 500
-
+	print("stuff")
 	values = []
 	for i in range(len(data['text'])):
 		value = "("
@@ -135,9 +142,9 @@ def process_tasks(cron_key, uid):
 		values.append(value[:-2] + ")")
 
 	sql = f"INSERT INTO {document.get('name')} {ai_document['insert_schema_string']} VALUES {','.join(values)};"
-
+	print(sql)
 	_, err = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
-
+	print(err)
 	if err:
 		return f"failed to insert data: {err}", 500
 	else:
