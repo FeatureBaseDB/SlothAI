@@ -70,6 +70,9 @@ def process_task(task_payload, uid):
 		if 'error' in document:
 			del document['error']
 		create_task(document)
+	except Exception as e:
+		print("YOU NEED TO LOOK AT THIS: unhandled exception. task won't be retried but maybe it should be?")
+		return
 
 	
 
@@ -148,9 +151,12 @@ def insert_data(document, user):
 			if column == "_id":
 				value += f"'{random_string(6)}'"
 			else:
-				v = data[column][i]
-				if isinstance(v, str):
-					v = f"'{v}'"
+				if len(data[column]) > i:
+					v = data[column][i]
+					if isinstance(v, str):
+						v = f"'{v}'"
+				else:
+					print(f"there is a column that we're trying to insert but the length of that column is not equal to the length of text. what is going on\n DATA:{data}")
 				value += f"{v}"
 			value += ", "
 		values.append(value[:-2] + ")")
