@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import random
 from datetime import datetime, timedelta
@@ -11,12 +12,12 @@ from google.protobuf import timestamp_pb2
 from lib.util import random_string
 from lib.gcloud import box_start
 from web.models import Models, Box
+from web.kafka import Kafka
 
 import config
 
 # Set your Google Cloud Project ID
 project_id = config.project_id
-
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
@@ -91,7 +92,37 @@ def list_tasks(uid):
 			
 	return _tasks
 
+# Optional per-message delivery callback (triggered by poll() or flush())
+# when a message has been successfully delivered or permanently
+# failed delivery (after retries).
+def delivery_callback(err, msg):
+	msg_str = f"key: {msg.key()}" # , value: {msg.value()}"
+	if err:
+		sys.stderr.write(f"INFO: task delivery failed: {msg_str}: {err}\n")
+	else:
+		sys.stderr.write(f"INFO: task delivered to kafka task queue successfully: {msg_str}\n")
+
 def create_task(document):
+	if hasattr(config, 'task_queue') and config.task_queue == "kafka":
+		return create_task_kafka(document)
+	else:
+		return create_task_appengine(document)
+
+def create_task_kafka(document):
+	"""
+	no expection handling.
+	"""
+	k = Kafka() # get singleton obj
+	doc_task_id = document.get('task_id', None)
+	task_id = random_string(16) if not doc_task_id else doc_task_id
+	p = k.getProducer()
+	doc = json.dumps(document).encode()
+	p.produce(k.task_topic, value=doc, key=task_id, callback=delivery_callback)
+	p.flush()
+	# producer is garbage collected when out of scope
+	return task_id
+
+def create_task_appengine(document):
 	# Create a Cloud Tasks client
 	client = tasks_v2.CloudTasksClient()
 
