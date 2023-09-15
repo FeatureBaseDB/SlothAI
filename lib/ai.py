@@ -36,12 +36,10 @@ def ai(model_name="none", document={}):
 		# rewrite to match document flow
 		document['error'] = "model %s errors with no token" % (model_name)
 		document['explain'] = "I encountered an error talking with OpenAI."
-		return document
 
 	# call the model
 	try:
 		document = models[model_name](document)
-		return document
 
 	except Exception as ex:
 		if config.dev == "True":
@@ -49,7 +47,6 @@ def ai(model_name="none", document={}):
 
 		document['error'] = "model *%s* errors with %s." % (model_name, ex)
 		document['explain'] = "I encountered an error talking with my AI handler."
-		return document
 
 
 # helper functions
