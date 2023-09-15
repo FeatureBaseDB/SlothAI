@@ -1,17 +1,31 @@
 # SlothAI: Model API Manager
-SlothAI serves various models from a Google AppEngine project. Job deployment is managed using a Button box.
+SlothAI serves various models from a Google AppEngine project. Machine learning box deployment is managed using Laminoid.
 
-SlothAI implements [SlothANN](https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothANN.md), a new type of approximate nearest neighbor indexing and search strategy for efficiently handling large volumes of high-dimensional data in data analysis and information retrieval tasks.
+## Vector Organization
+SlothAI also implements [SlothANN](https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothANN.md), a new type of approximate nearest neighbor (ANN) strategy using semantic graphs. SlothANN allows flexible and balanced vector storage, increasing the speed of retrevial no matter the ANN implmentation in the vector store.
 
-Authentication is currently limited to FeatureBase tokens ONLY. You must have a FeatureBase cloud account to use the application.
+## Authentication
+Authentication is currently limited to FeatureBase tokens ONLY. You must have a FeatureBase cloud account to use the application. Authentication could be extended to other methods.
 
 ## Configuration
 Create a `config.py` configuration file in the root directory. Instructions will follow to populate these settings.
 
-### Configuration Settings
-TBD
+### Dependencies
+Install conda and activate a new environment:
+
+```
+conda create -n slothai python=3.9
+conda activate slothai
+```
+
+Install the requirements:
+
+```
+pip3 install -r requirements
+```
 
 ## Install
+
 To deploy to your own AppEngine:
 
 ```
