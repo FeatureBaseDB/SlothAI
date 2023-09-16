@@ -1,4 +1,4 @@
-# SlothAI: An ML Chain Manager
+# SlothAI: A Model Chain Manager
 SlothAI provides a simple UI and pipelines various models. Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
 ## Vector Managment
