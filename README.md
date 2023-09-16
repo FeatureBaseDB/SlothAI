@@ -1,5 +1,5 @@
-# SlothAI: A Model Chain Manager
-SlothAI provides a simple UI and pipelines various models.
+# SlothAI: A Model Pipeline Manager
+SlothAI provides a simple UI and methodology to implement document-based pipelines (chains) for various models. 
 
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
