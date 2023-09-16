@@ -1,5 +1,7 @@
 # SlothAI: A Model Pipeline Manager
-SlothAI provides a simple UI and methodology to implement document-based pipelines (chains) for various models. 
+SlothAI provides a simple UI and methodology to implement document-based pipelines (chains) for various models.
+
+SlothAI is implemented in Python to run on AppEngine containers. SlothAI uses queues to asyncronously run inferencing on documents.
 
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
