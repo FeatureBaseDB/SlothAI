@@ -1,11 +1,13 @@
-# SlothAI: Model API Manager
-SlothAI serves various models from a Google AppEngine project. Machine learning box deployment is managed using Laminoid.
+# SlothAI: An ML Chain Manager
+SlothAI provides a simple UI and pipelines various models. Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
-## Vector Organization
-SlothAI also implements [SlothANN](https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothANN.md), a new type of approximate nearest neighbor (ANN) strategy using semantic graphs. SlothANN allows flexible and balanced vector storage, increasing the speed of retrevial no matter the ANN implmentation in the vector store.
+## Vector Managment
+SlothAI implements [SlothANN](https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothANN.md), a new type of approximate nearest neighbor (ANN) strategy using semantic graphs. SlothANN allows flexible and balanced vector storage, increasing the speed of retrevial no matter the ANN implmentation in the vector store.
 
 ## Authentication
-Authentication is currently limited to FeatureBase tokens ONLY. You must have a FeatureBase cloud account to use the application. Authentication could be extended to other methods.
+Authentication is currently limited to FeatureBase tokens ONLY. You must have a [FeatureBase cloud](https://cloud.featurebase.com/) account to use the application.
+
+Authentication will be extended to other methods soon, as well as other storage layers, such as PostgreSQL.
 
 ## Configuration
 Create a `config.py` configuration file in the root directory. Instructions will follow to populate these settings.
