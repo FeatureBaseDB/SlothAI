@@ -5,6 +5,8 @@ Machine learning box deployment is managed using [Laminoid](https://github.com/F
 
 Laminoid and SlothAI currently support OpenAI and Instructor embeddings, as well as OpenAI and an open ensemble model called `sloth-extract` for keyterm extraction.
 
+Support for templates and vector balancing are in the works.
+
 ## Authentication
 Authentication is currently limited to FeatureBase tokens ONLY. You must have a [FeatureBase cloud](https://cloud.featurebase.com/) account to use the application.
 
