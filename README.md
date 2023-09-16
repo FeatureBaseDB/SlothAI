@@ -3,17 +3,20 @@ SlothAI provides a simple UI and methodology to implement document-based pipelin
 
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
-Laminoid and SlothAI currently support OpenAI and Instructor embeddings, as well as OpenAI and an open ensemble model called `sloth-extract` for keyterm extraction.
-
-Support for templates and vector balancing are in the works.
+## Release Notes
+* Authentication is supported with FeatureBase.
+* Embeddings and keyterm extraction pipelines are supported.
+* Local queue managment is supported.
+* Templates and vector balancing are under development.
+* Storage layer for PostgreSQL is under development.
+* Alternate auth methods are being considered.
+* config.py example is coming soon.
 
 ## Authentication
 Authentication is currently limited to FeatureBase tokens ONLY. You must have a [FeatureBase cloud](https://cloud.featurebase.com/) account to use the application.
 
-Authentication will be extended to other methods soon, as well as other storage layers, such as PostgreSQL.
-
 ## Configuration
-Create a `config.py` configuration file in the root directory. Instructions will follow to populate these settings.
+Create a `config.py` configuration file in the root directory. Instructions will follow to populate these settings. TODO
 
 ### Dependencies
 Install conda and activate a new environment:
