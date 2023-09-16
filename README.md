@@ -57,5 +57,5 @@ For local development, use the following URL:
 http://localhost:8080
 ```
 
-### Authentication
+### Login
 To login to the system, use your FeatureBase Cloud [database ID](https://cloud.featurebase.com/databases) and [API key](https://cloud.featurebase.com/configuration/api-keys) (token).
