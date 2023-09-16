@@ -1,4 +1,4 @@
-# SlothANN
+# SlothANN (WIP)
 In the realm of AI, data analysis, and information retrieval, the efficient storage and comparison of vectors has become  central challenges for many. Enter SlothANN, a solution designed to tackle this fundamental problem using semantic knowledge graphs.
 
 ## Semantic Graphs 
