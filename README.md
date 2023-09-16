@@ -15,6 +15,8 @@ Machine learning box deployment is managed using [Laminoid](https://github.com/F
 ## Authentication
 Authentication is currently limited to FeatureBase tokens ONLY. You must have a [FeatureBase cloud](https://cloud.featurebase.com/) account to use the application.
 
+Security to the Laminoid controller is done through box tokens assigned to network tags in Google Compute. This secures the deployment somewhat, but could be better.
+
 ## Configuration
 Create a `config.py` configuration file in the root directory. Instructions will follow to populate these settings. TODO
 
