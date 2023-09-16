@@ -1,8 +1,9 @@
 # SlothAI: A Model Chain Manager
-SlothAI provides a simple UI and pipelines various models. Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
+SlothAI provides a simple UI and pipelines various models.
 
-## Vector Managment
-SlothAI implements [SlothANN](https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothANN.md), a new type of approximate nearest neighbor (ANN) strategy using semantic graphs. SlothANN allows flexible and balanced vector storage, increasing the speed of retrevial no matter the ANN implmentation in the vector store.
+Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
+
+Laminoid and SlothAI currently support OpenAI and Instructor embeddings, as well as OpenAI and an open ensemble model called `sloth-extract` for keyterm extraction.
 
 ## Authentication
 Authentication is currently limited to FeatureBase tokens ONLY. You must have a [FeatureBase cloud](https://cloud.featurebase.com/) account to use the application.
