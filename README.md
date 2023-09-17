@@ -20,7 +20,9 @@ Authentication is currently limited to FeatureBase tokens ONLY. You must have a 
 Security to the Laminoid controller is done through box tokens assigned to network tags in Google Compute. This secures the deployment somewhat, but could be better.
 
 ## Configuration
-Create a `config.py` configuration file in the root directory. Instructions will follow to populate these settings. TODO
+Create a `config.py` configuration file in the root directory. Use `config.py.example` to populate.
+
+Keys or tokens need to be created as needed.
 
 ### Dependencies
 Install conda and activate a new environment:
