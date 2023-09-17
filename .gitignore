@@ -5,6 +5,7 @@ private-key.json
 .vscode
 development/
 dump.txt
+cron.yaml # do not remove
 .DS_Store
 test-queue.sh
 cron.yaml
