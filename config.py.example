@@ -17,7 +17,7 @@ sloth_token = ""
 sloth_controller_username = "controller"
 sloth_controller_ip = ""
 
-sloth_queue = "<create_queue_put_name_here"
+sloth_queue = "<create_queue_put_name_here>"
 
 # cron key
 cron_key = ""

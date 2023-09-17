@@ -22,7 +22,7 @@ Security to the Laminoid controller is done through box tokens assigned to netwo
 ## Configuration
 Create a `config.py` configuration file in the root directory. Use `config.py.example` to populate.
 
-Keys or tokens need to be created as needed.
+Keys, tokens and IPs are created as needed.
 
 ### Dependencies
 Install conda and activate a new environment:
@@ -44,6 +44,18 @@ To deploy to your own AppEngine:
 
 ```
 ./deploy.sh
+```
+
+Deploy the cron.yaml after updating the key (use the `cron.yaml.example` file):
+
+```
+gcloud app deploy cron.yaml
+```
+
+Create an AppEngine task queue (from the name in `config.py`):
+
+```
+gcloud tasks queues create sloth-spittle --location=us-central1 
 ```
 
 To deploy for local development:

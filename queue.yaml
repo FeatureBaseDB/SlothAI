@@ -1,0 +1,3 @@
+queue:
+- name: sloth-liner
+  rate: 10/s
