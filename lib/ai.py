@@ -127,10 +127,6 @@ def sloth_keyterms(document):
 		else:
 			document['error'] = f"POST request failed with status code {response.status_code}: {response.text}"
 
-	if config.dev == "True":
-		with open("dump.txt", "w") as file:
-			json.dump(document, file, indent=4)
-
 	return document
 
 
@@ -143,20 +139,18 @@ def ada(document):
 	for _text in document.get('data').get('text'): 
 		texts.append(_text.replace("\n", " "))
 
-	model = document.get('models').get('embedding')
-	embedding_results = openai.Embedding.create(input=texts, model=model)['data']
+	try:
+		model = document.get('models').get('embedding')
+		embedding_results = openai.Embedding.create(input=texts, model=model)['data']
+	except Exception as ex:
+		print(ex)
+		embedding_results = []
 
 	embeddings = []
 	for _object in embedding_results:
 		embeddings.append(_object.get("embedding"))
 
 	document['data']['embedding'] = embeddings
-
-	# process and return
-
-	if config.dev == "True":
-		with open("dump.txt", "w") as file:
-			json.dump(document, file, indent=4)
 
 	return document
 
@@ -185,12 +179,12 @@ def chatgpt_extract_keyterms(document):
 		return document
 
 	answer = completion.choices[0].message
-	_dict = eval(answer.get('content').replace("\n", ""))
+	ai_dict = eval(answer.get('content').replace("\n", "").replace("\t", "").lower())
 	
 	if document.get('data', None).get('keyterms', None):
-		document['data']['keyterms'].insert(0, _dict.get('keyterms'))
+		document['data']['keyterms'].insert(0, ai_dict.get('keyterms'))
 	else:
-		document['data']['keyterms'] = [_dict.get('keyterms')]
+		document['data']['keyterms'] = [ai_dict.get('keyterms')]
 
 	return document
 
@@ -224,7 +218,7 @@ def chatgpt_table_schema(document):
 		  ]
 		  #max_tokens=256
 		)
-	print(completion)
+
 	try:
 		schema_dict = eval(completion.choices[0].message['content'].replace("\n", ""))
 		for k,v in schema_dict.items():

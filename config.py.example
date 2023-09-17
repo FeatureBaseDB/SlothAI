@@ -1,0 +1,34 @@
+# config.py
+project_id = "sloth-compute"
+
+# development
+import os
+try:
+
+	if "True" in os.environ['DEV']:
+		dev = "True"
+	else:
+		dev = "False"
+except:
+	dev = "False"
+
+# sloth box token
+sloth_token = ""
+sloth_controller_username = "controller"
+sloth_controller_ip = ""
+
+sloth_queue = "<create_queue_put_name_here"
+
+# cron key
+cron_key = ""
+
+# secret key for the app
+secret_key = ""
+
+# featurebase endpoint URL
+featurebase_endpoint = "query.featurebase.com/v2"
+
+# OpenAI
+openai_token = "<token>"
+completion_model = "gpt-4-0613"
+

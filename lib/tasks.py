@@ -70,7 +70,7 @@ def list_tasks(uid):
 	client = tasks_v2.CloudTasksClient()
 
 	# Define the queue name
-	queue_name = client.queue_path(project_id, "us-east1", "sloth-line")
+	queue_name = client.queue_path(project_id, "us-east1", config.sloth_queue)
 
 	# List tasks in the specified queue
 	tasks = client.list_tasks(parent=queue_name)
@@ -130,7 +130,7 @@ def create_task_appengine(document):
 	target_url = f"/tasks/process/{config.cron_key}/{document.get('uid')}"
 
 	# Create a task
-	parent = client.queue_path(project_id, "us-east1", f"sloth-line")
+	parent = client.queue_path(project_id, "us-east1", config.sloth_queue)
 
 	task = {
 		"app_engine_http_request": {
