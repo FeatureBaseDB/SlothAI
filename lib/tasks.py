@@ -4,8 +4,6 @@ import json
 import random
 from datetime import datetime, timedelta
 
-from flask import url_for
-
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
@@ -98,9 +96,14 @@ def list_tasks(uid):
 def delivery_callback(err, msg):
 	msg_str = f"key: {msg.key()}" # , value: {msg.value()}"
 	if err:
-		sys.stderr.write(f"INFO: task delivery failed: {msg_str}: {err}\n")
+		try:
+			doc = json.loads(msg.value())
+			create_task(doc)
+			sys.stderr.write(f"ERROR: task delivery failed: {msg_str}: {err}: requeuing\n")
+		except Exception as e:
+			sys.stderr.write(f"ERROR: task delivery failed: {msg_str}: {err}: {e}: killing task\n")
 	else:
-		sys.stderr.write(f"INFO: task delivered to kafka task queue successfully: {msg_str}\n")
+		sys.stderr.write(f"INFO: task delivered to kafka queue successfully: {msg_str}\n")
 
 def create_task(document):
 	if hasattr(config, 'task_queue') and config.task_queue == "kafka":
@@ -108,34 +111,47 @@ def create_task(document):
 	else:
 		return create_task_appengine(document)
 
+def create_dead_letter(document):
+	if hasattr(config, 'task_queue') and config.task_queue == "kafka":
+		return create_dead_letter_kafka(document)
+	else:
+		return create_dead_letter_appengine(document)
+
 def create_task_kafka(document):
-	"""
-	no expection handling.
-	"""
+	return send_message_kafka(document, queue=Kafka().task_topic)
+
+def create_task_appengine(document):
+	return send_message_appengine(document, queue=config.sloth_queue, target=f"/tasks/process/{config.cron_key}/{document.get('uid')}")
+
+def create_dead_letter_kafka(document):
+	return send_message_kafka(document, queue=Kafka().dead_letter_topic)
+
+def create_dead_letter_appengine(document):
+	return send_message_appengine(document, queue=config.sloth_queue + "-dlq", target=f"/tasks/dead-letter/{config.cron_key}/{document.get('uid')}")
+
+def send_message_kafka(document, queue):
 	k = Kafka() # get singleton obj
 	doc_task_id = document.get('task_id', None)
 	task_id = random_string(16) if not doc_task_id else doc_task_id
+	document['task_id'] = task_id
 	p = k.getProducer()
 	doc = json.dumps(document).encode()
-	p.produce(k.task_topic, value=doc, key=task_id, callback=delivery_callback)
+	p.produce(queue, value=doc, key=task_id, callback=delivery_callback)
 	p.flush()
 	# producer is garbage collected when out of scope
 	return task_id
 
-def create_task_appengine(document):
+def send_message_appengine(document, queue, target):
 	# Create a Cloud Tasks client
 	client = tasks_v2.CloudTasksClient()
 
-	# Define the target URL where the task will be sent
-	target_url = f"/tasks/process/{config.cron_key}/{document.get('uid')}"
-
 	# Create a task
-	parent = client.queue_path(project_id, "us-east1", config.sloth_queue)
+	parent = client.queue_path(project_id, "us-east1", queue)
 
 	task = {
 		"app_engine_http_request": {
 			"http_method": tasks_v2.HttpMethod.POST,
-			"relative_uri": target_url,
+			"relative_uri": target,
 			"headers": {"Content-type": "application/json"}
 		}
 	}
@@ -161,7 +177,7 @@ def create_task_appengine(document):
 
 	# Send the task to the Cloud Tasks queue
 	response = client.create_task(parent=parent, task=task)
-	task_id = response.name.split('/')[-1]
+	task_id = response.name.split('/')[-1] if not document.get('task_id', None) else document['task_id']
 
 	# return the task ID
 	return task_id

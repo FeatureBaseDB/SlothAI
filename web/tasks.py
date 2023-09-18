@@ -6,7 +6,7 @@ from flask import request
 from lib.util import random_string
 from lib.ai import ai
 from lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
-from lib.tasks import create_task, box_required
+from lib.tasks import create_task, box_required, create_dead_letter
 from web.models import User, Table, Models
 
 tasks = Blueprint('tasks', __name__)
@@ -57,14 +57,20 @@ def process_task(task_payload, uid):
 			document['ip_address'] = selected_box.get('ip_address')
 
 		run_model(document)
-
 		insert_data(document, user)
 
 	except (json.JSONDecodeError, NonRetryException) as e:
-		print(f"task aborted with error: {task_payload}: {e}")
-		# cannot decode the payload or some other non retryable error, do nothing
-		return
+		print(f"task failed with error: {task_payload}: {e}... sending to dead letter queue.")
+		create_dead_letter({'payload': str(task_payload), 'error': str(e)})
 	except RetryException as e:
+		if 'attempt_num' not in document:
+			document['attempt_num'] = 1
+	
+		if document['attempt_num'] > 5:
+			create_dead_letter(document)
+		else:
+			document['attempt_num'] += 1
+	
 		if 'ip_address' in document:
 			del document['ip_address']
 		if 'error' in document:
@@ -72,9 +78,6 @@ def process_task(task_payload, uid):
 		create_task(document)
 	except Exception as e:
 		print("YOU NEED TO LOOK AT THIS: unhandled exception. task won't be retried but maybe it should be?")
-		return
-
-	
 
 def run_model(document):
 	if not document.get('models', None):
@@ -104,13 +107,13 @@ def run_model(document):
 
 			ai(ai_model, document)
 			if document.get('error', None):
+				document['text_stack'] = target
 				raise RetryException(f"got error in {kind}: {document['error']}")
 
 			if len(document.get('text_stack')) > 0:
 				raise RetryException("text_stack is not empty, requeue")
 
 			document.get('models').pop(kind) # pop the run model off the document
-
 
 def insert_data(document, user):
 	data = document['data']
@@ -167,3 +170,7 @@ def insert_data(document, user):
 		raise RetryException(f"failed to insert data: {err}")
 	else:
 		return "success", 200
+	
+@tasks.route('/tasks/dead-letter/<cron_key>/<uid>', methods=['POST'])
+def dead_letter(cron_key, uid):
+	return 400

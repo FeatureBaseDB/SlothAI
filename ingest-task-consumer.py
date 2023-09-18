@@ -4,15 +4,11 @@ import config
 import requests
 import sys
 
-debug = False
-if hasattr(config, 'debug') and config.debug:
-    debug = True
-
+debug = config.debug if hasattr(config, 'debug') else False
 topic = config.task_queue_name if hasattr(config, 'task_queue_name') else "sloth"
+task_endpoint = config.task_endpoint if hasattr(config, 'task_endpoint') else "http://localhost:8080"
 consumer = Kafka().getConsumer()
 consumer.subscribe([topic])
-producer = Kafka().getProducer()
-task_endpoint = config.task_endpoint if hasattr(config, 'task_endpoint') else "http://localhost:8080"
 
 # until sigkill
 while True:
