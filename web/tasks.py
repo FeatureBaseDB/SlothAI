@@ -125,11 +125,10 @@ def insert_data(document, user):
 	if "_id" not in data.keys():
 		data['_id'] = "string"
 	
-	ai("chatgpt_table_schema", document)
-	if "error" in document.keys():
-		raise RetryException(document.get('error'))
-	
 	if not tbl_exists:
+		ai("chatgpt_table_schema", document)
+		if "error" in document.keys():
+			raise RetryException(document.get('error'))
 		err = create_table(document.get('name'), document['create_schema_string'], auth)
 		if err:
 			raise RetryException(err)
@@ -139,10 +138,13 @@ def insert_data(document, user):
 		if err:
 			raise RetryException(err)
 
-		
-		for k,v in document['create_schema_dict'].items():
-			if k not in cols.keys():
-				err = add_column(document.get('name'), {'name': k, 'type':v}, auth)
+		for key in data.keys():
+			if key not in cols.keys():
+				if not document.get("create_schema_dict", None):
+					ai("chatgpt_table_schema", document)
+					if "error" in document.keys():
+						raise RetryException(document.get('error'))
+				err = add_column(document.get('name'), {'name': key, 'type': document["create_schema_dict"][key]}, auth)
 				if err:
 					raise RetryException(err)
 
