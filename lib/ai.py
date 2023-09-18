@@ -114,18 +114,19 @@ def sloth_keyterms(document):
 	headers = {
 		"Content-Type": "application/json"
 	}
-	document['data']['keyterms'] = []
+
+	if not document['data'].get('keyterms'):
+		document['data']['keyterms'] = []
+
 	# Send the POST request with the JSON data
-	for _text in document.get('data').get('text'):
-		_data = {"text": [_text]} # must be a single text in an array
+	response = requests.post(url, data=json.dumps(document), headers=headers)
 
-		response = requests.post(url, data=json.dumps(_data), headers=headers)
-
-		# Check the response status code for success
-		if response.status_code == 200:
-			document['data']['keyterms'].append(response.json().get('keyterms'))
-		else:
-			document['error'] = f"POST request failed with status code {response.status_code}: {response.text}"
+	# Check the response status code for success
+	if response.status_code == 200:
+		for _keyterms in response.json().get('keyterms'):
+			document['data']['keyterms'].append(_keyterms)
+	else:
+		document['error'] = f"POST request failed with status code {response.status_code}: {response.text}"
 
 	return document
 
