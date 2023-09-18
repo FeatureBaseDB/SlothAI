@@ -53,6 +53,8 @@ async def main():
         if i % 5 == 0:
             # Send a batch of 10 records asynchronously
             url = f"https://ai.featurebase.com/tables/{tid}/ingest?token={token}"
+            url = f"http://localhost:8080/tables/{tid}/ingest?token={token}"
+            print(records)
             tasks.append(send_batch(url, records))
 
             # Reset the records list for the next batch
