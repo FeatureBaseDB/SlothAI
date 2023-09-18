@@ -1,6 +1,10 @@
 #!/bin/bash
 
-task_queue=$(grep -oP 'task_queue\s*=\s*"\K[^"]+' config.py)
+task_queue=$(python3 - <<END
+import config
+print(config.task_queue)if hasattr(config, "task_queue") else print()
+END
+)
 if [ "$task_queue" == "kafka" ]; then
     # Initialize DOCKER_COMPOSE variable
     DOCKER_COMPOSE=""
