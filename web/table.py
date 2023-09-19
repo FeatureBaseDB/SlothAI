@@ -50,7 +50,7 @@ def ingest_post(tid):
 
 		# move to data
 		document = {"data": json_data}
-		if 'text' in json_data:
+		if 'text' in json_data: # TODO: make this configurable by the user
 			text_value = json_data['text']
 			if not isinstance(text_value, list):
 				# If 'text' is not an array, convert it to a single-element list
@@ -58,7 +58,7 @@ def ingest_post(tid):
 		else:
 			return jsonify({"response": "need 'text' field..."})
 
-
+		# this populates the model object in the document
 		# map table document to document (includes uid, etc.)
 		document.update(table)
 
@@ -106,7 +106,8 @@ def tables_add():
 	if request.is_json:
 			json_data = request.get_json()
 
-			models = {"embedding": json_data.get('embeddingModel'),"keyterms": json_data.get('keytermModel')}
+			# TODO: pulls from form
+			models = [{"name": json_data.get('embeddingModel')}, {"name": json_data.get('keytermModel')}]
 
 			_table = Table.create(
 				current_user.uid, 

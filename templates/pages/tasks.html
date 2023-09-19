@@ -85,6 +85,8 @@
                             <td>
                               {% if "418" in task.log %}
                                 Server start issued.
+                              {% elif "429" in task.log %}
+                                Too many requests to OpenAI.
                               {% else %}
                                 {{ task.log }}
                               {% endif %}
