@@ -67,8 +67,9 @@ def process_task(task_payload, uid):
 		if 'attempt_num' not in document:
 			document['attempt_num'] = 1
 	
-		if document['attempt_num'] > 5:
+		if document['attempt_num'] > 4:
 			create_dead_letter(document)
+			return
 		else:
 			document['attempt_num'] += 1
 	
@@ -81,7 +82,7 @@ def process_task(task_payload, uid):
 		import traceback
 		traceback.print_exc()
 		print(e)
-		print("YOU NEED TO LOOK AT THIS: unhandled exception. task won't be retried but maybe it should be?")
+		print("ERROR: unhandled exception. task won't be retried")
 
 def run_model(document):
 	if not document.get('models', None):
@@ -115,7 +116,7 @@ def run_model(document):
 			document = ai(ai_model, document)
 
 			if document.get('error', None):
-				document['text_stack'] = target
+				document['text_stack'].append(target)
 				raise RetryException(f"got error in {kind}: {document['error']}")
 
 			if len(document.get('text_stack')) > 0:
@@ -141,46 +142,48 @@ def insert_data(document, user):
 		if err:
 			raise RetryException(err)
 
-	else:
-		cols, err = get_columns(document.get('name'), auth)
-		if err:
-			raise RetryException(err)
+	columns, err = get_columns(document.get('name'), auth)
+	if err:
+		raise RetryException(err)
+	columns = [k for k in columns.keys()]
 
-		for key in data.keys():
-			if key not in cols.keys():
-				if not document.get("create_schema_dict", None):
-					ai("chatgpt_table_schema", document)
-					if "error" in document.keys():
-						raise RetryException(document.get('error'))
-				err = add_column(document.get('name'), {'name': key, 'type': document["create_schema_dict"][key]}, auth)
-				if err:
-					raise RetryException(err)
-
+	for key in data.keys():
+		if key not in columns:
+			if not document.get("create_schema_dict", None):
+				ai("chatgpt_table_schema", document)
+				if "error" in document.keys():
+					raise RetryException(document.get('error'))
+			err = add_column(document.get('name'), {'name': key, 'type': document["create_schema_dict"][key]}, auth)
+			if err:
+				raise RetryException(err)
 
 	values = []
+	value_columns = []
 	for i in range(len(data['text'])):
 		value = "("
-		for column in document['insert_schema_list']:
+		for column in columns:
 			if column == "_id":
-				value += f"'{random_string(6)}'"
-			else:
-				if len(data[column]) > i:
-					v = data[column][i]
-					if isinstance(v, str):
-						v = f"'{v}'"
-				else:
-					print(f"there is a column that we're trying to insert but the length of that column is not equal to the length of text. what is going on\n DATA:{data}")
-				value += f"{v}"
-			value += ", "
+				value += f"'{random_string(6)}', "
+				if i == 0:
+					value_columns.append(column)
+				continue
+			if data.get(column, None) and len(data[column]) > i:
+				if i == 0:
+					value_columns.append(column)
+				v = data[column][i]
+				if isinstance(v, str):
+					v = f"'{v}'"
+				value += f"{v}, "
 		values.append(value[:-2] + ")")
 
-	sql = f"INSERT INTO {document.get('name')} {document['insert_schema_string']} VALUES {','.join(values)};"
+	sql = f"INSERT INTO {document.get('name')} ({','.join(value_columns)}) VALUES {','.join(values)};"
 	_, err = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
 	if err:
+		print(f"failed to insert data: {err}")
 		raise RetryException(f"failed to insert data: {err}")
 	else:
 		return "success", 200
 	
 @tasks.route('/tasks/dead-letter/<cron_key>/<uid>', methods=['POST'])
 def dead_letter(cron_key, uid):
-	return 400
+	return "going to dead letter queue", 400
