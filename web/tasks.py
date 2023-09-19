@@ -32,7 +32,6 @@ def start_tasks(cron_key, uid):
 	return "success", 200
 
 def process_task(task_payload, uid):
-
 	try:
 		document = json.loads(task_payload)
 		if "data" not in document.keys():
@@ -50,6 +49,7 @@ def process_task(task_payload, uid):
 			raise RetryException('Can\'t find the table specified. Flushing request.')
 
 		defer, selected_box = box_required(table.get('models'))
+
 		if defer:
 			raise RetryException('Models requiring boxes get deferred')
 
@@ -57,6 +57,7 @@ def process_task(task_payload, uid):
 			document['ip_address'] = selected_box.get('ip_address')
 
 		run_model(document)
+
 		insert_data(document, user)
 
 	except (json.JSONDecodeError, NonRetryException) as e:
@@ -77,6 +78,9 @@ def process_task(task_payload, uid):
 			del document['error']
 		create_task(document)
 	except Exception as e:
+		import traceback
+		traceback.print_exc()
+		print(e)
 		print("YOU NEED TO LOOK AT THIS: unhandled exception. task won't be retried but maybe it should be?")
 
 def run_model(document):
@@ -94,18 +98,22 @@ def run_model(document):
 			continue
 
 		if 'gpt' not in model.get('name'):
-			ai(ai_model, document)
+			# our models
+			document = ai(ai_model, document)
+
 			if 'error' in document:
 				raise RetryException(f"got error in {kind}: {document['error']}")
 		else:
-
+			print("calling AI")
+			# stack the calls to OpenAI
 			if not document.get('text_stack', None):
 				document['text_stack'] = document.get('data').get('text').copy()
 
 			target = document.get('text_stack').pop()
 			document['text_target'] = target
 
-			ai(ai_model, document)
+			document = ai(ai_model, document)
+
 			if document.get('error', None):
 				document['text_stack'] = target
 				raise RetryException(f"got error in {kind}: {document['error']}")

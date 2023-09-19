@@ -55,6 +55,7 @@ def box_required(pipeline_models):
 
 				# start a box
 				box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
+
 				selected_box = None
 				_box_required = True
 	else:

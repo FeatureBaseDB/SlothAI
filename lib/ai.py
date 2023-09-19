@@ -48,6 +48,7 @@ def ai(model_name="none", document={}):
 		document['error'] = "model *%s* errors with %s." % (model_name, ex)
 		document['explain'] = "I encountered an error talking with my AI handler."
 
+	return document
 
 # helper functions
 # ================
@@ -192,7 +193,6 @@ def chatgpt_extract_keyterms(document):
 
 @model
 def chatgpt_table_schema(document):
-	print("in ai")
 	prompt_doc = {}
 	for k,v in document.get('data').items():
 		if isinstance(v, list) and len(v) > 0:
