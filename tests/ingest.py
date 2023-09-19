@@ -32,7 +32,6 @@ async def send_batch(url, records):
                 print(f"Batch sent successfully.")
             else:
                 print(f"Failed to send batch with status code: {response.status}")
-                print(response.json)
 
 async def main():
     # Record the start time
@@ -46,15 +45,13 @@ async def main():
     tasks = []
 
     # Loop to generate and send batches of 10 records
-    for i in range(1, 11):
+    for i in range(1, 501):
         random_text = generate_random_sentence(10)
         records.append(random_text)
 
         if i % 5 == 0:
-            # Send a batch of 10 records asynchronously
+            # Send a batch of 5 records asynchronously
             url = f"https://ai.featurebase.com/tables/{tid}/ingest?token={token}"
-            # url = f"http://localhost:8080/tables/{tid}/ingest?token={token}"
-            print(records)
             tasks.append(send_batch(url, records))
 
             # Reset the records list for the next batch

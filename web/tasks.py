@@ -152,7 +152,7 @@ def start_tasks(cron_key, uid):
 		print(f"failed to insert data: {err}")
 		# TODO: we need to store retries in the document
 		# HUGE CALLOUT: dropping document
-		print(document['error'])
+		print(document.get('error', None))
 		return err, 200
 	else:
 		return "success", 200
