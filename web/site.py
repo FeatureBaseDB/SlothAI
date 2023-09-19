@@ -64,7 +64,7 @@ def models():
 	models = Models.get_all()
 
 	return render_template(
-		'pages/models.html', username=username, api_token=api_token, dbid=dbid, models=models
+		'pages/models.html', username=username, dev=config.dev, api_token=api_token, dbid=dbid, models=models
 	)
 
 @site.route('/', methods=['GET'])
@@ -84,7 +84,7 @@ def tables():
 
 	models = Models.get_all()
 
-	return render_template('pages/tables.html', username=username, tables=_tables, models=models)
+	return render_template('pages/tables.html', username=username, dev=config.dev, tables=_tables, models=models)
 
 @site.route('/tables/<tid>', methods=['GET'])
 @flask_login.login_required

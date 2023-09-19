@@ -6,11 +6,11 @@ import os
 try:
 
 	if "True" in os.environ['DEV']:
-		dev = "True"
+		dev = True
 	else:
-		dev = "False"
+		dev = False
 except:
-	dev = "False"
+	dev = False
 
 # sloth box token
 sloth_token = ""
@@ -18,6 +18,9 @@ sloth_controller_username = "controller"
 sloth_controller_ip = ""
 
 sloth_queue = "<create_queue_put_name_here>"
+
+# task processing
+ngrok_url = "https://<ngrok_subdomain>.ngrok-free.app"
 
 # cron key
 cron_key = ""
