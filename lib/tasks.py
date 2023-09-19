@@ -1,4 +1,3 @@
-import os
 import sys
 import json
 import random
@@ -9,18 +8,227 @@ from google.protobuf import timestamp_pb2
 
 from lib.util import random_string
 from lib.gcloud import box_start
-from web.models import Models, Box
+from web.models import Models, Box, User, Table
 from web.kafka import Kafka
+import enum
 
 import config
+
+from lib.database import featurebase_query, table_exists
 
 # Set your Google Cloud Project ID
 project_id = config.project_id
 
+class TaskStatus(enum.Enum):
+	CREATING = "creating"
+	RUNNING = "running"
+	COMPLETE = "complete"
+	FAILED = "failed"
+
+class Task:
+
+	def __init__(self, data, pipeline, user):
+		self.data = data
+		self.pipeline = pipeline
+		self.user = user
+		self.status = TaskStatus.CREATING
+		self.retries = 0
+		self.id = ""
+
+	def _get_id(self):
+		return self.__id
+	
+	def _set_data(self, value):
+		if not isinstance(value, str):
+			raise TypeError("id must be set to a str")
+		self.__id = value
+	
+	def _get_data(self):
+		return self.__data
+	
+	def _set_data(self, value):
+		if not isinstance(value, dict):
+			raise TypeError("data must be set to a dict")
+		self.__data = value
+
+	def _get_pipeline(self):
+		return self.__pipeline
+	
+	def _set_pipeline(self, value):
+		if not isinstance(value, Pipeline):
+			raise TypeError("user must be set to a Pipeline")
+		self.__pipeline = value
+
+	def _get_user(self):
+		return self.__user
+	
+	def _set_user(self, value):
+		if not isinstance(value, User):
+			raise TypeError("user must be set to a Pipeline")
+		self.__user = value
+
+	def _get_status(self):
+		return self.__status
+	
+	def _set_status(self, value):
+		if not isinstance(value, TaskStatus):
+			raise TypeError("status must be set to a TaskStatus")
+		self.__status = value
+
+	def _get_retries(self):
+		return self.__status
+	
+	def _set_retries(self, value):
+		if not isinstance(value, int):
+			raise TypeError("retries must be set to a int")
+		self.__status = value
+
+	data = property(_get_data, _set_data)
+	pipeline = property(_get_pipeline, _set_pipeline)
+	user = property(_get_user, _set_user)
+	status = property(_get_status, _set_status)
+	retries = property(_get_retries, _set_retries)
+
+	def to_dict(self):
+		return {
+            "data": self.data,
+            "pipeline": self.pipeline.to_dict(),
+            "user": self.user.to_dict(),
+            "status": str(self.status),
+            "retries": self.retries,
+            "id": self.id,
+        }
+
+class Model:
+
+	def __init__(self, type, name):
+		self.type = type
+		self.name = name
+
+	def _get_type(self):
+		return self.__type
+
+	def _set_type(self, value):
+		if not isinstance(value, str):
+			raise TypeError("type must be set to a str")
+		self.__type = value
+
+	def _get_name(self):
+		return self.__name
+	
+	def _set_name(self, value):
+		if not isinstance(value, str):
+			raise TypeError("name must be set to a str")
+		self.__id = value
+
+	id = property(_get_type, _set_type)
+	name = property(_get_name, _set_name)
+
+	def to_dict(self):
+		return {
+            "id": self.id,
+            "name": self.name,
+        }
+
+class Pipeline:
+
+	def __init__(self, name, id, models, openai_token):
+		self.name = name
+		self.id = id
+		self.models = models
+		self.openai_token = openai_token
+
+	def _get_name(self):
+		return self.__name
+
+	def _set_name(self, value):
+		if not isinstance(value, str):
+			raise TypeError("name must be set to a dict")
+		self.__name = value
+
+	def _get_id(self):
+		return self.__id
+	
+	def _set_id(self, value):
+		if not isinstance(value, str):
+			raise TypeError("id must be set to a dict")
+		self.__id = value
+
+	def _get_models(self):
+		return self.__models
+	
+	def _set_models(self, value):
+		typeErr = TypeError("models must be set to a list of Models")
+		if not isinstance(value, list):
+			raise typeErr
+		for el in value:
+			if not isinstance(el, Model):
+				raise typeErr
+		self.__models = value
+
+	def _get_openai_token(self):
+		return self.__openai_token
+	
+	def _set_openai_token(self, value):
+		if not isinstance(value, str):
+			raise TypeError("id must be set to a dict")
+		self.__openai_token = value
+
+	id = property(_get_id, _set_id)
+	name = property(_get_name, _set_name)
+	models = property(_get_models, _set_models)
+	openai_token = property(_get_openai_token, _set_openai_token)
+
+	def to_dict(self):
+		models = []
+		for m in self.models:
+			models.append(m.to_dict())
+
+		return {
+            "id": self.id,
+            "name": self.name,
+            "models": self.models.to_dict(),
+            "openai_token": self.openai_token,
+        }
+
+class User:
+
+	def __init__(self, name, id):
+		self.name = name
+		self.id = id
+
+	def _get_id(self):
+		return self.__id
+	
+	def _set_id(self, value):
+		if not isinstance(value, str):
+			raise TypeError("id must be set to a dict")
+		self.__id = value
+
+	def _get_name(self):
+		return self.__name
+
+	def _set_name(self, value):
+		if not isinstance(value, str):
+			raise TypeError("name must be set to a dict")
+		self.__name = value
+
+	id = property(_get_id, _set_id)
+	name = property(_get_name, _set_name)
+
+
+	def to_dict(self):
+		return {
+            "id": self.id,
+            "name": self.name,
+            "models": self.models.to_dict(),
+            "openai_token": self.openai_token,
+        }
+
+
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
 	pass
-
 
 # probaby not the best place for this, so welcome to agile!
 def box_required(pipeline_models):
@@ -61,7 +269,6 @@ def box_required(pipeline_models):
 		selected_box = None
 
 	return _box_required, selected_box
-
 
 def list_tasks(uid):
 	# Create a Cloud Tasks client
@@ -106,10 +313,28 @@ def delivery_callback(err, msg):
 		sys.stderr.write(f"INFO: task delivered to kafka queue successfully: {msg_str}\n")
 
 def create_task(document):
+	if not isinstance(document['task'], Task):
+		return 0
+	# user = User.get_by_uid(document.get('uid', None))
+	# if not user:
+	# 	document['error'] = "user not found"
+	# 	return
+
+	# table = Table.get_by_uid_tid(document.get('uid', None), document.get('tid', None))
+	# if not table:
+	# 	document['error'] = "table not found"
+	# 	return
+
 	if hasattr(config, 'task_queue') and config.task_queue == "kafka":
-		return create_task_kafka(document)
+		task_id =  create_task_kafka(document)
 	else:
-		return create_task_appengine(document)
+		task_id = create_task_appengine(document)
+
+	# if table_exists(config.task_store, {'dbid'})
+	# featurebase_query({
+	# 	'sql': f'INSERT INTO {config.task_store} VALUES'
+	# })
+	
 
 def create_dead_letter(document):
 	if hasattr(config, 'task_queue') and config.task_queue == "kafka":

@@ -17,6 +17,8 @@ from flask_login import current_user
 from lib.util import random_string
 from lib.gcloud import box_status
 from lib.tasks import create_task
+from lib.tasks import Task, Pipeline, User, Model
+from types import SimpleNamespace
 
 from web.models import Table, Models
 
@@ -39,41 +41,49 @@ def tables_list():
 def ingest_post(tid):
 	table = Table.get_by_uid_tid(current_user.uid, tid)
 
-	if table:
-		try:
-			json_data = request.get_json()
-		except Exception as ex:
-			return jsonify({"response": f"Check your JSON! {ex}"}), 400
-
-		if not json_data.get('text', None):
-			return jsonify({"response": "'text' field is required"}), 406 # todo get error code
-
-		# move to data
-		document = {"data": json_data}
-		if 'text' in json_data:
-			text_value = json_data['text']
-			if not isinstance(text_value, list):
-				# If 'text' is not an array, convert it to a single-element list
-				json_data['text'] = [text_value]
-		else:
-			return jsonify({"response": "need 'text' field..."})
-
-
-		# map table document to document (includes uid, etc.)
-		document.update(table)
-
-		# write to the job queue
-		job_id = create_task(document)
-		document['job_id'] = job_id
-
-		# pop secure info
-		document.pop('openai_token')
-		document.pop('uid')
-
-		return jsonify(document), 200
-	else:
+	if not table:
 		return jsonify({"response": "not found"}), 404
 
+	try:
+		data = request.get_json()
+	except Exception as ex:
+		return jsonify({"response": f"Check your JSON! {ex}"}), 400
+
+	if not data.get('text', None):
+		return jsonify({"response": "'text' field is required"}), 406 # todo get error code
+
+	# move to data
+	
+	if 'text' in data:
+		text_value = data['text']
+		if not isinstance(text_value, list):
+			# If 'text' is not an array, convert it to a single-element list
+			data['text'] = [text_value]
+	else:
+		return jsonify({"response": "need 'text' field..."})
+	
+	models = []
+	for k,v in table.get('models', {}).items():
+		models.append(Model(k, v))
+
+	task = Task(
+		data=data,
+		pipeline=Pipeline(table.get('name', ""), tid, models, openai_token=table.get('openai_token', "")),
+		user=User(name=table.get('uid', ""), id=table.get('uid', ""))
+	)
+
+	document = {"task": task}
+
+	# write to the job queue
+	job_id = create_task(document)
+	document['task'].id = job_id
+
+	# pop secure info
+	task.pipeline.openai_token = ""
+	task.user.id = ""
+	task.user.name = ""
+
+	return jsonify(document), 200
 
 # API DELETE
 @table.route('/tables/<tid>', methods=['DELETE'])
