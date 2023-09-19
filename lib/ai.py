@@ -42,7 +42,7 @@ def ai(model_name="none", document={}):
 		document = models[model_name](document)
 
 	except Exception as ex:
-		if config.dev == "True":
+		if config.dev:
 			print(traceback.format_exc())
 
 		document['error'] = "model *%s* errors with %s." % (model_name, ex)
@@ -78,7 +78,7 @@ def random_string(size=6, chars=string.ascii_letters + string.digits):
 # ===============
 @model 
 def instructor(document):
-	ip_address = document.get('ip_address')
+	ip_address = document.get('ip_address') # TODO: move this into the model
 
 	password = config.sloth_token
 	url = f"http://sloth:{password}@{ip_address}:9898/embed"
@@ -87,9 +87,11 @@ def instructor(document):
 	headers = {
 		"Content-Type": "application/json"
 	}
-
-	# Send the POST request with the JSON data
-	response = requests.post(url, data=json.dumps(document.get('data')), headers=headers, timeout=30)
+	try:
+		# Send the POST request with the JSON data
+		response = requests.post(url, data=json.dumps(document.get('data')), headers=headers, timeout=30)
+	except Exception as ex:
+		raise "server not avaliable"
 
 	# Check the response status code for success
 	if response.status_code == 200:
@@ -97,12 +99,7 @@ def instructor(document):
 	else:
 		document['error'] = f"POST request failed with status code {response.status_code}: {response.text}"
 
-	if config.dev == "True":
-		with open("dump.txt", "w") as file:
-			json.dump(document, file, indent=4)
-
 	return document
-
 
 @model 
 def sloth_keyterms(document):
@@ -119,9 +116,12 @@ def sloth_keyterms(document):
 	if not document['data'].get('keyterms'):
 		document['data']['keyterms'] = []
 
-	# Send the POST request with the JSON data
-	response = requests.post(url, data=json.dumps(document), headers=headers)
-
+	try:
+		# Send the POST request with the JSON data
+		response = requests.post(url, data=json.dumps(document), headers=headers)
+	except Exception as ex:
+		raise "server not avaliable"
+	
 	# Check the response status code for success
 	if response.status_code == 200:
 		for _keyterms in response.json().get('keyterms'):
@@ -146,13 +146,10 @@ def ada(document):
 		embedding_results = openai.Embedding.create(input=texts, model=model)['data']
 	except Exception as ex:
 		print(ex)
+		document['error'] = f"exception talking to OpenAI ada embedding: {ex}"
 		embedding_results = []
 
-	embeddings = []
-	for _object in embedding_results:
-		embeddings.append(_object.get("embedding"))
-
-	document['data']['embedding'] = embeddings
+	document['data']['embedding'] = [_object.get("embedding") for _object in embedding_results]
 
 	return document
 
@@ -162,6 +159,7 @@ def chatgpt_extract_keyterms(document):
 	# load user's openai key then drop it from the document
 	openai.api_key = document.get('openai_token')
 
+	# TODO: move this somewhere and name it some reasonable 
 	_text = document.get('text_target')
 
 	template = load_template("complete_dict_qkg")
@@ -176,13 +174,14 @@ def chatgpt_extract_keyterms(document):
 			]
 		)
 	except Exception as ex:
-		print("caught you! ", ex)
-		document['error'] = f"exception talking to OpenAI {ex}"
+		print(ex)
+		document['error'] = f"exception talking to OpenAI chat completion: {ex}"
 		return document
 
 	answer = completion.choices[0].message
 	ai_dict = eval(answer.get('content').replace("\n", "").replace("\t", "").lower())
 	
+	# TODO: ensure we have data before calling the model
 	if document.get('data', None).get('keyterms', None):
 		document['data']['keyterms'].insert(0, ai_dict.get('keyterms'))
 	else:
@@ -190,7 +189,7 @@ def chatgpt_extract_keyterms(document):
 
 	return document
 
-
+# TODO: remove this model
 @model
 def chatgpt_table_schema(document):
 	prompt_doc = {}
@@ -227,7 +226,7 @@ def chatgpt_table_schema(document):
 				schema_dict[k] = f"vector({len(document['data'][k][0])})"
 	except Exception as e:
 		document['error'] = f"decoding openai repsonse: {completion}: exception: {e}"
-		return
+		return document
 
 	# build the schema
 	create_schema_list = []

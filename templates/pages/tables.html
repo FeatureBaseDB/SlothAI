@@ -68,21 +68,23 @@
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Embedding Model</th>
-                        <th>Keyterm Model</th>
+                        <th>Models</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for table in tables %}
-                        <tr>
-                            <td><a href="/tables/{{table.tid}}">{{ table.name }}</a></td>
-                            <td>{{ table.models.get('embedding') }}</td>
-                            <td>{{ table.models.get('keyterms') }}</td>
-                            <td>
-                                <button class="delete-button btn btn-danger" data-table-id="{{ table.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
-                            </td>
-                        </tr>
+                    <tr>
+                        <td><a href="/tables/{{ table.tid }}">{{ table.name }}</a></td>
+                        <td> |
+                        {% for model in table.models %}
+                            {{ model['name'] }} |
+                        {% endfor %}
+                        </td>
+                        <td>
+                            <button class="delete-button btn btn-danger" data-table-id="{{ table.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
 

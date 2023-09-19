@@ -62,12 +62,14 @@
             <h4 class="card-title card-callout">{{ table.name }}</h4>
 
 			<p class="card-text">
-			    Pipeline endpoint runs <strong>{{ table.models.get('embedding') }}</strong> and <strong>{{ table.models.get('keyterms') }}</strong> models. It targets the <strong>{{table.name}}</strong> table in your <a href="https://cloud.featurebase.com/databases">FeatureBase</a>. 
-			</p>
+                {% for model in models %}
+                <strong>{{ model.name }}</strong>
+                {% endfor %}
+            </p>
 
             <p class="card-text"></p>
 
-			<pre><span></span>{%if dev=='True'%}http://localhost:8080{%else%}https://ai.featurebase.com{%endif%}/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
+			<pre><span></span>{%if dev%}http://localhost:8080{%else%}https://ai.featurebase.com{%endif%}/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
 
             <p class="card-text">
                 <strong>Task:</strong> Send data to the <strong>{{table.name}}</strong> pipeline to create a <strong>{{table.name}}</strong> table in your FeatureBase.
@@ -79,7 +81,7 @@
 <code>curl -X POST \
 -H "Content-Type: application/json" \
 -d '{"text":["There was a knock at the door, then silence."], "attributes": [["frontdoor", "sound", "person"]]}' \
-"{%if dev=='True'%}http://localhost:8080{%else%}https://ai.featurebase.com{%endif%}/tables/{{table.tid}}/ingest?token={{token}}"</span>
+"{%if dev%}http://localhost:8080{%else%}https://ai.featurebase.com{%endif%}/tables/{{table.tid}}/ingest?token={{token}}"</span>
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
             <p class="card-text">Sample results:</p>
@@ -96,8 +98,8 @@
   },
   "job_id": "2578086926602701263",
   "models": {
-    "embedding": "{{table.get('models').get('embedding')}}",
-    "keyterms": "{{table.get('models').get('keyterms')}}"
+    {% for model in table.get('models') %} "{{ model['name'] }}"{% if not loop.last %},{% endif %}
+    {% endfor %}
   },
   "name": "{{table.name}}",
   "tid": "{{table.tid}}"

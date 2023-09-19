@@ -6,173 +6,143 @@ from flask import request
 from lib.util import random_string
 from lib.ai import ai
 from lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
-from lib.tasks import create_task, box_required, create_dead_letter
+from lib.tasks import box_required, create_task
 from web.models import User, Table, Models
 
 tasks = Blueprint('tasks', __name__)
 
-def print_debug(text):
-	if hasattr(config, 'debug') and config.debug:
-		print(text)
-
-class RetryException(Exception):
-	pass
-
-class NonRetryException(Exception):
-	pass
-
 @tasks.route('/tasks/process/<cron_key>/<uid>', methods=['POST'])
 def start_tasks(cron_key, uid):
+	# validate call with a key
 	if cron_key != config.cron_key:
-		return "ERROR: auth", 401
+		return "error auth", 401
 
+	# verify user
+	user = User.get_by_uid(uid)
+	if not user:
+		return f"Not authenticated. Flushing request.", 200
+
+	# Parse the task payload sent in the request.
 	task_payload = request.get_data(as_text=True)
-	thread = threading.Thread(target=process_task, args=(task_payload, uid))
-	thread.start()
-	return "success", 200
+	document = json.loads(task_payload)
 
-def process_task(task_payload, uid):
-	try:
-		document = json.loads(task_payload)
-		if "data" not in document.keys():
-			raise NonRetryException('tasks payload must contain a "data" key')
-		data = document['data']
-		if "text" not in data.keys():
-			raise NonRetryException('tasks payload must contain a "text" key in the "data" element')
+	# check we have the table still (user could delete since ingestion)
+	table = Table.get_by_uid_tid(uid, document.get('tid'))
+	if not table:
+		return f"Can't find the table specified. Flushing request.", 200
 
-		user = User.get_by_uid(uid)
-		if not user:
-			raise RetryException('Not authenticated. Flushing request.')
+	# models requiring boxes get deferred
+	defer, selected_box = box_required(table.get('models'))
+	if defer:
+		return f"Starting GPUs...", 418 # return resource starting 
 
-		table = Table.get_by_uid_tid(uid, document.get('tid'))
-		if not table:
-			raise RetryException('Can\'t find the table specified. Flushing request.')
-
-		defer, selected_box = box_required(table.get('models'))
-
-		if defer:
-			raise RetryException('Models requiring boxes get deferred')
-
-		if selected_box:
-			document['ip_address'] = selected_box.get('ip_address')
-
-		run_model(document)
-
-		insert_data(document, user)
-
-	except (json.JSONDecodeError, NonRetryException) as e:
-		print(f"task failed with error: {task_payload}: {e}... sending to dead letter queue.")
-		create_dead_letter({'payload': str(task_payload), 'error': str(e)})
-	except RetryException as e:
-		if 'attempt_num' not in document:
-			document['attempt_num'] = 1
-	
-		if document['attempt_num'] > 4:
-			create_dead_letter(document)
-			return
-		else:
-			document['attempt_num'] += 1
-	
-		if 'ip_address' in document:
-			del document['ip_address']
-		if 'error' in document:
-			del document['error']
-		create_task(document)
-	except Exception as e:
-		import traceback
-		traceback.print_exc()
-		print(e)
-		print("ERROR: unhandled exception. task won't be retried")
-
-def run_model(document):
-	if not document.get('models', None):
-		# no models, do nothing
-		return
+	# grab the IP for locally run models and stuff it into the document
+	if selected_box:
+		document['ip_address'] = selected_box.get('ip_address')
 
 	#  (੭｡╹▿╹｡)੭
 	# popping ai methods called by name from document.embedding -> lib/ai.py
-	for kind in ['embedding', 'keyterms']:		
-		model = Models.get_by_name(document['models'].get(kind, None))
-		ai_model = model.get('ai_model', None) if model else None
-		if not ai_model:
-			# no ai_model found, nothing to do
-			continue
+	models = document.get('models', []).copy()
+	for _model in models:
+		# TODO: refactor for clarity as this uses the AI model decorator		
+		ai_model = Models.get_by_name(_model.get("name")).get('ai_model', None)
+		if ai_model:
+			if 'gpt' not in ai_model:
+				document = ai(ai_model, document)
+				if 'error' in document:
+					return f"got error in {_model}: {document['error']}", 400
+			else:
+				# stack the calls to OpenAI
+				print("calling AI")
+				if not document.get('text_stack', None):
+					# TODO: referencing text but we want to make that variable
+					document['text_stack'] = document.get('data').get('text').copy()
 
-		if 'gpt' not in model.get('name'):
-			# our models
-			document = ai(ai_model, document)
+				target = document.get('text_stack').pop()
+				document['text_target'] = target
 
-			if 'error' in document:
-				raise RetryException(f"got error in {kind}: {document['error']}")
-		else:
-			print("calling AI")
-			# stack the calls to OpenAI
-			if not document.get('text_stack', None):
-				document['text_stack'] = document.get('data').get('text').copy()
+				document = ai(ai_model, document)
 
-			target = document.get('text_stack').pop()
-			document['text_target'] = target
+				# for now the queue max retries is 13, see queue.yaml
+				if document.get('error', None):
+					return f"got error in {_model['name']}: {document['error']}", 429 # too many requests
 
-			document = ai(ai_model, document)
+				if len(document.get('text_stack')) > 0:
+					create_task(document)
+					return f"delete the current document", 200
+		
+		document['models'].remove(_model)
 
-			if document.get('error', None):
-				document['text_stack'].append(target)
-				raise RetryException(f"got error in {kind}: {document['error']}")
-
-			if len(document.get('text_stack')) > 0:
-				raise RetryException("text_stack is not empty, requeue")
-
-			document.get('models').pop(kind) # pop the run model off the document
-
-def insert_data(document, user):
-	data = document['data']
+	# at this point we should have data for every text element for every model.
 	auth = {"dbid": user.get('dbid'), "db_token": user.get('db_token')}
 	tbl_exists, err = table_exists(document.get('name'), auth)
 	if err:
-		raise RetryException(err)
+		# TODO: we need to store retries in the document
+		# HUGE CALLOUT: dropping document
+		print(err)
+		return err, 200
 	
-	if "_id" not in data.keys():
-		data['_id'] = "string"
-	
+	if "_id" not in document['data'].keys():
+		document['data']['_id'] = "string"
+
+	# TODO: use id keys with create table
 	if not tbl_exists:
-		ai("chatgpt_table_schema", document)
+		document = ai("chatgpt_table_schema", document)
 		if "error" in document.keys():
-			raise RetryException(document.get('error'))
+			# TODO: we need to store retries in the document
+			# HUGE CALLOUT: dropping document
+			print(document['error'])
+			return err, 200
+		
 		err = create_table(document.get('name'), document['create_schema_string'], auth)
 		if err:
-			raise RetryException(err)
+			# TODO: we need to store retries in the document
+			# HUGE CALLOUT: dropping document
+			print(document['error'])
+			return err, 200
 
 	columns, err = get_columns(document.get('name'), auth)
 	if err:
-		raise RetryException(err)
+		# TODO: we need to store retries in the document
+		# HUGE CALLOUT: dropping document
+		print(document['error'])
+		return err, 200
+	
 	columns = [k for k in columns.keys()]
 
-	for key in data.keys():
+	for key in document['data'].keys():
 		if key not in columns:
 			if not document.get("create_schema_dict", None):
-				ai("chatgpt_table_schema", document)
+				document = ai("chatgpt_table_schema", document)
 				if "error" in document.keys():
-					raise RetryException(document.get('error'))
+					# TODO: we need to store retries in the document
+					# HUGE CALLOUT: dropping document
+					print(document['error'])
+					return err, 200
 			err = add_column(document.get('name'), {'name': key, 'type': document["create_schema_dict"][key]}, auth)
 			if err:
-				raise RetryException(err)
+				# TODO: we need to store retries in the document
+				# HUGE CALLOUT: dropping document
+				print(document['error'])
+				return err, 200
 
 	values = []
 	value_columns = []
-	for i in range(len(data['text'])):
+	for i in range(len(document['data']['text'])):
 		value = "("
-		for column in columns:
+		for column in columns: # TODO: loop through data keys not columns
 			if column == "_id":
 				value += f"'{random_string(6)}', "
 				if i == 0:
 					value_columns.append(column)
 				continue
-			if data.get(column, None) and len(data[column]) > i:
+			if document['data'].get(column, None) and len(document['data'][column]) > i:
 				if i == 0:
 					value_columns.append(column)
-				v = data[column][i]
+				v = document['data'][column][i]
 				if isinstance(v, str):
-					v = f"'{v}'"
+					v = v.replace("'", "''")
+					v = f"'{v}'" 
 				value += f"{v}, "
 		values.append(value[:-2] + ")")
 
@@ -180,10 +150,9 @@ def insert_data(document, user):
 	_, err = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
 	if err:
 		print(f"failed to insert data: {err}")
-		raise RetryException(f"failed to insert data: {err}")
+		# TODO: we need to store retries in the document
+		# HUGE CALLOUT: dropping document
+		print(document['error'])
+		return err, 200
 	else:
 		return "success", 200
-	
-@tasks.route('/tasks/dead-letter/<cron_key>/<uid>', methods=['POST'])
-def dead_letter(cron_key, uid):
-	return "going to dead letter queue", 400
