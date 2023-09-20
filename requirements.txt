@@ -13,3 +13,4 @@ psutil==5.9.5
 featurebase==0.0.2
 openai[datalib]
 confluent-kafka==2.2.0
+markdown==3.4.4
