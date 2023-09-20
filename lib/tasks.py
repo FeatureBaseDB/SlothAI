@@ -1,13 +1,11 @@
-import os
-import sys
 import json
 import random
+from lib.schemar import Schemar
 from datetime import datetime, timedelta
 
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
-from lib.util import random_string
 from lib.gcloud import box_start
 from web.models import Models, Box
 import config
@@ -139,3 +137,22 @@ def create_task(document):
 
 	# return the task ID
 	return task_id
+
+def get_task_schema(document):
+	'''
+	Populate with schema dict
+	'''
+	data = document.get('data', None)
+	if not data:
+		document['schema'] = {}
+	else:		
+		try:
+			document['schema'] = Schemar(data=data).infer_schema()
+		except Exception as ex:
+			document['schema'] = {}
+			document['error'] = f"in get_task_schema: {ex}"
+
+	return document
+
+	
+
