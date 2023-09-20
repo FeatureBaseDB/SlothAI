@@ -4,6 +4,9 @@ import json
 
 import requests
 
+import markdown
+import markdown.extensions.fenced_code
+
 from google.cloud import ndb
 
 from flask import Blueprint, render_template, flash
@@ -66,6 +69,24 @@ def models():
 	return render_template(
 		'pages/models.html', username=username, dev=config.dev, api_token=api_token, dbid=dbid, models=models
 	)
+
+@site.route('/animate', methods=['GET'])
+def serve_markdown():
+	# Get the directory containing the script (one level above)
+	script_directory = os.path.dirname(os.path.abspath(__file__))
+	parent_directory = os.path.abspath(os.path.join(script_directory, '../static/'))
+
+	# Define the relative path to your Markdown file
+	relative_file_path = 'animate.mmd'
+
+
+	readme_file = open(os.path.join(parent_directory, relative_file_path), "r")
+	md_template_string = markdown.markdown(
+		readme_file.read(), extensions=["fenced_code"]
+	)
+
+	return md_template_string
+
 
 @site.route('/', methods=['GET'])
 @site.route('/tables', methods=['GET'])
