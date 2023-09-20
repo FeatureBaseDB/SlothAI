@@ -16,7 +16,7 @@ from flask_login import current_user
 
 from lib.util import random_string
 from lib.gcloud import box_status
-from lib.tasks import create_task
+from lib.tasks import create_task, get_task_schema
 
 from web.models import Table, Models
 
@@ -58,9 +58,16 @@ def ingest_post(tid):
 		else:
 			return jsonify({"response": "need 'text' field..."})
 
+		# don't create a task if there is going to be an issue converting user
+		# data to a valid schema.
+		document = get_task_schema(document)
+		if document.get('error', None):
+			return jsonify({"error": document['error']}), 400
+
 		# this populates the model object in the document
 		# map table document to document (includes uid, etc.)
 		document.update(table)
+		document['retries'] = 0
 
 		# write to the job queue
 		job_id = create_task(document)
@@ -72,7 +79,7 @@ def ingest_post(tid):
 
 		return jsonify(document), 200
 	else:
-		return jsonify({"response": "not found"}), 404
+		return jsonify({"response": f"table with id {tid} not found"}), 404
 
 
 # API DELETE

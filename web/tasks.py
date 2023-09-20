@@ -6,7 +6,7 @@ from flask import request
 from lib.util import random_string
 from lib.ai import ai
 from lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
-from lib.tasks import box_required, create_task, get_task_schema
+from lib.tasks import box_required, create_task, get_task_schema, retry_task
 from web.models import User, Table, Models
 
 tasks = Blueprint('tasks', __name__)
@@ -15,11 +15,13 @@ tasks = Blueprint('tasks', __name__)
 def start_tasks(cron_key, uid):
 	# validate call with a key
 	if cron_key != config.cron_key:
-		return "error auth", 401
+		print(f"ERROR: invalid cron_key. dropping task.")
+		return f"Not authenticated. Flushing request.", 200
 
 	# verify user
 	user = User.get_by_uid(uid)
 	if not user:
+		print(f"ERROR: user not found. dropping task.")
 		return f"Not authenticated. Flushing request.", 200
 
 	# Parse the task payload sent in the request.
@@ -29,6 +31,7 @@ def start_tasks(cron_key, uid):
 	# check we have the table still (user could delete since ingestion)
 	table = Table.get_by_uid_tid(uid, document.get('tid'))
 	if not table:
+		print(f"ERROR: table with id {document.get('tid')} not found. dropping task.")
 		return f"Can't find the table specified. Flushing request.", 200
 
 	# models requiring boxes get deferred
@@ -75,64 +78,56 @@ def start_tasks(cron_key, uid):
 
 	# at this point we should have data for every text element for every model.
 	auth = {"dbid": user.get('dbid'), "db_token": user.get('db_token')}
-	tbl_exists, err = table_exists(document.get('name'), auth)
-	if err:
-		# TODO: we need to store retries in the document
-		# HUGE CALLOUT: dropping document
-		print(err)
-		return err, 200
+	tbl_exists, document['error'] = table_exists(document.get('name'), auth)
+	if document.get("error", None):
+		retry_task(document)
+		return "retrying", 200
 
-	# TODO: use id keys with create table
 	if not tbl_exists:
 		document = get_task_schema(document)
 		if document.get("error", None):
-			# TODO: we need to store retries in the document
-			# HUGE CALLOUT: dropping document
-			print(document['error'])
-			return err, 200
+			print(f"ERROR: {document['error']}. dropping task.")
+			return document['error'], 200
 		
+		# new tables always have id keys
 		schema = "(_id id, " + ", ".join([f"{fld} {typ}" for fld, typ in document.get('schema', {}).items()]) + ")"
 		
-		err = create_table(document.get('name'), schema, auth)
-		if err:
-			# TODO: we need to store retries in the document
-			# HUGE CALLOUT: dropping document
-			print(document['error'])
-			return err, 200
+		document['error'] = create_table(document.get('name'), schema, auth)
+		if document.get("error", None):
+			retry_task(document)
+			return "retrying", 200
 
-	columns, err = get_columns(document.get('name'), auth)
-	if err:
-		# TODO: we need to store retries in the document
-		# HUGE CALLOUT: dropping document
-		print(document['error'])
-		return err, 200
+	columns_dict, document['error'] = get_columns(document.get('name'), auth)
+	if document.get("error", None):
+		retry_task(document)
+		return "retrying", 200
 	
-	columns = [k for k in columns.keys()]
+	columns = [k for k in columns_dict.keys()]
 
 	for key in document['data'].keys():
 		if key not in columns:
 			if not document.get("schema", None):
 				document = get_task_schema(document)
 				if document.get("error", None):
-					# TODO: we need to store retries in the document
-					# HUGE CALLOUT: dropping document
-					print(document['error'])
-					return err, 200
-			err = add_column(document.get('name'), {'name': key, 'type': document["schema"][key]}, auth)
-			if err:
-				# TODO: we need to store retries in the document
-				# HUGE CALLOUT: dropping document
-				print(document['error'])
-				return err, 200
+					print(f"ERROR: {document['error']}. dropping task.")
+					return document['error'], 200
+			document['error'] = add_column(document.get('name'), {'name': key, 'type': document["schema"][key]}, auth)
+			if document['error']:
+				retry_task(document)
+				return "retrying", 200
 
 	values = []
 	value_columns = []
 	document['data']['_id'] = 'dummy_value'
+
 	for i in range(len(document['data']['text'])):
 		value = "("
 		for column in document['data'].keys():
 			if column == "_id":
-				value += f"identifier('{document.get('name')}'), "
+				if columns_dict['_id'] == "string":
+					value += f"'{random_string(6)}', "
+				else: # id
+					value += f"identifier('{document.get('name')}'), "
 				if i == 0:
 					value_columns.append(column)
 				continue
@@ -147,11 +142,9 @@ def start_tasks(cron_key, uid):
 		values.append(value[:-2] + ")")
 
 	sql = f"INSERT INTO {document.get('name')} ({','.join(value_columns)}) VALUES {','.join(values)};"
-	_, err = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
-	if err:
-		# TODO: we need to store retries in the document
-		# HUGE CALLOUT: dropping document
-		print(f"failed to insert data: {err}")
-		return err, 200
+	_, document['error'] = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
+	if document.get("error", None):
+		retry_task(document)
+		return "retrying", 200
 	else:
 		return "success", 200

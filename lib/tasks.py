@@ -154,5 +154,12 @@ def get_task_schema(document):
 
 	return document
 
+def retry_task(document):
+	document['retries'] += 1
+	if document['retries'] > 4:
+		print(f"ERROR: {document['error']}. {document['retries']} total retries. dropping.")
+		return
 	
-
+	print(f"ERROR: {document['error']}. {document['retries']} total retries. retrying.")
+	del document['error']
+	create_task(document)
