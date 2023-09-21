@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, make_response, redirect, url_for, 
 from flask_login import login_user, login_manager, logout_user, login_required, current_user
 import flask_login
 
-from web.models import User, Transaction, Table
+from web.models import User, Transaction, Table, Pipeline
 
 from lib.util import random_string
 
@@ -38,6 +38,7 @@ def remove():
 	logout_user()
 	User.remove_by_uid(uid)
 	Table.remove_by_uid(uid)
+	Pipeline.remove_by_uid(uid)
 	flash("Account information deleted.")
 	return redirect(url_for('auth.login'))
 

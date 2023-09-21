@@ -44,10 +44,12 @@ class Transaction(ndb.Model):
 
 class Models(ndb.Model):
 	mid = ndb.StringProperty()
+	uid = ndb.StringProperty()
 	name = ndb.StringProperty()
 	kind = ndb.StringProperty()
 	ai_model = ndb.StringProperty()
-	field = ndb.StringProperty()
+	input_fields = ndb.JsonProperty()
+	output_fields = ndb.JsonProperty()
 	gpu = ndb.StringProperty()
 
 	@classmethod
@@ -60,6 +62,7 @@ class Models(ndb.Model):
 		with client.context():
 			entities = cls.query(cls.kind == kind).fetch()
 			return [entity.to_dict() for entity in entities]
+
 	@classmethod
 	def get_all(cls):
 		with client.context():
@@ -72,38 +75,33 @@ class Models(ndb.Model):
 			return None
 		with client.context():
 			return cls.query(cls.name == name).get().to_dict()
-			
 
+	
 class Table(ndb.Model):
-	tid = ndb.StringProperty()
-	uid = ndb.StringProperty()
-	name = ndb.StringProperty()
-	models = ndb.JsonProperty()
-	schema = ndb.JsonProperty()
-	openai_token = ndb.StringProperty()
+    name = ndb.StringProperty()
+    tid = ndb.StringProperty()
+    uid = ndb.StringProperty()
+    schema = ndb.JsonProperty()
 
-	@classmethod
-	def create(cls, uid, name, models, openai_token):
+    @classmethod
+    def create(cls, uid, name, schema):
+        with ndb.Client().context():
+            current_utc_time = datetime.datetime.utcnow()
+            tid = random_string(size=17)
+            table = cls(tid=tid, uid=uid, name=name, schema=schema)
+            table.put()
 
-		with ndb.Client().context():
-			current_utc_time = datetime.datetime.utcnow()
-			table = cls.query(cls.uid == uid,cls.name == name).get()
-			if not table:
-				tid = random_string(size=17)
-				table = cls(tid=tid, uid=uid, name=name, models=models, openai_token=openai_token)
-				table.put()
+        return table.to_dict()
 
-			return table.to_dict()
-
-	@classmethod
-	def delete(cls, tid):
-		with ndb.Client().context():
-			table = cls.query(cls.tid == tid).get()
-			if table:
-				table.key.delete()
-				return True
-			else:
-				return False
+    @classmethod
+    def delete(cls, tid):
+        with ndb.Client().context():
+            table = cls.query(cls.tid == tid).get()
+            if table:
+                table.key.delete()
+                return True
+            else:
+                return False
 
 	@classmethod
 	def remove_by_uid(cls, uid):
@@ -113,7 +111,7 @@ class Table(ndb.Model):
 				table.key.delete() 
 			
 			return True
-			
+
 	@classmethod
 	def get_all_by_uid(cls, uid):
 		with ndb.Client().context():
@@ -133,11 +131,78 @@ class Table(ndb.Model):
 			return False
 
 	@classmethod
-	def get_by_uid_tid(cls, uid, tid):
+	def get_by_uid_tid(cls, uid, pid):
 		with ndb.Client().context():
-			table = cls.query(cls.uid == uid, cls.tid == tid).get()
+			table = cls.query(cls.uid == uid, cls.pid == pid).get()
 		if table:
 			return table.to_dict()
+		else:
+			return False
+
+
+class Pipeline(ndb.Model):
+	name = ndb.StringProperty()
+	pid = ndb.StringProperty()
+	uid = ndb.StringProperty()
+	models = ndb.JsonProperty()
+	openai_token = ndb.StringProperty()
+
+	@classmethod
+	def create(cls, uid, name, models, openai_token):
+
+		with ndb.Client().context():
+			current_utc_time = datetime.datetime.utcnow()
+			pipeline = cls.query(cls.uid == uid,cls.name == name).get()
+			if not pipeline:
+				pid = random_string(size=17)
+				pipeline = cls(pid=pid, uid=uid, name=name, models=models, openai_token=openai_token)
+				pipeline.put()
+
+			return pipeline.to_dict()
+
+	@classmethod
+	def delete(cls, pid):
+		with ndb.Client().context():
+			pipeline = cls.query(cls.pid == pid).get()
+			if pipeline:
+				pipeline.key.delete()
+				return True
+			else:
+				return False
+
+	@classmethod
+	def remove_by_uid(cls, uid):
+		with ndb.Client().context():
+			pipelines = cls.query(cls.uid == uid).fetch()
+			for pipeline in pipelines:
+				pipeline.key.delete() 
+			
+			return True
+			
+	@classmethod
+	def get_all_by_uid(cls, uid):
+		with ndb.Client().context():
+			pipelines = cls.query(cls.uid == uid).fetch()
+		if pipelines:
+			return pipelines
+		else:
+			return False
+
+	@classmethod
+	def get_by_uid_name(cls, uid, name):
+		with ndb.Client().context():
+			pipeline = cls.query(cls.uid == uid, cls.name == name).get()
+		if pipeline:
+			return pipeline.to_dict()
+		else:
+			return False
+
+	@classmethod
+	def get_by_uid_tid(cls, uid, pid):
+		with ndb.Client().context():
+			pipeline = cls.query(cls.uid == uid, cls.pid == pid).get()
+		if pipeline:
+			return pipeline.to_dict()
 		else:
 			return False
 
