@@ -40,7 +40,7 @@ async def main():
     tasks = []
 
     # Loop to generate and send batches of 10 records
-    for i in range(1, 501):
+    for i in range(1, 101):
         random_text = generate_random_sentence(10)
         records.append(random_text)
 
