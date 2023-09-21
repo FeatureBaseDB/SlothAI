@@ -46,6 +46,7 @@ def start_tasks(cron_key, uid):
 	for _model in models:
 		# TODO: refactor for clarity as this uses the AI model decorator		
 		ai_model = Models.get_by_name(_model.get("name")).get('ai_model', None)
+		
 		if ai_model:
 			if 'gpt' not in ai_model:
 				document = ai(ai_model, document)

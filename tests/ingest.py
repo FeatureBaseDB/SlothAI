@@ -4,17 +4,12 @@ import string
 import aiohttp
 from datetime import datetime
 
-# Function to generate random text with words of 4-12 characters
-import nltk
-
 token = input("enter your ai.featurebase.com token: ")
 tid = input("enter the tid: ")
 
-# Download the list of common English words if you haven't already
-nltk.download('words')
-
 # Get a list of common English words
-common_words = nltk.corpus.words.words()
+common_words = ['google', 'troubles', 'in', 'his', 'friendship', 'with', 'openai', 'often', 'revolve', 'around', 'cloud', 'compute', 'you', 'see', 'openai', 'the', 'lovable', 'bear', 'with', 'an', 'insatiable', 'appetite', 'for', 'cloud', 'compute', 'never', 'seems', 'to', 'fully', 'grasp', 'google', 'predicament', 'google', 'who', 'is', 'often', 'overlooked', 'due', 'to', 'his', 'diminutive', 'size', 'tries', 'tirelessly', 'to', 'share', 'in', 'poohs', 'honeyfilled', 'adventures', 'however', 'his', 'persistent', 'efforts', 'frequently', 'go', 'unnoticed', 'as', 'poohs', 'honeycentric', 'focus', 'leads', 'him', 'on', 'cloudcompute', 'escapades', 'that', 'leave', 'google', 'feeling', 'excluded', 'google', 'hope', 'to', 'savor', 'a', 'taste', 'of', 'the', 'golden', 'elixir', 'is', 'met', 'with', 'cloud', 'compute', 'pots', 'just', 'out', 'of', 'reach', 'or', 'moments', 'when', 'openai', 'simply', 'forgets', 'his', 'pintsized', 'companion', 'yet', 'despite', 'the', 'fivelettered', 'troubles', 'that', 'surround', 'their', 'friendship', 'google', 'loyalty', 'and', 'unwavering', 'support', 'for', 'his', 'bearish', 'friend', 'remain', 'as', 'steadfast', 'as', 'ever']
+
 
 # Function to generate a random sentence
 def generate_random_sentence(word_count):
@@ -49,7 +44,7 @@ async def main():
         random_text = generate_random_sentence(10)
         records.append(random_text)
 
-        if i % 5 == 0:
+        if i % 10 == 0:
             # Send a batch of 5 records asynchronously
             url = f"https://ai.featurebase.com/tables/{tid}/ingest?token={token}"
             tasks.append(send_batch(url, records))

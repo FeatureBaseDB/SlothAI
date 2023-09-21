@@ -1,8 +1,10 @@
 # complete dict task
-1. Quickly build an entry in step 3. for the dictionary that has a 'text' key for the following text:
+1. Quickly build an entry in step 4. for the dictionary that has a 'text' key for the following text:
 """
 $text
 """
 2. Ignore any obvious stop words in step 1. text: examples are are, for, where, etc.
-3. Build an entry for the dictionary that has a 'keyterms' key for an array of up to (5) keyterms from the text: in step 1.
+3. Here is an example
+# python_dict = { "text": "pooh was at the door, piglet saw.", "keyterms": ["door", "pooh", "knocked"] }
+4. Build an entry for the dictionary that has a 'keyterms' key for an array of up to (5) keyterms from the text: in step 1.
 python_dict = 

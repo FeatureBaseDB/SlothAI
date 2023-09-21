@@ -6,6 +6,8 @@ import string
 import requests
 import json
 import time
+import ast
+import re
 
 import openai
 
@@ -164,10 +166,12 @@ def chatgpt_extract_keyterms(document):
 
 	template = load_template("complete_dict_qkg")
 	prompt = template.substitute({"text": _text})
-
+	for _model in document.get('models'):
+		if "gpt" in _model.get('name'):
+			model = _model.get('name')
 	try:
 		completion = openai.ChatCompletion.create(
-			model = document.get('models').get('keyterms'),
+			model = model,
 			messages = [
 			{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
 			{"role": "user", "content": prompt}
@@ -179,12 +183,21 @@ def chatgpt_extract_keyterms(document):
 		return document
 
 	answer = completion.choices[0].message
-	ai_dict = eval(answer.get('content').replace("\n", "").replace("\t", "").lower())
-	
-	# TODO: ensure we have data before calling the model
+	ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
+	ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
+
+	try:
+	    ai_dict = ast.literal_eval(ai_dict_str)
+	except (ValueError, SyntaxError):
+	    print("Error: Invalid JSON format in ai_dict_str.")
+	    ai_dict = {}
+
+	print(ai_dict)
+
+	# Now you can use ai_dict as a dictionary
 	if document.get('data', None).get('keyterms', None):
-		document['data']['keyterms'].insert(0, ai_dict.get('keyterms'))
+	    document['data']['keyterms'].insert(0, ai_dict.get('keyterms'))
 	else:
-		document['data']['keyterms'] = [ai_dict.get('keyterms')]
+	    document['data']['keyterms'] = [ai_dict.get('keyterms', [])]
 
 	return document
