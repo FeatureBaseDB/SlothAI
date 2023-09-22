@@ -1,5 +1,6 @@
 import unittest
-from schemar import FBTypes, Schemar, InvalidData, UnhandledDataType
+from datetime import datetime, timezone
+from schemar import FBTypes, Schemar, InvalidData, UnhandledDataType, string_to_datetime, datetime_to_string
 
 class TestSchemar(unittest.TestCase):
 
@@ -43,6 +44,7 @@ class TestSchemar(unittest.TestCase):
             {
                 "input": {
                     "str_attr": ["this is some test", "this is some text"],
+                    "ts_attr": ["2022-02-02T02:02:02Z", "2022-02-02T02:02:02Z"],
                     "str_list_attr": [["list of test", "list of text"], ["list of text", "list of text"]],
                     "int_attr": [1, 2],
                     "int_list_attr": [[1, 2], [1, 2]],
@@ -55,6 +57,7 @@ class TestSchemar(unittest.TestCase):
                 },
                 "output": {
                     "str_attr": FBTypes.STRING,
+                    "ts_attr": FBTypes.TIMESTAMP + " timeunit 'ms'",
                     "str_list_attr": FBTypes.STRINGSET,
                     "int_attr": FBTypes.INT,
                     "int_list_attr": FBTypes.IDSET,
@@ -134,6 +137,132 @@ class TestSchemar(unittest.TestCase):
                     schemar.data = case['input']
                     schemar.infer_schema()
                 self.assertEqual(str(cm.exception), str(case['exception_str']))
+
+    def test_string_to_datetime(self):
+        """
+        data must be set to a dict and will raise an exception otherwise.
+        testing that here.
+        """
+        cases = [
+            {
+                "string": "2022",
+                "datetime": datetime(2022, 1, 1, 0, 0, 0)
+            },
+            {
+                "string": "2022-02",
+                "datetime": datetime(2022, 2, 1, 0, 0, 0)
+            },
+            {
+                "string": "2022-02-02",
+                "datetime": datetime(2022, 2, 2, 0, 0, 0)
+            },
+            {
+                "string": "2022-02-02 02",
+                "datetime": datetime(2022, 2, 2, 2, 0, 0)
+            },
+            {
+                "string": "2022-02-02T02",
+                "datetime": datetime(2022, 2, 2, 2, 0, 0)
+            },
+            {
+                "string": "2022-02-02 02:02",
+                "datetime": datetime(2022, 2, 2, 2, 2, 0)
+            },
+            {
+                "string": "2022-02-02T02:02",
+                "datetime": datetime(2022, 2, 2, 2, 2, 0)
+            },
+            {
+                "string": "2022-02-02 02:02:02",
+                "datetime": datetime(2022, 2, 2, 2, 2, 2)
+            },
+            {
+                "string": "2022-02-02T02:02:02",
+                "datetime": datetime(2022, 2, 2, 2, 2, 2)
+            },
+            {
+                "string": "2022-02-02 02:02:02.123456",
+                "datetime": datetime(2022, 2, 2, 2, 2, 2, 123456)
+            },
+            {
+                "string": "2022-02-02T02:02:02.123456",
+                "datetime": datetime(2022, 2, 2, 2, 2, 2, 123456)
+            },
+            {
+                "string": "2022-02-02T02Z",
+                "datetime": datetime(2022, 2, 2, 2, 0, 0, tzinfo=timezone.utc)
+            },
+            {
+                "string": "2022-02-02 02:02Z",
+                "datetime": datetime(2022, 2, 2, 2, 2, 0, tzinfo=timezone.utc)
+            },
+            {
+                "string": "2022-02-02T02:02Z",
+                "datetime": datetime(2022, 2, 2, 2, 2, 0, tzinfo=timezone.utc)
+            },
+            {
+                "string": "2022-02-02 02:02:02Z",
+                "datetime": datetime(2022, 2, 2, 2, 2, 2, tzinfo=timezone.utc)
+            },
+            {
+                "string": "2022-02-02T02:02:02Z",
+                "datetime": datetime(2022, 2, 2, 2, 2, 2, tzinfo=timezone.utc)
+            },
+            {
+                "string": "2022-02-02 02:02:02.123456Z",
+                "datetime": datetime(2022, 2, 2, 2, 2, 2, 123456, tzinfo=timezone.utc)
+            },
+            {
+                "string": "2022-02-02T02:02:02.123456Z",
+                "datetime": datetime(2022, 2, 2, 2, 2, 2, 123456, tzinfo=timezone.utc)
+            },
+            {
+                "string": "03/15/2023",
+                "datetime": datetime(2023, 3, 15, 0, 0, 0)
+            },
+            {
+                "string": "03/15/2023 03:30:45 AM",
+                "datetime": datetime(2023, 3, 15, 3, 30, 45)
+            },
+            {
+                "string": "03/15/2023 03:30:45 PM UTC",
+                "datetime": datetime(2023, 3, 15, 15, 30, 45)
+            },
+            {
+                "string": "September 22 2023",
+                "datetime": datetime(2023, 9, 22, 0, 0, 0)
+            },
+            {
+                "string": "September 22, 2023",
+                "datetime": datetime(2023, 9, 22, 0, 0, 0)
+            }
+        ]
+
+        for case in cases:
+            dt = string_to_datetime(case['string'])
+            self.assertEqual(case['datetime'], dt)
+
+    def test_datetime_to_string(self):
+        """
+        data must be set to a dict and will raise an exception otherwise.
+        testing that here.
+        """
+        cases = [
+            {
+                "datetime": datetime(2022, 2, 2),
+                "string": "2022-02-02T00:00:00.000000+00:00"
+            },
+            {
+                "datetime": datetime(2022, 2, 2, 2, 2, 2, 123456, tzinfo=timezone.utc),
+                "string": "2022-02-02T02:02:02.123456+00:00"
+
+            }
+        ]
+
+        for case in cases:
+            string = datetime_to_string(case['datetime'])
+            self.assertEqual(case['string'], string)
+
 
 if __name__ == '__main__':
     unittest.main()
