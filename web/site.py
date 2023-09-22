@@ -127,3 +127,4 @@ def table_view(tid):
 	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table)
 
 
+
