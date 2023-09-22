@@ -120,7 +120,7 @@ def table_view(tid):
 	if not _table:
 		return redirect(url_for('site.tables'))
 	
-	if os.environ['GAE_VERSION'] == "staging":
+	if not config.dev and os.environ['GAE_VERSION'] == "staging":
 		staging = True
 		url = "https://staging-dot-" + config.project_id + ".appspot.com"
 	else:
