@@ -120,6 +120,13 @@ def table_view(tid):
 	if not _table:
 		return redirect(url_for('site.tables'))
 	
-	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, dev=config.dev, table=_table)
+	if os.environ['GAE_VERSION'] == "staging":
+		staging = True
+		url = "https://staging-dot-" + config.project_id + ".appspot.com"
+	else:
+		staging = False
+		url = ""
+	
+	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, dev=config.dev, table=_table, staging=staging, url=url)
 
 

@@ -1,3 +1,4 @@
+import os
 import json
 import random
 from lib.schemar import Schemar
@@ -110,6 +111,7 @@ def create_task(document):
 		task = {
 			"app_engine_http_request": {
 				"http_method": tasks_v2.HttpMethod.POST,
+				"app_engine_routing": {"version": os.environ['GAE_VERSION']},
 				"relative_uri": f"/tasks/process/{config.cron_key}/{document.get('uid')}",
 				"headers": {"Content-type": "application/json"}
 			}
