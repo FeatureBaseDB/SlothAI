@@ -1,12 +1,12 @@
 import json
 import config
-import threading
 from flask import Blueprint
 from flask import request
 from lib.util import random_string
 from lib.ai import ai
 from lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
 from lib.tasks import box_required, create_task, get_task_schema, retry_task
+from lib.schemar import string_to_datetime, datetime_to_string
 from web.models import User, Table, Models
 
 tasks = Blueprint('tasks', __name__)
@@ -86,6 +86,7 @@ def start_tasks(cron_key, uid):
 	
 	columns = [k for k in columns_dict.keys()]
 
+	# add columns if data key cannot be found as an existing column
 	for key in document['data'].keys():
 		if key not in columns:
 			if not document.get("schema", None):
@@ -97,6 +98,7 @@ def start_tasks(cron_key, uid):
 			if document['error']:
 				retry_task(document)
 				return "retrying", 200
+			columns_dict[key] = document["schema"][key]
 
 	values = []
 	value_columns = []
@@ -117,6 +119,10 @@ def start_tasks(cron_key, uid):
 				if i == 0:
 					value_columns.append(column)
 				v = document['data'][column][i]
+				typ = columns_dict[column]
+				if "timestamp" in typ: # format timestamp
+					dt = string_to_datetime(v)
+					v = datetime_to_string(dt)
 				if isinstance(v, str):
 					v = v.replace("'", "''")
 					v = f"'{v}'" 

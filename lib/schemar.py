@@ -1,4 +1,5 @@
-import datetime
+import re
+from datetime import datetime
 
 class FBTypes():
     ID = "id"
@@ -72,7 +73,11 @@ class Schemar:
 
             # list of strs
             elif isinstance(values[0], str):
-                schema[key] = FBTypes.STRING
+                ts = string_to_datetime(values[0])
+                if ts:
+                    schema[key] = FBTypes.TIMESTAMP +  " timeunit 'ms'"
+                else:
+                    schema[key] = FBTypes.STRING
                 
             # list of lists
             elif isinstance(values[0], list):
@@ -98,4 +103,64 @@ class Schemar:
 
         return schema
 
-            
+
+def string_to_datetime(string):
+    
+    # input must be a string
+    if not isinstance(string, str):
+        return None
+
+    formats = [
+        "%Y",
+        "%Y-%m",
+        "%Y-%m-%d",
+        "%Y-%m-%d %H",
+        "%Y-%m-%dT%H",
+        "%Y-%m-%d %H%z",
+        "%Y-%m-%dT%H%z",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d %H:%M%z",
+        "%Y-%m-%dT%H:%M%z",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S%z",
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%d %H:%M:%S.%f%z",
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%m/%d/%Y",
+        "%m/%d/%Y %I:%M:%S %p",
+        "%m/%d/%Y %I:%M:%S %p %Z",
+        "%B %d %Y",
+        "%B %d, %Y"
+    ]
+
+    for format in formats:
+        try:
+            date_object = datetime.strptime(string, format)
+            return date_object
+        except Exception:
+            continue
+
+    return None
+
+def datetime_to_string(dt):
+
+    # input must be datetime
+    if not isinstance(dt, datetime):
+        return None
+    
+    try:
+        string = dt.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+        if not re.search(r"[-+]?\d{2}:\d{2}$", string): # doesn't end in +00:00 or similar
+            if re.search(r"[-+][0-9]{4}$", string): # end in +0000 or similar
+                string = string[:-2] + ":" + string[-2:]
+            else:
+                string += "+00:00"
+
+        return string
+    except Exception as e:
+        print(e)
+        return None
