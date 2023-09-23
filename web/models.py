@@ -84,8 +84,9 @@ class Table(ndb.Model):
 
 	@classmethod
 	def create(cls, uid, name, models, openai_token):
-
 		with ndb.Client().context():
+			print(models)
+			print("in create")
 			current_utc_time = datetime.datetime.utcnow()
 			table = cls.query(cls.uid == uid,cls.name == name).get()
 			if not table:

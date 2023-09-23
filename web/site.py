@@ -95,6 +95,8 @@ def tables():
 	# get the user and their tables
 	username = current_user.name
 
+	hostname = request.host
+
 	tables = Table.get_all_by_uid(uid=current_user.uid)
 
 	_tables = []
@@ -105,7 +107,7 @@ def tables():
 
 	models = Models.get_all()
 
-	return render_template('pages/tables.html', username=username, dev=config.dev, tables=_tables, models=models)
+	return render_template('pages/tables.html', username=username, hostname=hostname, tables=_tables, models=models)
 
 @site.route('/tables/<tid>', methods=['GET'])
 @flask_login.login_required
@@ -114,19 +116,15 @@ def table_view(tid):
 	username = current_user.name
 	token = current_user.api_token
 
+	hostname = request.host
+
 	# hack the _table (pipeline) up with the model info 
 	_table = Table.get_by_uid_tid(uid=current_user.uid, tid=tid)
 
 	if not _table:
 		return redirect(url_for('site.tables'))
 	
-	if not config.dev and os.environ['GAE_VERSION'] == "staging":
-		staging = True
-		url = "https://staging-dot-" + config.project_id + ".appspot.com"
-	else:
-		staging = False
-		url = ""
-	
-	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, dev=config.dev, table=_table, staging=staging, url=url)
+	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table)
+
 
 

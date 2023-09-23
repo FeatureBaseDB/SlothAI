@@ -76,9 +76,9 @@
                     {% for table in tables %}
                     <tr>
                         <td><a href="/tables/{{ table.tid }}">{{ table.name }}</a></td>
-                        <td> |
+                        <td>
                         {% for model in table.models %}
-                            {{ model['name'] }}
+                            {{ model.kind }}{{ model.name }}{% if not loop.last %},{% endif %}
                         {% endfor %}
                         </td>
                         <td>
@@ -101,9 +101,9 @@
 
         <div class="card rounded-lg">
             <div class="card-body">
-                <h4 class="card-title card-callout">Task: Create a new text storage table.</h4>
+                <h4 class="card-title card-callout">Task: Create a new pipeline.</h4>
                 <p class="card-text">
-                    Click on the "Add Pipeline" button. When prompted, select the models you want to run on the data sent to its endpoint.
+                    Click on the "Add Pipeline" button to create a new pipeline. Pipelines without models insert directly into FeatureBase.
                 </p>
 
                 <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
@@ -134,61 +134,56 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
     {% endif %}
 
 
-    <!-- Modal -->
-    <div class="modal fade" id="modelFormModal" tabindex="-1" role="dialog" aria-labelledby="modelFormModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title card-callout" id="modelFormModalLabel">Add Pipeline</h4>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+<div class="modal fade" id="modelFormModal" tabindex="-1" role="dialog" aria-labelledby="modelFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title card-callout" id="modelFormModalLabel">Create Pipeline</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- New model selection section -->
+                <div class="form-group">
+                    <label for="tableName">Pipeline Name</label>
+                    <input type="text" class="form-control" id="tableName" placeholder="Enter pipeline name">
                 </div>
-                <div class="modal-body">
-                    <form>
-                        <div class="form-group">
-                            <label for="tableName">Pipeline Name</label>
-                            <input type="text" class="form-control" id="tableName" placeholder="Enter table name">
-                        </div>
-                        <div class="form-group">
-                            <label for="EmbeddingModel">Embedding Model</label>
-                            <select class="form-control" id="EmbeddingModel">
-                                <optgroup label="Embedding Models">
-                                    {% for model in models %}
-                                        {% if model.kind == 'embedding' %}
-                                            <option>{{ model.name }}</option>
-                                        {% endif %}
-                                    {% endfor %}
-                                    <optiom>none</optiom>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="KeytermModel">Keyterm Model</label>
-                            <select class="form-control" id="KeytermModel">
-                                <optgroup label="Keyterm Models">
-                                    {% for model in models %}
-                                        {% if model.kind == 'keyterms' %}
-                                            <option>{{ model.name }}</option>
-                                        {% endif %}
-                                    {% endfor %}
-                                    <option>none</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <div class="form-group" id="tokenField">
-                            <label for="openaiToken">OpenAI Token</label>
-                            <input type="password" class="form-control" id="openaiToken" placeholder="Enter OpenAI Token">
-                        </div>
-                    </form>
+
+                <!-- Model list section -->
+                <div class="form-group">
+                    <p id="ListMessage">Pipeline will write directly to FeatureBase.</p>
+                    <ul id="modelList"></ul>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-dark" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-dark">Create</button>
+
+                <div class="form-group">
+                    <label for="selectedModel">Add Model</label>
+                    <select class="form-control" id="selectedModel">
+                        <optgroup label="Available Models">
+                            <option data-mid="none">None</option>
+                            {% for model in models %}
+                                <option data-mid="{{ model.mid }}">{{ model.kind }} with {{ model.name }}</option>
+                            {% endfor %}
+                        </optgroup>
+                    </select>
                 </div>
+                <button id="addModelToList" class="btn btn-primary">Add to Pipeline</button>
+                
+                <div class="form-group"></div>
+                <div class="form-group" id="openaiTokenField">
+                    <label for="openaiToken">OpenAI Token</label>
+                    <input type="text" class="form-control" id="openaiToken" name="openaiToken">
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-dark">Create</button>
             </div>
         </div>
     </div>
+</div>
+
 </div>
 
 
@@ -198,12 +193,12 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
 <script src="{{ url_for('static', filename='trianglify.bundle.js') }}"></script>
 <script type="text/javascript">
-$(document).ready(function() {
+$(document).ready(function () {
     // Show the notice
     $('#tempNotice').removeClass('d-none');
 
     // After 5 seconds, hide the notice
-    setTimeout(function() {
+    setTimeout(function () {
         $('#tempNotice').addClass('d-none');
     }, 5000); // 5000 milliseconds = 5 seconds
 
@@ -229,64 +224,137 @@ $(document).ready(function() {
         });
     });
 
+const selectedModelDropdown = $('#selectedModel');
+const addModelButton = $('#addModelToList');
+const modelList = $('#modelList');
+const ListMessage = $('#ListMessage');
+const openaiTokenField = $('#openaiToken'); // Added this line to select the OpenAI Token field
 
-    // When the "Create" button is clicked
-    $("#modelFormModal").on("click", ".btn-dark", function() {
-        var formData = {
-            tableName: $("#tableName").val(),
-            embeddingModel: $("#EmbeddingModel").val(),
-            keytermModel: $("#KeytermModel").val(),
-            openaiToken: $("#openaiToken").val()
-        };
-        console.log(formData);
-        // Move this to a notice in the form
-        if (!/^[a-z-]+$/.test(formData.tableName)) {
-            alert("Invalid table name. Table name should only contain lowercase letters and '-'");
-        } else if ((formData.keytermModel.includes('gpt') || formData.embeddingModel.includes('ada')) && formData.openaiToken === "") {
-            alert("OpenAI Token is required for selected options.");
-        } else {
-            $.ajax({
-                type: "POST",
-                url: "/tables",
-                data: JSON.stringify(formData),  // Send data as JSON
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                success: function(response) {
-                    window.location.href = "/tables/"+response.tid;
-                },
-                error: function(error) {
-                    console.error("Error submitting form:", error);
+const selectedModels = []; // Initialize an array to store selected models
+const mids = []; // Initialize an array to store mids
+
+addModelButton.click(function () {
+    const selectedModel = selectedModelDropdown.val();
+
+    // Check if the selectedModel is not empty and is not already in the list
+    if (selectedModel && !selectedModels.includes(selectedModel)) {
+        // Retrieve the data-mid attribute of the selected option
+        const selectedOption = selectedModelDropdown.find(':selected');
+        const selectedMid = selectedOption.data('mid');
+
+        // Add the selectedModel to the list of selected models and the associated mid to the mids array
+        selectedModels.push(selectedModel);
+        mids.push(selectedMid);
+
+        // Create a Bootstrap-styled badge for the model
+        const badge = $('<span></span>', {
+            class: 'badge badge-danger clickable-badge',
+            text: 'x',
+            click: function () {
+                const indexToRemove = selectedModels.indexOf(selectedModel);
+                if (indexToRemove !== -1) {
+                    selectedModels.splice(indexToRemove, 1);
+                    mids.splice(indexToRemove, 1);
                 }
-            });
-        }
-    });
+                listItem.remove();
+                if (modelList.children().length === 0) {
+                    ListMessage.text('Pipeline will write directly to FeatureBase.');
+                }
+
+                // Add the removed model back to the pull-down list
+                const optionToAddBack = $('<option></option>', {
+                    'data-mid': selectedMid,
+                    value: selectedModel,
+                    text: selectedModel,
+                });
+                selectedModelDropdown.append(optionToAddBack);
+
+                // After removing the model, re-check and toggle the OpenAI Token field visibility
+                toggleOpenAITokenField();
+            },
+            css: {
+                cursor: 'pointer' // Change cursor to pointer on hover
+            }
+        });
+
+        // Create a list item containing the model name, a space, and the badge
+        const listItem = $('<li></li>').text(selectedModel + ' ').append(badge);
+
+        modelList.append(listItem);
+
+        ListMessage.text('Pipeline execution order:');
+
+        // Remove the selected model from the pull-down list
+        selectedOption.remove();
+
+        // After adding the model, re-check and toggle the OpenAI Token field visibility
+        toggleOpenAITokenField();
+    }
+});
+
+
+var formFields = [
+    { name: 'tableName', id: 'tableName' },
+    { name: 'openaiToken', id: 'openaiToken' },
+    { name: 'mids', id: 'mids' }
+];
 
 // Function to toggle the visibility of the OpenAI Token field
 function toggleOpenAITokenField() {
-    var embeddingModel = $("#EmbeddingModel").val();
-    var keytermModel = $("#KeytermModel").val();
-    var $tokenField = $("#tokenField");
+    // Check if any of the selected models contain "gpt" or "ada"
+    const isGptOrAdaSelected = selectedModels.some(model => model.includes('gpt') || model.includes('ada'));
+    
+    // Select the entire group (including label and input)
+    const openaiTokenFieldGroup = $('#openaiTokenField');
 
-    // Check if "gpt" or "ada" is selected in either the embedding or keyterm models
-    var isGptOrAdaSelected = (keytermModel.includes('gpt') || embeddingModel.includes('ada'));
-
-    // Toggle visibility based on the 'isGptOrAdaSelected' variable
+    // Use jQuery to toggle visibility based on the 'isGptOrAdaSelected' variable
     if (isGptOrAdaSelected) {
-        $tokenField.show(); // Show the OpenAI Token field
+        openaiTokenFieldGroup.show(); // Show the OpenAI Token field without animation
     } else {
-        $tokenField.hide(); // Hide the OpenAI Token field
+        openaiTokenFieldGroup.hide(); // Hide the OpenAI Token field without animation
     }
 }
 
-    // Initial visibility check
-    toggleOpenAITokenField();
 
-    // Attach change event handlers to the model select fields
-    $("#EmbeddingModel, #KeytermModel").change(function() {
-        toggleOpenAITokenField();
-    });
+toggleOpenAITokenField(); // Initial state
+
+$("#modelFormModal").on("click", ".btn-dark", function () {
+    var formData = {};
+
+    // Populate formData object from formFields array
+    for (var i = 0; i < formFields.length; i++) {
+        var field = formFields[i];
+        formData[field.name] = $("#" + field.id).val();
+    }
+
+    // Include the selected mids in the formData object
+    formData.mids = mids;
+
+    // Move this to a notice in the form
+    if (!/^[a-z-]+$/.test(formData.tableName)) {
+        alert("Invalid table name. Table name should only contain lowercase letters and '-'");
+    } else if (selectedModels.some(model => model.includes('gpt') || model.includes('ada')) && formData.openaiToken === "") {
+        alert("OpenAI Token is required for selected options.");
+    } else {
+        $.ajax({
+            type: "POST",
+            url: "/tables",
+            data: JSON.stringify(formData), // Send data as JSON
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (response) {
+                window.location.href = "/tables/" + response.tid;
+            },
+            error: function (error) {
+                console.error("Error submitting form:", error);
+            }
+        });
+    }
+});
+
 
 });
 </script>
+
 </body>
 </html>

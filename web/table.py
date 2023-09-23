@@ -113,16 +113,18 @@ def tables_add():
 	if request.is_json:
 			json_data = request.get_json()
 
-			# TODO: pulls from form
-			models = [{"name": json_data.get('embeddingModel')}, {"name": json_data.get('keytermModel')}]
+			_models = []
+			for _model in json_data.get('mids'):
+				model = Models.get_by_mid(_model)
+				_models.append(model)
 
 			_table = Table.create(
 				current_user.uid, 
 				json_data.get('tableName'), 
-				models,
+				_models,
 				json_data.get('openaiToken')
 			)
-		
+
 			if _table:
 				return jsonify(_table), 200
 	

@@ -66,10 +66,29 @@
                 <strong>{{ model.name }}</strong>
                 {% endfor %}
             </p>
+<p class="card-text">{% if table.models|length == 0 %}This pipeline inserts directly into FeatureBase.{% else %}This pipeline is running the{% endif %}
+    {% if table.models|length == 1 and table.models|length != 0 %}
+        {{ table.models[0]['name'] }} model.
+    {% elif table.models|length == 2 and table.models|length != 0 %}
+        {{ table.models[0]['name'] }} and {{ table.models[1]['name'] }} models.
+    {% else %}
+        {% for model in table.models %}
+            {{ model['name'] }}
+            {% if not loop.last %}
+                {% if loop.index == table.models|length - 2 %}
+                    , and
+                {% elif not loop.last %}
+                    ,
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        {% if table.models|length != 0 %}models.{% endif %}
+    {% endif %}
+</p>
 
-            <p class="card-text"></p>
+            <p class="card-text">This is the ingestion endpoint for your pipeline:</p>
 
-			<pre><span></span>{%if dev%}http://localhost:8080{%elif staging %}{{ url }}{%else%}https://ai.featurebase.com{%endif%}/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
+			<pre><span></span>http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
 
             <p class="card-text">
                 <strong>Task:</strong> Send data to the <strong>{{table.name}}</strong> pipeline to create a <strong>{{table.name}}</strong> table in your FeatureBase.
@@ -81,7 +100,7 @@
 <code>curl -X POST \
 -H "Content-Type: application/json" \
 -d '{"text":["There was a knock at the door, then silence."], "attributes": [["frontdoor", "sound", "person"]]}' \
-"{%if dev%}http://localhost:8080{%elif staging %}{{ url }}{%else%}https://ai.featurebase.com{%endif%}/tables/{{table.tid}}/ingest?token={{token}}"
+"http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/tables/{{table.tid}}/ingest?token={{token}}"
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
             <p class="card-text">Sample results:</p>
