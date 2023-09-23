@@ -14,7 +14,6 @@ Machine learning box deployment is managed using [Laminoid](https://github.com/F
 * Templates and vector balancing are under development.
 * Storage layer for PostgreSQL is under development.
 * Alternate auth methods are being considered.
-* config.py example is coming soon.
 
 ## Authentication
 Authentication is currently limited to FeatureBase tokens ONLY. You must have a [FeatureBase cloud](https://cloud.featurebase.com/) account to use the application.
