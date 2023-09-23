@@ -101,9 +101,9 @@
 
         <div class="card rounded-lg">
             <div class="card-body">
-                <h4 class="card-title card-callout">Task: Create a new text storage table.</h4>
+                <h4 class="card-title card-callout">Task: Create a new pipeline.</h4>
                 <p class="card-text">
-                    Click on the "Add Pipeline" button. When prompted, select the models you want to run on the data sent to its endpoint.
+                    Click on the "Add Pipeline" button to create a new pipeline. Pipelines without models insert directly into FeatureBase.
                 </p>
 
                 <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
@@ -138,7 +138,7 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title card-callout" id="modelFormModalLabel">Add Pipeline</h4>
+                <h4 class="modal-title card-callout" id="modelFormModalLabel">Create Pipeline</h4>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -170,10 +170,10 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
                 <button id="addModelToList" class="btn btn-primary">Add to Pipeline</button>
                 
                 <div class="form-group"></div>
-<div class="form-group" id="tokenField" style="display: none;">
-    <label for="openaiToken">OpenAI Token</label>
-    <input type="text" class="form-control" id="openaiToken" name="openaiToken">
-</div>
+                <div class="form-group" id="openaiTokenField">
+                    <label for="openaiToken">OpenAI Token</label>
+                    <input type="text" class="form-control" id="openaiToken" name="openaiToken">
+                </div>
 
             </div>
             <div class="modal-footer">
@@ -224,131 +224,134 @@ $(document).ready(function () {
         });
     });
 
-    const selectedModelDropdown = $('#selectedModel');
-    const addModelButton = $('#addModelToList');
-    const modelList = $('#modelList');
-    const ListMessage = $('#ListMessage');
-    const $tokenField = $("#tokenField"); // Cache the token field element
+const selectedModelDropdown = $('#selectedModel');
+const addModelButton = $('#addModelToList');
+const modelList = $('#modelList');
+const ListMessage = $('#ListMessage');
+const openaiTokenField = $('#openaiToken'); // Added this line to select the OpenAI Token field
 
-    function updateTokenFieldVisibility() {
-        var embeddingModel = $("#EmbeddingModel").val();
-        var keytermModel = $("#KeytermModel").val();
+const selectedModels = []; // Initialize an array to store selected models
+const mids = []; // Initialize an array to store mids
 
-        // Check if "gpt" or "ada" is selected in either the embedding or keyterm models
-        var isGptOrAdaSelected = (keytermModel.includes('gpt') || embeddingModel.includes('ada'));
+addModelButton.click(function () {
+    const selectedModel = selectedModelDropdown.val();
 
-        // Use jQuery to toggle visibility based on the 'isGptOrAdaSelected' variable
-        if (isGptOrAdaSelected) {
-            $tokenField.slideDown(); // Show the OpenAI Token field with animation
-        } else {
-            $tokenField.slideUp(); // Hide the OpenAI Token field with animation
-        }
+    // Check if the selectedModel is not empty and is not already in the list
+    if (selectedModel && !selectedModels.includes(selectedModel)) {
+        // Retrieve the data-mid attribute of the selected option
+        const selectedOption = selectedModelDropdown.find(':selected');
+        const selectedMid = selectedOption.data('mid');
+
+        // Add the selectedModel to the list of selected models and the associated mid to the mids array
+        selectedModels.push(selectedModel);
+        mids.push(selectedMid);
+
+        // Create a Bootstrap-styled badge for the model
+        const badge = $('<span></span>', {
+            class: 'badge badge-danger clickable-badge',
+            text: 'x',
+            click: function () {
+                const indexToRemove = selectedModels.indexOf(selectedModel);
+                if (indexToRemove !== -1) {
+                    selectedModels.splice(indexToRemove, 1);
+                    mids.splice(indexToRemove, 1);
+                }
+                listItem.remove();
+                if (modelList.children().length === 0) {
+                    ListMessage.text('Pipeline will write directly to FeatureBase.');
+                }
+
+                // Add the removed model back to the pull-down list
+                const optionToAddBack = $('<option></option>', {
+                    'data-mid': selectedMid,
+                    value: selectedModel,
+                    text: selectedModel,
+                });
+                selectedModelDropdown.append(optionToAddBack);
+
+                // After removing the model, re-check and toggle the OpenAI Token field visibility
+                toggleOpenAITokenField();
+            },
+            css: {
+                cursor: 'pointer' // Change cursor to pointer on hover
+            }
+        });
+
+        // Create a list item containing the model name, a space, and the badge
+        const listItem = $('<li></li>').text(selectedModel + ' ').append(badge);
+
+        modelList.append(listItem);
+
+        ListMessage.text('Pipeline execution order:');
+
+        // Remove the selected model from the pull-down list
+        selectedOption.remove();
+
+        // After adding the model, re-check and toggle the OpenAI Token field visibility
+        toggleOpenAITokenField();
+    }
+});
+
+
+var formFields = [
+    { name: 'tableName', id: 'tableName' },
+    { name: 'openaiToken', id: 'openaiToken' },
+    { name: 'mids', id: 'mids' }
+];
+
+// Function to toggle the visibility of the OpenAI Token field
+function toggleOpenAITokenField() {
+    // Check if any of the selected models contain "gpt" or "ada"
+    const isGptOrAdaSelected = selectedModels.some(model => model.includes('gpt') || model.includes('ada'));
+    
+    // Select the entire group (including label and input)
+    const openaiTokenFieldGroup = $('#openaiTokenField');
+
+    // Use jQuery to toggle visibility based on the 'isGptOrAdaSelected' variable
+    if (isGptOrAdaSelected) {
+        openaiTokenFieldGroup.show(); // Show the OpenAI Token field without animation
+    } else {
+        openaiTokenFieldGroup.hide(); // Hide the OpenAI Token field without animation
+    }
+}
+
+
+toggleOpenAITokenField(); // Initial state
+
+$("#modelFormModal").on("click", ".btn-dark", function () {
+    var formData = {};
+
+    // Populate formData object from formFields array
+    for (var i = 0; i < formFields.length; i++) {
+        var field = formFields[i];
+        formData[field.name] = $("#" + field.id).val();
     }
 
-    addModelButton.click(function () {
-        const selectedModel = selectedModelDropdown.val();
+    // Include the selected mids in the formData object
+    formData.mids = mids;
 
-        // Check if the selectedModel is not empty and is not already in the list
-        if (selectedModel && !modelList.find('li:contains(' + selectedModel + ')').length) {
-            // Create a Bootstrap-styled badge for the model
-            const badge = $('<span></span>', {
-                class: 'badge badge-danger clickable-badge',
-                text: 'x',
-                click: function () {
-                    listItem.remove();
-                    if (modelList.children().length === 0) {
-                        ListMessage.text('Pipeline will write directly to FeatureBase.');
-                    }
-                    // After removing the model, re-check and toggle the OpenAI Token field visibility
-                    updateTokenFieldVisibility();
-                },
-                css: {
-                    cursor: 'pointer' // Change cursor to pointer on hover
-                }
-            });
-
-            // Create a list item containing the model name, a space, and the badge
-            const listItem = $('<li></li>').text(selectedModel + ' ').append(badge);
-
-            modelList.append(listItem);
-
-            ListMessage.text('These models will run in order:');
-
-            // After adding the model, re-check and toggle the OpenAI Token field visibility
-            updateTokenFieldVisibility();
-        }
-    });
-
-    var formFields = [
-        { name: 'tableName', id: 'tableName' },
-        { name: 'embeddingModel', id: 'EmbeddingModel' },
-        { name: 'keytermModel', id: 'KeytermModel' },
-        { name: 'openaiToken', id: 'openaiToken' },
-        { name: 'mid', id: 'mid' } // Add mid field to formFields
-    ];
-
-    $("#modelFormModal").on("click", ".btn-dark", function () {
-        var formData = {};
-
-        // Populate formData object from formFields array
-        for (var i = 0; i < formFields.length; i++) {
-            var field = formFields[i];
-            formData[field.name] = $("#" + field.id).val();
-        }
-
-        // Retrieve the selected option and its associated mid
-        var selectedOption = $("#EmbeddingModel option:selected"); // Adjust the selector if needed
-        var selectedMid = selectedOption.data("mid");
-
-        // Include the mid in the formData object
-        formData.mid = selectedMid;
-
-        console.log(formData);
-
-        // Move this to a notice in the form
-        if (!/^[a-z-]+$/.test(formData.tableName)) {
-            alert("Invalid table name. Table name should only contain lowercase letters and '-'");
-        } else if ((formData.keytermModel.includes('gpt') || formData.embeddingModel.includes('ada')) && formData.openaiToken === "") {
-            alert("OpenAI Token is required for selected options.");
-        } else {
-            $.ajax({
-                type: "POST",
-                url: "/tables",
-                data: JSON.stringify(formData), // Send data as JSON
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                success: function (response) {
-                    window.location.href = "/tables/" + response.tid;
-                },
-                error: function (error) {
-                    console.error("Error submitting form:", error);
-                }
-            });
-        }
-    });
-
-    // Function to toggle the visibility of the OpenAI Token field
-    function toggleOpenAITokenField() {
-        var embeddingModel = $("#EmbeddingModel").val();
-        var keytermModel = $("#KeytermModel").val();
-        var $tokenField = $("#tokenField");
-
-        // Check if "gpt" or "ada" is selected in either the embedding or keyterm models
-        var isGptOrAdaSelected = (keytermModel.includes('gpt') || embeddingModel.includes('ada'));
-
-        // Use jQuery to toggle visibility based on the 'isGptOrAdaSelected' variable
-        if (isGptOrAdaSelected) {
-            $tokenField.slideDown(); // Show the OpenAI Token field with animation
-        } else {
-            $tokenField.slideUp(); // Hide the OpenAI Token field with animation
-        }
+    // Move this to a notice in the form
+    if (!/^[a-z-]+$/.test(formData.tableName)) {
+        alert("Invalid table name. Table name should only contain lowercase letters and '-'");
+    } else if (selectedModels.some(model => model.includes('gpt') || model.includes('ada')) && formData.openaiToken === "") {
+        alert("OpenAI Token is required for selected options.");
+    } else {
+        $.ajax({
+            type: "POST",
+            url: "/tables",
+            data: JSON.stringify(formData), // Send data as JSON
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (response) {
+                window.location.href = "/tables/" + response.tid;
+            },
+            error: function (error) {
+                console.error("Error submitting form:", error);
+            }
+        });
     }
+});
 
-    toggleOpenAITokenField(); // Initial state
-
-    $("#EmbeddingModel, #KeytermModel").change(function () {
-        toggleOpenAITokenField(); // Update when model selection changes
-    });
 
 });
 </script>

@@ -66,10 +66,10 @@
                 <strong>{{ model.name }}</strong>
                 {% endfor %}
             </p>
-<p class="card-text">This pipeline is running the
-    {% if table.models|length == 1 %}
+<p class="card-text">{% if table.models|length == 0 %}This pipeline inserts directly into FeatureBase.{% else %}This pipeline is running the{% endif %}
+    {% if table.models|length == 1 and table.models|length != 0 %}
         {{ table.models[0]['name'] }} model.
-    {% elif table.models|length == 2 %}
+    {% elif table.models|length == 2 and table.models|length != 0 %}
         {{ table.models[0]['name'] }} and {{ table.models[1]['name'] }} models.
     {% else %}
         {% for model in table.models %}
@@ -82,7 +82,7 @@
                 {% endif %}
             {% endif %}
         {% endfor %}
-        models.
+        {% if table.models|length != 0 %}models.{% endif %}
     {% endif %}
 </p>
 

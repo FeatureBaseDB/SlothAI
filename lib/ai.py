@@ -122,7 +122,8 @@ def instructor(ai_model, document):
 		# Send the POST request with the JSON data
 		response = requests.post(url, data=json.dumps(document.get('data')), headers=headers, timeout=30)
 	except Exception as ex:
-		raise "server not avaliable"
+		document['error'] = "server not avaliable"
+		return document
 
 	# Check the response status code for success
 	if response.status_code == 200:
@@ -151,8 +152,9 @@ def sloth_keyterms(ai_model, document):
 		# Send the POST request with the JSON data
 		response = requests.post(url, data=json.dumps(document), headers=headers)
 	except Exception as ex:
-		raise "server not avaliable"
-	
+		document['error'] = "server not avaliable"
+		return document
+
 	# Check the response status code for success
 	if response.status_code == 200:
 		for _keyterms in response.json().get('keyterms'):
