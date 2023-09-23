@@ -78,7 +78,7 @@
                         <td><a href="/tables/{{ table.tid }}">{{ table.name }}</a></td>
                         <td>
                         {% for model in table.models %}
-                            {{ model.kind }}{{ model.name }}{% if not loop.last %},{% endif %}
+                            {{ model.kind }} with {{ model.name }}{% if not loop.last %},{% endif %}
                         {% endfor %}
                         </td>
                         <td>
