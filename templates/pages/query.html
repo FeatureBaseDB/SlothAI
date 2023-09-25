@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,73 +42,37 @@
     <a href="/tables">
         <i class="fas fa-code-branch"></i> Pipelines
     </a>
-    <a href="/query">
+    <a href="/query" class="highlighted-link">
         <i class="fas fa-search"></i> Query
     </a>
     <a href="/models">
         <i class="fas fa-cogs"></i> Models
     </a>
-    <a href="/jobs" class="highlighted-link">
+
+    <a href="/jobs">
         <i class="fas fa-tasks"></i> Jobs
     </a>
     <a href="/settings">
         <i class="fas fa-cog"></i> Settings
     </a>
 </div>
-
-<!-- Main Content -->
 <div class="content container mt-5 pt-5">
     {% for message in get_flashed_messages() %}
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
-
-    <h2 class="page_heading">Active Jobs</h2>
-
-    {% if tasks %}
-    <div class="card rounded-lg">
-        <div class="card-body">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Run #</th>
-                        <th>Next Run</th>
-                        <th>Log</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for task in tasks %}
-                        <tr>
-                            <td>{{ task.name }}</td>
-                            <td>{{ task.dispatch_count }}</td>
-                            <td>{{ task.schedule_time }}</td>
-                            <td>
-                              {% if "418" in task.log %}
-                                Server start issued.
-                              {% elif "429" in task.log %}
-                                Too many requests to OpenAI.
-                              {% else %}
-                                {{ task.log }}
-                              {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    
+    <h2 class="page_heading">Query</h2>
+    <!-- Search Box and Query Button -->
+    <select class="form-select">
+        <option selected>Select Table</option>
+    </select>
+    <div class="d-flex justify-content-between mt-4">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search...">
         </div>
+        <button class="btn btn-primary ms-2">Query</button>
     </div>
-    <p></p>
-    <button class="reload-button btn btn-success" onclick="location.reload()">
-        <i class="fas fa-sync-alt"></i> Reload
-    </button>
-    {% else %}
-    <p>The job queue is empty.</p>
-  	<button type="button" class="btn btn-dark" data-toggle="modal" id="modelFormModal">
-        View Pipelines
-    </button>
-    {% endif %}
 </div>
-
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -124,16 +85,9 @@ $(document).ready(function() {
 	$("#modelFormModal").on("click", function() {
 	    window.location.href = "/tables";
 	});
-    function reloadPage() {
-        location.reload();
-    }
-
-    // Reload the page once per minute (60,000 milliseconds)
-    setInterval(reloadPage, 60000);
 });
 </script>
 
 </script>
 </body>
 </html>
-

@@ -57,6 +57,22 @@ def settings():
 		'pages/settings.html', username=username, api_token=api_token, dbid=dbid
 	)
 
+@site.route('/query', methods=['GET'])
+@flask_login.login_required
+def query():
+	# get the user and their tables
+	username = current_user.name
+	api_token = current_user.api_token
+	dbid = current_user.dbid
+	models = Models.get_all()
+	tables = Table.get_all_by_uid(current_user.uid)
+	print(tables)
+
+	return render_template(
+		'pages/query.html', username=username, dev=config.dev, dbid=dbid, models=models, tables=tables
+	)
+
+
 @site.route('/models', methods=['GET'])
 @flask_login.login_required
 def models():
