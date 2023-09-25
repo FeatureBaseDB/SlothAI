@@ -117,12 +117,17 @@ class Table(ndb.Model):
 			
 	@classmethod
 	def get_all_by_uid(cls, uid):
+		_tables = []
 		with ndb.Client().context():
 			tables = cls.query(cls.uid == uid).fetch()
-		if tables:
-			return tables
-		else:
-			return False
+
+			for table in tables:
+				_tables.append(table.to_dict())
+
+			if tables:
+				return _tables
+			else:
+				return False
 
 	@classmethod
 	def get_by_uid_name(cls, uid, name):
