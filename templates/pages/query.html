@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FeatureBase AI - Table Details</title>
+    <title>FeatureBase AI - Query</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -62,16 +62,28 @@
     {% endfor %}
     
     <h2 class="page_heading">Query</h2>
-    <!-- Search Box and Query Button -->
+    <!-- Inside the <select> element, use a for loop to populate the options -->
     <select class="form-select">
         <option selected>Select Table</option>
+        {% for table in tables %}
+            <option value="{{ table.tid }}">{{ table.name }}</option>
+        {% endfor %}
     </select>
-    <div class="d-flex justify-content-between mt-4">
-        <div class="input-group">
-            <input type="text" class="form-control" placeholder="Search...">
+
+    <!-- Add a <form> element to wrap the input fields and button -->
+    <form id="queryForm">
+        <div class="d-flex justify-content-between mt-4">
+            <div class="input-group">
+                <input type="text" id="query" class="form-control" placeholder="enter a query...">
+            </div>
+            <button type="submit" class="btn btn-primary ms-2">Query</button>
         </div>
-        <button class="btn btn-primary ms-2">Query</button>
+    </form>
+
+    <div id="resultDiv" class="mt-4">
+        <!-- Result content will be displayed here -->
     </div>
+
 </div>
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
@@ -82,10 +94,47 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-	$("#modelFormModal").on("click", function() {
-	    window.location.href = "/tables";
-	});
+    $("form").submit(function(event) {
+        event.preventDefault(); // Prevent the default form submission
+        
+        // Get the selected table and user-entered query
+        const selectedTable = $("select").val();
+        const query = $("#query").val();
+        
+        // Check if a table is selected and a query is provided
+        if (selectedTable === "Select Table" || query.trim() === "") {
+            alert("Please select a table and enter a query.");
+            return;
+        }
+        
+        // Prepare the JSON data
+        const jsonData = {
+            "query": query
+        };
+        
+        $.ajax({
+            type: "POST",
+            url: `/tables/${selectedTable}/query`,
+            contentType: "application/json",
+            data: JSON.stringify(jsonData),
+            success: function(response) {
+                // Handle the success response by updating the resultDiv
+                const resultHtml = `
+                    <strong>SQL Query:</strong>
+                    <pre>${response.sql}</pre>
+                    <strong>Answer:</strong>
+                    <pre>${response.answer}</pre>
+                `;
+                $("#resultDiv").html(resultHtml);
+            },
+            error: function(xhr, status, error) {
+                // Handle errors here
+                console.error(xhr.responseText);
+            }
+        });
+    });
 });
+
 </script>
 
 </script>
