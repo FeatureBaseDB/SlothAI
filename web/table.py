@@ -1,30 +1,17 @@
-import os
-import sys
-import json
-
-import requests
-
 from google.cloud import ndb
 
-from flask import Blueprint, render_template, flash, jsonify
-from flask import make_response, Response
-from flask import redirect, url_for, abort
-from flask import request, send_file
+from flask import Blueprint, flash, jsonify, request
 
 import flask_login
 from flask_login import current_user
 
-from lib.util import random_string
-from lib.gcloud import box_status
-from lib.tasks import create_task, get_task_schema
 from lib.ai import ai
-from lib.database import get_columns
+from lib.tasks import create_task, get_task_schema
+from lib.database import get_columns, get_unique_column_values
 
 from web.models import Table, Models
 
 table = Blueprint('table', __name__)
-
-import config
 
 # client connection
 client = ndb.Client()
@@ -67,6 +54,35 @@ def query(tid):
 	document = {"sql": f"SELECT * FROM {table.get('name')}", "answer": "Content goes here."}
 
 	return document, 200
+
+
+# Distinct values
+@table.route('/tables/<tid>/unique_values', methods=['GET'])
+@flask_login.login_required
+def set_values(tid):
+	table = Table.get_by_uid_tid(current_user.uid, tid)
+	if table:
+		try:
+			json_data = request.get_json()
+		except Exception as ex:
+			return jsonify({"response": f"request data must be valid JSON: {ex}"}), 400
+
+		if not json_data.get('columns', None):
+			return jsonify({"response": "'columns' field with list of column names is required"}), 400
+		else:
+			columns = json_data['columns']
+			if not isinstance(columns, list):
+				return jsonify({"response": "'columns' field with list of column names is required"}), 400
+
+
+	# use the table and get the column schema
+	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
+
+	vals, err = get_unique_column_values(table.get("name"), columns, auth)
+	if err:
+		return jsonify({"error": err}), 400
+
+	return jsonify(vals), 200
 
 # API INGEST
 @table.route('/tables/<tid>/ingest', methods=['POST'])
