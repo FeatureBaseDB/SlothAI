@@ -88,8 +88,8 @@ def gpt_dict_completion(prompt, model):
 		)
 	except Exception as ex:
 		print(ex)
-		document['error'] = f"exception talking to OpenAI chat completion: {ex}"
-		return document
+		ai_dict = {"error": f"exception talking to OpenAI chat completion: {ex}"}
+		return ai_dict
 
 	answer = completion.choices[0].message
 
@@ -107,6 +107,30 @@ def gpt_dict_completion(prompt, model):
 
 # model functions
 # ===============
+@model
+def query_analyze(ai_model, document):
+	# load openai key then drop it from the document
+	openai.api_key = config.openai_token
+
+	# substitute things
+	try:
+		template = load_template("query_analyze")
+		prompt = template.substitute(document)
+	except Exception as ex:
+		print(ex)
+		document['error'] = "template wouldn't load"
+		return document
+	print(prompt)
+	# get the template's dict
+	ai_dict = gpt_dict_completion(prompt, ai_model)
+
+	# extract the keyterms and stuff into the document
+	document['classify'] = ai_dict.get('classify')
+	document['sql'] = ai_dict.get('sql')
+
+	return document
+
+
 @model 
 def instructor(ai_model, document):
 	ip_address = document.get('ip_address') # TODO: move this into the model

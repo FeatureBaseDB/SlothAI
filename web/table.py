@@ -17,6 +17,8 @@ from flask_login import current_user
 from lib.util import random_string
 from lib.gcloud import box_status
 from lib.tasks import create_task, get_task_schema
+from lib.ai import ai
+from lib.database import get_columns
 
 from web.models import Table, Models
 
@@ -32,6 +34,39 @@ client = ndb.Client()
 @flask_login.login_required
 def tables_list():
 	return None
+
+# API QUERY
+@table.route('/tables/<tid>/query', methods=['POST'])
+@flask_login.login_required
+def query(tid):
+	table = Table.get_by_uid_tid(current_user.uid, tid)
+	
+	if table:
+		try:
+			json_data = request.get_json()
+		except Exception as ex:
+			return jsonify({"response": f"Check your JSON! {ex}"}), 400
+
+		if not json_data.get('query', None):
+			return jsonify({"response": "'query' field is required"}), 406 # todo get error code
+
+	# populate with the query and the table name
+	document = {"query": f"{json_data.get('query')}", "table_name": table.get("name")}
+
+	# use the table and get the column schema
+	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
+	document['columns'] = get_columns(table.get('name'), auth)
+
+	# get the embedding type from the table
+	# get the embedding for the query
+	# get the sets so we can build pulldowns
+	
+	document = ai("query_analyze", "gpt-3.5-turbo", document)
+	print(document)
+
+	document = {"sql": f"SELECT * FROM {table.get('name')}", "answer": "Content goes here."}
+
+	return document, 200
 
 # API INGEST
 @table.route('/tables/<tid>/ingest', methods=['POST'])

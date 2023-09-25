@@ -81,8 +81,15 @@
                         <td><a href="/tables/{{ table.tid }}">{{ table.name }}</a></td>
                         <td>
                         {% for model in table.models %}
-                            {{ model.kind }} with {{ model.name }}{% if not loop.last %},{% endif %}
+                            {% if "embedding" in model.kind %}
+                                <span class="badge badge-primary">{{ model.kind }} with {{ model.name }}</span>
+                            {% elif "keyterm" in model.kind %}
+                                <span class="badge badge-warning">{{ model.kind }} with {{ model.name }}</span>
+                            {% elif "question" in model.kind %}
+                                <span class="badge badge-success">{{ model.kind }} with {{ model.name }}</span>
+                            {% endif %}
                         {% endfor %}
+                        <span class="badge badge-dark">write to database</span>
                         </td>
                         <td>
                             <button class="delete-button btn btn-danger" data-table-id="{{ table.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
@@ -162,7 +169,7 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
                 <div class="form-group">
                     <label for="selectedModel">Add Model</label>
                     <select class="form-control" id="selectedModel">
-                        <optgroup label="Available Models">
+                        <optgroup id="modelPulldown" label="Available Models">
                             <option data-mid="none">None</option>
                             {% for model in models %}
                                 <option data-mid="{{ model.mid }}">{{ model.kind }} with {{ model.name }}</option>
@@ -232,7 +239,7 @@ const addModelButton = $('#addModelToList');
 const modelList = $('#modelList');
 const ListMessage = $('#ListMessage');
 const openaiTokenField = $('#openaiToken'); // Added this line to select the OpenAI Token field
-
+const modelPulldown = $('#modelPulldown');
 const selectedModels = []; // Initialize an array to store selected models
 const mids = []; // Initialize an array to store mids
 
@@ -270,7 +277,7 @@ addModelButton.click(function () {
                     value: selectedModel,
                     text: selectedModel,
                 });
-                selectedModelDropdown.append(optionToAddBack);
+                modelPulldown.append(optionToAddBack);
 
                 // After removing the model, re-check and toggle the OpenAI Token field visibility
                 toggleOpenAITokenField();
@@ -281,7 +288,14 @@ addModelButton.click(function () {
         });
 
         // Create a list item containing the model name, a space, and the badge
-        const listItem = $('<li></li>').text(selectedModel + ' ').append(badge);
+        if (selectedModel.includes("embedding") ) {
+            var badgeType = "badge-primary";
+        } else if (selectedModel.includes("keyterm") ) {
+            var badgeType = "badge-warning";
+        } else {
+            var badgeType = "badge-success";
+        }
+        const listItem = $('<li></li>').html("<span class='badge "+badgeType+"'>"+selectedModel + "</span> ").append(badge);
 
         modelList.append(listItem);
 
