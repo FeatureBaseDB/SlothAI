@@ -46,16 +46,65 @@ def featurebase_query(document, debug=False):
 	try:
 		resp = fb_client.query(sql=sql)
 		if resp.error:
-			if len(sql) > 50:
-				partial_query = sql[:50]
-			else:
-				partial_query = sql				
-			return None, f"featurebase_query: {partial_query}... :{resp.error}"
+				if len(sql) > 100:
+					partial_query = sql[:100]
+				else:
+					partial_query = sql				
+				return None, f"featurebase_query: {partial_query}... :{resp.error}"
 		return resp, None
 	except (HTTPError, URLError, ContentTooShortError)  as err:
 		return None, f"featurebase_query: {err.reason}"
 	except Exception as e:
-		return None, f"featurebase_query: unhandled excpetion while running query"
+		return None, f"featurebase_query: unhandled excpetion while running query: {e}"
+
+
+def featurebase_querybatch(document, debug=False):
+	"""
+    Execute a query against FeatureBase cloud and return the response and any query errors.
+
+    Args:
+    - document (dict): A dictionary containing the query information.
+        - 'sqllist' (str): The SQL query to be executed.
+        - 'dbid' (str): The database ID in FeatureBase cloud.
+        - 'db_token' (str): The API key/token for authentication.
+
+    - debug (bool, optional): If True, enables debug mode for additional logging (default is False).
+
+    Returns:
+    Tuple:
+        - resp (object): The response from the Featurebase query.
+        - query_error (str): Any error message from the query execution, or None if there were no errors.
+    """
+	sqllist = document.get("sqllist")
+	dbid = document.get('dbid')
+	db_token = document.get('db_token')
+
+	fb_client = featurebase.client(
+		hostport=config.featurebase_endpoint,
+		database=dbid,
+		apikey=db_token
+	)
+
+	if debug:
+		print(f"dbid: {fb_client.database}")
+		print(f"apikey: {fb_client.apikey}")
+		print(f"hostport: {fb_client.hostport}")
+
+	try:
+		errs = []
+		results = fb_client.querybatch(sqllist, asynchronous=True)
+		for result in results:
+			if result.error:		
+				errs.append(f"featurebase_query:{result.error}")
+		if len(errs) == 0:
+			return results, None
+		else:
+			return results, errs
+	except (HTTPError, URLError, ContentTooShortError)  as err:
+		return None, f"featurebase_query: {err.reason}"
+	except Exception as e:
+		return None, f"featurebase_query: unhandled excpetion while running query: {e}"
+
 
 def create_table(name, schema, auth):
 	"""
@@ -206,3 +255,49 @@ def add_column(table_name, column, auth):
 	)
 		
 	return err
+
+
+def get_unique_column_values(table_name, columns, auth):
+	"""
+    Retrieve unique values from specified columns in a database table.
+
+    This function constructs and executes SQL queries to retrieve distinct values
+    from specified columns in a database table. It uses the provided authentication
+    information to access the database.
+
+    Args:
+        table_name (str): The name of the database table from which to retrieve values.
+        columns (list): A list of column names for which unique values are to be fetched.
+        auth (dict): A dictionary containing authentication information for database access.
+
+    Returns:
+        tuple: A tuple containing two elements:
+            - A dictionary where keys are column names, and values are lists of unique values.
+            - An error message if an error occurred during the query execution, or None if successful.
+	"""
+	
+	if not isinstance(table_name, str):
+		return None, "ERROR: table_name must be a string"
+	
+	if not isinstance(columns, list):
+		return None, "ERROR: columns must be a list of string"
+
+	if len(columns) == 0:
+			return None, None
+
+	sqllist = [f"SELECT DISTINCT({column}) FROM {table_name} WITH (FLATTEN({column}))" for column in columns]
+
+	results, err = featurebase_querybatch(
+		{
+			"sqllist": sqllist,
+			"dbid": f"{auth.get('dbid')}",
+			"db_token": f"{auth.get('db_token')}" 
+		}
+	)
+	if err:
+		return None, err
+
+	vals = {}
+	for result in results:
+		vals[result.schema['fields'][0]['name']] = [v[0] for v in result.data]
+	return vals, None
