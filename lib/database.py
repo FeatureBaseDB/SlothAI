@@ -46,7 +46,11 @@ def featurebase_query(document, debug=False):
 	try:
 		resp = fb_client.query(sql=sql)
 		if resp.error:
-			return None, f"featurebase_query: {resp.error}"
+			if len(sql) > 50:
+				partial_query = sql[:50]
+			else:
+				partial_query = sql				
+			return None, f"featurebase_query: {partial_query}... :{resp.error}"
 		return resp, None
 	except (HTTPError, URLError, ContentTooShortError)  as err:
 		return None, f"featurebase_query: {err.reason}"

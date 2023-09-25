@@ -81,17 +81,21 @@ class Table(ndb.Model):
     name = ndb.StringProperty()
     tid = ndb.StringProperty()
     uid = ndb.StringProperty()
-    schema = ndb.JsonProperty()
+    models = ndb.JsonProperty()
+    openai_token = ndb.StringProperty()
 
-    @classmethod
-    def create(cls, uid, name, schema):
-        with ndb.Client().context():
-            current_utc_time = datetime.datetime.utcnow()
-            tid = random_string(size=17)
-            table = cls(tid=tid, uid=uid, name=name, schema=schema)
-            table.put()
+	@classmethod
+	def create(cls, uid, name, models, openai_token):
+		with ndb.Client().context():
+			current_utc_time = datetime.datetime.utcnow()
+			table = cls.query(cls.uid == uid,cls.name == name).get()
+			if not table:
+				tid = random_string(size=17)
+				table = cls(tid=tid, uid=uid, name=name, models=models, openai_token=openai_token)
+				table.put()
 
-        return table.to_dict()
+	        return table.to_dict()
+
 
     @classmethod
     def delete(cls, tid):

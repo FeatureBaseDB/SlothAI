@@ -64,7 +64,7 @@
     <div class="card rounded-lg">
         <div class="card-body">
             <h4 class="card-title card-callout">Embedding Models</h4>
-			<p class="card-text">FeatureBase AI transparently supports calculating dense vectors for text sent to table endpoints. Our current embeddings models for producing these vectors (numeric arrays) include:</p>
+			<p class="card-text">Embedding models create dense vectors for text sent to table endpoints:</p>
 			<p class="card-text">
 				<ul>
                 {% for model in models %}
@@ -77,8 +77,22 @@
 			<p class="card-text">A common application of text embeddings is measuring text similarity. The resulting vectors from these types of models can be weighted to quantify how similar or dissimilar texts are to each other.</p>
         </div>
         <div class="card-body">
+            <h4 class="card-title card-callout">Question Models</h4>
+            <p class="card-text">Question models form questions about the text that is ingested:</p>
+            <p class="card-text">
+                <ul>
+                {% for model in models %}
+                    {% if model.kind == 'form_question' %}
+                        <li>{{ model.name }}</li>
+                    {% endif %}
+                {% endfor %}
+                </ul>
+            </p>
+            <p class="card-text">A common application of text embeddings is measuring text similarity. The resulting vectors from these types of models can be weighted to quantify how similar or dissimilar texts are to each other.</p>
+        </div>
+        <div class="card-body">
             <h4 class="card-title card-callout">Keyterm Models</h4>
-			<p class="card-text">FeatureBase AI supports transparent keyterm extraction for text sent to table endpoints and all POSTs to the system must carry a relevant <strong>`text`</strong> field to ensure proper vector balancing.</p>
+			<p class="card-text">Keyterm models create keyterms for text sent to table endpoints:</p>
 			<p class="card-text">
 				<ul>
                     {% for model in models %}

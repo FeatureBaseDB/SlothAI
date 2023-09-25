@@ -1,12 +1,12 @@
 import json
 import config
-import threading
 from flask import Blueprint
 from flask import request
 from lib.util import random_string
 from lib.ai import ai
 from lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
 from lib.tasks import box_required, create_task, get_task_schema, retry_task
+from lib.schemar import string_to_datetime, datetime_to_string
 from web.models import User, Table, Models
 
 tasks = Blueprint('tasks', __name__)
@@ -48,32 +48,13 @@ def start_tasks(cron_key, uid):
 	models = document.get('models', []).copy()
 	for _model in models:
 		# TODO: refactor for clarity as this uses the AI model decorator		
-		ai_model = Models.get_by_name(_model.get("name")).get('ai_model', None)
+		ai_model = Models.get_by_name(_model.get("name"))
 		
+		# process the model
 		if ai_model:
-			if 'gpt' not in ai_model:
-				document = ai(ai_model, document)
-				if 'error' in document:
-					return f"got error in {_model}: {document['error']}", 400
-			else:
-				# stack the calls to OpenAI
-				print("calling AI")
-				if not document.get('text_stack', None):
-					# TODO: referencing text but we want to make that variable
-					document['text_stack'] = document.get('data').get('text').copy()
-
-				target = document.get('text_stack').pop()
-				document['text_target'] = target
-
-				document = ai(ai_model, document)
-
-				# for now the queue max retries is 13, see queue.yaml
-				if document.get('error', None):
-					return f"got error in {_model['name']}: {document['error']}", 429 # too many requests
-
-				if len(document.get('text_stack')) > 0:
-					create_task(document)
-					return f"delete the current document", 200
+			document = ai(ai_model.get('ai_model', None), ai_model, document)
+			if 'error' in document:
+				return f"got error in {_model}: {document['error']}", 400
 		
 		document['models'].remove(_model)
 
@@ -105,6 +86,7 @@ def start_tasks(cron_key, uid):
 	
 	columns = [k for k in columns_dict.keys()]
 
+	# add columns if data key cannot be found as an existing column
 	for key in document['data'].keys():
 		if key not in columns:
 			if not document.get("schema", None):
@@ -116,6 +98,7 @@ def start_tasks(cron_key, uid):
 			if document['error']:
 				retry_task(document)
 				return "retrying", 200
+			columns_dict[key] = document["schema"][key]
 
 	values = []
 	value_columns = []
@@ -136,6 +119,10 @@ def start_tasks(cron_key, uid):
 				if i == 0:
 					value_columns.append(column)
 				v = document['data'][column][i]
+				typ = columns_dict[column]
+				if "timestamp" in typ: # format timestamp
+					dt = string_to_datetime(v)
+					v = datetime_to_string(dt)
 				if isinstance(v, str):
 					v = v.replace("'", "''")
 					v = f"'{v}'" 
