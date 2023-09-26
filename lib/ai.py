@@ -124,9 +124,8 @@ def query_analyze(ai_model, document):
 
 	# get the template's dict
 	ai_dict = gpt_dict_completion(prompt, ai_model)
-	print(ai_dict)
+
 	# extract the keyterms and stuff into the document
-	document['is_sql'] = ai_dict.get('is_sql')
 	document['sql'] = ai_dict.get('suggested_sql')
 	document['explain'] = ai_dict.get('explain')
 	return document

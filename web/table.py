@@ -27,7 +27,7 @@ def tables_list():
 @flask_login.login_required
 def query(tid):
 	table = Table.get_by_uid_tid(current_user.uid, tid)
-
+	print(table.get('models'))
 	if table:
 		try:
 			json_data = request.get_json()
@@ -82,6 +82,7 @@ def set_values(tid):
 		return jsonify({"error": err}), 400
 
 	return jsonify(vals), 200
+
 
 # API INGEST
 @table.route('/tables/<tid>/ingest', methods=['POST'])
