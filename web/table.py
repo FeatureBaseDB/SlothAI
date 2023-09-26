@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from lib.ai import ai
 from lib.tasks import create_task, get_task_schema, box_required
-from lib.database import get_columns, get_unique_column_values
+from lib.database import get_columns, get_unique_column_values, featurebase_query
 
 from web.models import Table, Models
 
@@ -55,7 +55,7 @@ def query(tid):
 		kind = model.get('kind', None)
 		if kind == 'embedding':
 			ai_model = model.get('ai_model', None)
-			ai(ai_model, model, emb) #emb['data']['']
+			ai(ai_model, model, emb) #emb['data']['embedding'] for the embedding
 
 	# use the table and get the column schema
 	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
@@ -64,6 +64,9 @@ def query(tid):
 	document = ai("query_analyze", "gpt-3.5-turbo", document)
 	print(document)
 	document = {"sql": document.get('sql'), "explain": f"{document.get('explain')}"}
+
+	if "{embedding}" in document['sql']:
+		document['sql'] = document['sql'].replace("{embedding}", f"{emb['data']['embedding']}")
 
 	return document, 200
 
@@ -96,6 +99,30 @@ def set_values(tid):
 
 	return jsonify(vals), 200
 
+# Distinct values
+@table.route('/tables/<tid>/sql', methods=['GET'])
+@flask_login.login_required
+def sql(tid):
+	table = Table.get_by_uid_tid(current_user.uid, tid)
+	if table:
+		try:
+			json_data = request.get_json()
+		except Exception as ex:
+			return jsonify({"response": f"request data must be valid JSON: {ex}"}), 400
+
+		if not json_data.get('sql', None):
+			return jsonify({"response": "'sql' field with a sql query is required"}), 400
+
+		# use the table and get the column schema
+		sql_doc = {"sql": json_data['sql'], "dbid": current_user.dbid, "db_token": current_user.db_token}
+
+		vals, err = featurebase_query(sql_doc)
+		if err:
+			return jsonify({"error": err}), 400
+
+		return jsonify({"schema": vals.schema, "data": vals.data}), 200
+
+	return "table not found", 400
 
 # API INGEST
 @table.route('/tables/<tid>/ingest', methods=['POST'])
