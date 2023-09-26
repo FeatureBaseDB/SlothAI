@@ -56,12 +56,26 @@
         <i class="fas fa-cog"></i> Settings
     </a>
 </div>
+
 <div class="content container mt-5 pt-5">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+        <a class="nav-link active" href="#">Enterprise Search</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">RAG</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">Document Chat</a>
+      </li>
+    </ul>
+
+    <div><span></span></div>
+
     {% for message in get_flashed_messages() %}
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
     
-    <h2 class="page_heading">Query</h2>
     <!-- Inside the <select> element, use a for loop to populate the options -->
     <select class="form-select">
         <option selected>Select Table</option>
@@ -122,8 +136,8 @@ $(document).ready(function() {
                 const resultHtml = `
                     <strong>SQL Query:</strong>
                     <pre>${response.sql}</pre>
-                    <strong>Answer:</strong>
-                    <pre>${response.answer}</pre>
+                    <strong>Explaination:</strong>
+                    <pre>${response.explain}</pre>
                 `;
                 $("#resultDiv").html(resultHtml);
             },

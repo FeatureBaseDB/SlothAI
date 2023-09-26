@@ -85,7 +85,7 @@
 
             <p class="card-text">This is the ingestion endpoint for your pipeline:</p>
 
-			<pre><span></span>http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
+			<code>http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/tables/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
             <p class="card-text">
                 <strong>Task:</strong> Send data to the <strong>{{table.name}}</strong> pipeline to create a <strong>{{table.name}}</strong> table in your FeatureBase.
@@ -174,6 +174,7 @@ $(document).ready(function() {
 		var text = preElement.text().trim();
 		var copyTextarea = document.createElement('textarea');
 		copyTextarea.value = text;
+        console.log(text);
 		document.body.appendChild(copyTextarea);
 		copyTextarea.select();
 		document.execCommand('copy');

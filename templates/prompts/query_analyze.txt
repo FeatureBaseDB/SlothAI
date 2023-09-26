@@ -1,40 +1,16 @@
-# complete dict task
-0. Study the following FeatureBase flavored SQL queries:
-"""
-# example 1
-insert into t values (0, 'a', ['a', 'b', 'c'], 1, [1, 2, 3]);
-select * from t;
- _id | s | sst             | i | ist       
------+---+-----------------+---+-----------
-   0 | a | ['a', 'b', 'c'] | 1 | [1, 2, 3] 
-# example 2
-select * from t where setcontains(sst, 'a');
- _id | s | sst             | i | ist       
------+---+-----------------+---+-----------
-   0 | a | ['a', 'b', 'c'] | 1 | [1, 2, 3] 
-# example 3
-select * from t where setcontains(ist, 1);
- _id | s | sst             | i | ist       
------+---+-----------------+---+-----------
-   0 | a | ['a', 'b', 'c'] | 1 | [1, 2, 3] 
-"""
-1. The user has entered the following (enterprise use case) query:
+# complete create dict task
+1. The user has entered the following query:
 """
 $query
 """.
-2. The user has selected the $table_name table. That table has the following schema:
+2. The user has selected the "$table_name" table. That table has the following schema:
 """
+table_name=$table_name
 $columns
 """
-3. Keeping in mind the example queries for step 0, and the query from step 1, reference the table schema in step 2 and determine the type of the query from one of the following:
-# query is classified as a general conversational question
-# {"classify": "question"}
-# query is classified as SQL
-# {"classify": "sql_query"}
-# query is classified as a conversational query that can be turned into SQL
-# {"classify": "table_query"}
-
-4. Build an python dictionary that has a 'sql' key and 'classify' key for the user query.
-# python_dict = { "query": "show me where sst is a", "table_name": "t", classify": "table_query": "sql": "select * from t where setcontains(sst, 'a');"}
-
+3. Determine if the query contains fragments of sql and complete a suggested sql query:
+# build a dict with "is_sql", "query", "suggested_sql" and "explain" keys:
+# if you determine this is a search, not sql, generate a search using the following format:
+# SELECT _id, cosine_distance(\{embedding\}, embedding) FROM <insert_table_name>;
+# "explain" provides an explaination for why you generated the required dictionary
 python_dict = 
