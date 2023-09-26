@@ -6,7 +6,7 @@ import flask_login
 from flask_login import current_user
 
 from lib.ai import ai
-from lib.tasks import create_task, get_task_schema
+from lib.tasks import create_task, get_task_schema, box_required
 from lib.database import get_columns, get_unique_column_values
 
 from web.models import Table, Models
@@ -40,13 +40,26 @@ def query(tid):
 	# populate with the query and the table name
 	document = {"query": f"{json_data.get('query')}", "table_name": table.get("name")}
 
+	emb = {"data": {"text": json_data.get('query')}}
+
+	# models requiring boxes get deferred
+	defer, selected_box = box_required(table.get('models'))
+	if defer:
+		return f"Starting GPUs...", 418 # return resource starting
+	
+	# grab the IP for locally run models and stuff it into the document
+	if selected_box:
+		emb['ip_address'] = selected_box.get('ip_address')
+
+	for model in table.get('models', None):
+		kind = model.get('kind', None)
+		if kind == 'embedding':
+			ai_model = model.get('ai_model', None)
+			ai(ai_model, model, emb) #emb['data']['']
+
 	# use the table and get the column schema
 	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
 	document['columns'] = get_columns(table.get('name'), auth)[0]
-
-	# get the embedding type from the table
-	# get the embedding for the query
-	# get the sets so we can build pulldowns
 
 	document = ai("query_analyze", "gpt-3.5-turbo", document)
 	print(document)
