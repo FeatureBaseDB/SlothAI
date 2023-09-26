@@ -1,5 +1,5 @@
 # complete create dict task
-1. The user has entered the following query:
+1. The user has entered the following query. This is what the user actually typed in:
 """
 $query
 """.
@@ -8,9 +8,15 @@ $query
 table_name=$table_name
 $columns
 """
-3. Determine if the query contains fragments of sql and complete a suggested sql query:
-# build a dict with "is_sql", "query", "suggested_sql" and "explain" keys:
-# if you determine this is a search, not sql, generate a search using the following format:
-# SELECT _id, cosine_distance(\{embedding\}, embedding) FROM <insert_table_name>;
+3. Determine if the query contains SQL or fragments of SQL based on the schema in step 2.
+4. Determine if the query is plain text. If it is plain text, think about an augmented user query:
+"""
+The user appears to be searching for "$query", which if it isn't SQL, can probably be found by running the embedding on the query and doing cosine distances on the database entries:
+SELECT _id, cosine_distance(\{embedding\}, embedding) FROM $table_name;
+$query
+"""
+4. build a dict with "query", "suggested_sql", and "explain" keys:
+# "query" is the user's query, which is "$query"
+# "sql" is an interpretation of the correct SQL for satifying the user's input query
 # "explain" provides an explaination for why you generated the required dictionary
 python_dict = 
