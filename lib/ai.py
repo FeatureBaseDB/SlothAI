@@ -93,13 +93,13 @@ def gpt_dict_completion(prompt, model):
 
 	answer = completion.choices[0].message
 
-	ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
+	ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "")
 	ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
 
 	try:
-	    ai_dict = ast.literal_eval(ai_dict_str)
+	    ai_dict = eval(ai_dict_str)
 	except (ValueError, SyntaxError):
-	    print("Error: Invalid JSON format in ai_dict_str.")
+	    print("Error: Invalid dictionary format in ai_dict_str.")
 	    ai_dict = {}
 
 	return ai_dict
@@ -116,18 +116,19 @@ def query_analyze(ai_model, document):
 	try:
 		template = load_template("query_analyze")
 		prompt = template.substitute(document)
+		print(prompt)
 	except Exception as ex:
 		print(ex)
 		document['error'] = "template wouldn't load"
 		return document
-	print(prompt)
+
 	# get the template's dict
 	ai_dict = gpt_dict_completion(prompt, ai_model)
-
+	print(ai_dict)
 	# extract the keyterms and stuff into the document
-	document['classify'] = ai_dict.get('classify')
-	document['sql'] = ai_dict.get('sql')
-
+	document['is_sql'] = ai_dict.get('is_sql')
+	document['sql'] = ai_dict.get('suggested_sql')
+	document['explain'] = ai_dict.get('explain')
 	return document
 
 

@@ -27,7 +27,7 @@ def tables_list():
 @flask_login.login_required
 def query(tid):
 	table = Table.get_by_uid_tid(current_user.uid, tid)
-	
+
 	if table:
 		try:
 			json_data = request.get_json()
@@ -42,16 +42,15 @@ def query(tid):
 
 	# use the table and get the column schema
 	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
-	document['columns'] = get_columns(table.get('name'), auth)
+	document['columns'] = get_columns(table.get('name'), auth)[0]
 
 	# get the embedding type from the table
 	# get the embedding for the query
 	# get the sets so we can build pulldowns
-	
+
 	document = ai("query_analyze", "gpt-3.5-turbo", document)
 	print(document)
-
-	document = {"sql": f"SELECT * FROM {table.get('name')}", "answer": "Content goes here."}
+	document = {"sql": document.get('sql'), "explain": f"{document.get('explain')}"}
 
 	return document, 200
 
@@ -89,7 +88,7 @@ def set_values(tid):
 @flask_login.login_required
 def ingest_post(tid):
 	table = Table.get_by_uid_tid(current_user.uid, tid)
-
+	
 	if table:
 		try:
 			json_data = request.get_json()
@@ -109,6 +108,8 @@ def ingest_post(tid):
 		else:
 			return jsonify({"response": "need 'text' field..."})
 
+		print("get task schema")
+		print(document)
 		# don't create a task if there is going to be an issue converting user
 		# data to a valid schema.
 		document = get_task_schema(document)
