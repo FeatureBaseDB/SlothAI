@@ -71,8 +71,26 @@ def query(tid):
 	return document, 200
 
 
+# table schema
+@table.route('/tables/<tid>/schema', methods=['GET'])
+@flask_login.login_required
+def get_schema(tid):
+	table = Table.get_by_uid_tid(current_user.uid, tid)
+	if table:
+		# use the table and get the column schema
+		auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
+		schema, err = get_columns(table.get('name'), auth)		
+		
+		if err:
+			return jsonify({"error": err}), 400
+
+		return jsonify(schema), 200
+
+	return jsonify({"error": "table not found"}), 404
+
+
 # Distinct values
-@table.route('/tables/<tid>/unique_values', methods=['GET'])
+@table.route('/tables/<tid>/unique_values', methods=['POST'])
 @flask_login.login_required
 def set_values(tid):
 	table = Table.get_by_uid_tid(current_user.uid, tid)
@@ -90,14 +108,16 @@ def set_values(tid):
 				return jsonify({"response": "'columns' field with list of column names is required"}), 400
 
 
-	# use the table and get the column schema
-	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
+		# use the table and get the column schema
+		auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
 
-	vals, err = get_unique_column_values(table.get("name"), columns, auth)
-	if err:
-		return jsonify({"error": err}), 400
+		vals, err = get_unique_column_values(table.get("name"), columns, auth)
+		if err:
+			return jsonify({"error": err}), 400
 
-	return jsonify(vals), 200
+		return jsonify(vals), 200
+
+	return jsonify({"error": "table not found"}), 404
 
 # Distinct values
 @table.route('/tables/<tid>/sql', methods=['GET'])

@@ -20,6 +20,7 @@ from flask_login import current_user
 from lib.util import random_string
 from lib.ai import ai
 from lib.tasks import list_tasks
+from lib.database import table_exists
 
 from web.models import Table, Models
 
@@ -66,10 +67,18 @@ def query():
 	dbid = current_user.dbid
 	models = Models.get_all()
 	tables = Table.get_all_by_uid(current_user.uid)
-	print(tables)
+
+	# see if they are created
+	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
+	
+	_tables = []
+	for table in tables:
+		exists, err = table_exists(table.get('name'), auth)				
+		if exists:
+			_tables.append(table)
 
 	return render_template(
-		'pages/query.html', username=username, dev=config.dev, dbid=dbid, models=models, tables=tables
+		'pages/query.html', username=username, dev=config.dev, dbid=dbid, models=models, tables=_tables
 	)
 
 
