@@ -58,46 +58,59 @@
 </div>
 
 <div class="content container mt-5 pt-5">
-    <ul class="nav nav-pills">
-      <li class="nav-item">
-        <a class="nav-link active" href="#">Enterprise Search</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#">RAG</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#">Document Chat</a>
-      </li>
-    </ul>
-
-    <div><span></span></div>
-
     {% for message in get_flashed_messages() %}
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
     
-    <!-- Inside the <select> element, use a for loop to populate the options -->
-    <select class="form-select">
-        <option selected>Select Table</option>
-        {% for table in tables %}
-            <option value="{{ table.tid }}">{{ table.name }}</option>
-        {% endfor %}
-    </select>
+    <h2 class="page_heading">Query</h2>
 
-    <!-- Add a <form> element to wrap the input fields and button -->
-    <form id="queryForm">
-        <div class="d-flex justify-content-between mt-4">
-            <div class="input-group">
-                <input type="text" id="query" class="form-control" placeholder="enter a query...">
+    <div class="card rounded-lg">
+        <div class="card-body">
+            <p class="card-text">
+                <ul class="nav nav-pills">
+                  <li class="nav-item">
+                    <a class="nav-link active" href="#">Enterprise Search</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="#">Document Chat</a>
+                  </li>
+                </ul>
+            </p>
+            <p class="card-text">You can use FeatureBaseAI's API to search data intelligently, once it is saved in your FeatureBase. Use the pulldown to select the table to query and then write any type of query to test a search. If you have attributes saved as set fields, their pulldowns may be used to limit the search.</p>
+
+            {% for message in get_flashed_messages() %}
+            <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
+            {% endfor %}
+            
+            <!-- Inside the <select> element, use a for loop to populate the options -->
+            {% if tables|length > 0 %}
+            <select class="form-select" id="tableSelect">
+                <option selected>Select Table</option>
+                {% for table in tables %}
+                    <option value="{{ table.tid }}">{{ table.name }}</option>
+                {% endfor %}
+            </select>
+            {% else %}
+            You need to populate a table first by using one of your <a href="/tables">pipelines</a>.
+            {% endif %}
+
+            <div id="pullDowns"></div>
+
+            <!-- Add a <form> element to wrap the input fields and button -->
+            <form id="queryForm">
+                <div class="d-flex justify-content-between mt-4">
+                    <div class="input-group">
+                        <input type="text" id="query" class="form-control" placeholder="enter a query...">
+                    </div>
+                    <button type="submit" class="btn btn-primary ms-2">Query</button>
+                </div>
+            </form>
+
+            <div id="resultDiv" class="mt-4">
+                <!-- Result content will be displayed here -->
             </div>
-            <button type="submit" class="btn btn-primary ms-2">Query</button>
         </div>
-    </form>
-
-    <div id="resultDiv" class="mt-4">
-        <!-- Result content will be displayed here -->
     </div>
-
 </div>
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
@@ -108,6 +121,67 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
+
+    function createPulldowns(data) {
+        // Identify the container where you want to append the pulldowns.
+        const container = $('#pullDowns');
+
+        // Clear the container first to ensure old pulldowns are removed.
+        container.empty();
+
+        $.each(data, function(key, values) {
+            let divContainer = $('<div>');
+            let labelElem = $('<label>').text(key);
+            let selectElem = $('<select>').attr('id', key );
+            let optgroupElem = $('<optgroup>').attr('label', key);
+
+            optgroupElem.append($('<option>').text('None').val('none'));
+
+            $.each(values, function(index, value) {
+                optgroupElem.append($('<option>').text(value).val(value));
+            });
+
+            selectElem.append(optgroupElem);
+            divContainer.append(labelElem);
+            divContainer.append(selectElem);
+
+            container.append(divContainer);
+        });
+    }
+
+    $("#tableSelect").on("change", function() {
+        var selectedTable = $(this).val();
+        $.ajax({
+            type: "GET",
+            url: `/tables/${selectedTable}/schema`,
+            contentType: "application/json",
+            success: function(response) {
+                column_list = []
+                $.each(response, function(key, values) {
+                    if (values == "stringset") {
+                        column_list.push(key);
+                    }
+                });
+                console.log(column_list)
+                $.ajax({
+                    type: "POST",
+                    url: `/tables/${selectedTable}/unique_values`,
+                    data: JSON.stringify({"columns": column_list}),
+                    contentType: "application/json",
+                    success: function(data) {
+                        createPulldowns(data);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(xhr.responseText);
+                    }
+                });  
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+            }
+        });
+    });
+
     $("form").submit(function(event) {
         event.preventDefault(); // Prevent the default form submission
         
@@ -123,9 +197,11 @@ $(document).ready(function() {
         
         // Prepare the JSON data
         const jsonData = {
-            "query": query
+            "query": query,
+
         };
         
+        // call the query endpoint
         $.ajax({
             type: "POST",
             url: `/tables/${selectedTable}/query`,
