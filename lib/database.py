@@ -3,6 +3,7 @@ database.py provides function to interact with FeatureBase cloud. It wraps the
 featurebase client library.
 """
 
+import config
 import featurebase
 from urllib.error import HTTPError, URLError, ContentTooShortError
 
@@ -32,7 +33,7 @@ def featurebase_query(document, debug=False):
 	db_token = document.get('db_token')
 
 	fb_client = featurebase.client(
-		hostport="query.featurebase.com/v2",
+		hostport=config.featurebase_endpoint,
 		database=dbid,
 		apikey=db_token
 	)
