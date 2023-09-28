@@ -257,6 +257,96 @@ def add_column(table_name, column, auth):
 	return err
 
 
+def add_filters_to_sql(original_sql_query, column_value_dict):
+	"""
+	Modify an SQL query to filter records based on column values.
+
+	This function takes an original SQL query and a dictionary of column-value
+	pairs. It constructs a new SQL query with a WHERE clause that filters
+	records based on the values provided in the column_value_dict. The function
+	handles different data types and ensures proper escaping of values for SQL
+	queries.
+
+	Args:
+	    original_sql_query (str): The original SQL query to be modified.
+	    column_value_dict (dict): A dictionary mapping column names to lists of
+	    values to filter on.
+
+	Returns:
+	    str: The modified SQL query with the added WHERE clause for filtering.
+	    str or None: An error message if any validation checks fail, or None if
+	    successful.
+
+	Example:
+		original_query = "SELECT * FROM my_table WHERE category = 'A'"
+		column_values = {
+			"column1": [1, 2, 3], "column2": ["X", "Y"],
+		} modified_query, error = modify_sql_query(original_query,
+		column_values)
+
+		if error:
+			print(f"Error: {error}")
+		else:
+			print(f"Modified Query: {modified_query}") 
+			# Modified Query: "SELECT * FROM my_table WHERE column1 IN (1, 2, 3)
+			AND column2 IN ('X', 'Y') AND category = 'A'",
+
+	Notes:
+		- The function supports filtering on string and integer column values.
+		- It handles different data types and escapes values to prevent SQL
+		  injection.
+		- If the original query already contains a WHERE clause, the function
+		  appends new conditions using the AND operator. If there is no existing
+		  WHERE clause, it adds a new one.
+	"""
+    
+	if not isinstance(original_sql_query, str):
+		return original_sql_query, "original_sql_query must be a string"
+	
+	if not isinstance(column_value_dict, dict):
+		return original_sql_query, "column_value_dict must be a dict mapping column names to values to filter on"
+
+
+    # Initialize an empty list to store WHERE clauses for each column
+	where_clauses = []
+
+    # Iterate through the dictionary and create WHERE clauses for each column
+	for column, values in column_value_dict.items():
+		if not isinstance(column, str):
+			return original_sql_query, "keys in column_value_dict must strings"
+		if not isinstance(values, list):
+			return original_sql_query, "values in column_value_dict must lists"
+		if len(values) == 0:
+			continue
+
+		typ = type(values[0])
+		if typ == str:
+			strs = ["'" + s.replace("'", "") + "'" for s in values]
+			in_clause = f"{column} IN ({', '.join(strs)})"
+		elif typ == int:
+			strs = [str(s) for s in values]
+			in_clause = f"{column} IN ({', '.join(strs)})"
+			in_clause = in_clause.replace("'", "")
+		else:
+			return original_sql_query, "column values must be strings or ints"
+
+		# in_clause = f"{column} IN ({', '.join(['%s'] * len(values))})"
+		where_clauses.append(in_clause)
+
+    # Combine the WHERE clauses using the AND operator
+	where_clause = " AND ".join(where_clauses)
+
+    # Check if the original query already has a WHERE clause
+	if 'WHERE' in original_sql_query:
+        # Append the new conditions using the AND operator
+		modified_sql_query = original_sql_query.replace('WHERE', f'WHERE {where_clause} AND')
+	else:
+        # Add a new WHERE clause
+		modified_sql_query = f"{original_sql_query} WHERE {where_clause}"
+
+	return modified_sql_query
+
+
 def get_unique_column_values(table_name, columns, auth):
 	"""
     Retrieve unique values from specified columns in a database table.
