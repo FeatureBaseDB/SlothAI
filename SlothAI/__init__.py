@@ -25,6 +25,8 @@ def create_app(conf='dev'):
         app.config.from_object(config.ProdConfig)
     else:
         raise Exception("invalid conf argument: must be 'testing', 'dev', or 'prod'.") 
+    
+    print(app.config)
 
     # logins
     login_manager = flask_login.LoginManager()
@@ -80,12 +82,7 @@ def create_app(conf='dev'):
 
     @app.before_request
     def before_request():
-        if request.url.startswith('http://') and app.config['DEV'] == "False" and "cron" not in request.url and "tasks" not in request.url:
-            url = request.url.replace('http://', 'https://', 1)
-            code = 301
-            return redirect(url, code=code)
-
-
+        pass
     @app.errorhandler(404)
     def f404_notfound(e):
         response = make_response(

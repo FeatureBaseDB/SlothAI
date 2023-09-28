@@ -88,7 +88,7 @@ pip3 install -r requirements
 To deploy to your own AppEngine:
 
 ```
-./deploy.sh
+./scripts/deploy.sh --production
 ```
 
 Deploy the cron.yaml after updating the key (use the `cron.yaml.example` file):
@@ -106,7 +106,20 @@ gcloud tasks queues create sloth-spittle --location=us-central1
 To deploy for local development:
 
 ```
-./dev.sh
+./scripts/dev.sh
+```
+
+## Testing
+
+To run tests run the following from the root directory:
+
+```
+pytest
+```
+
+To get test coverage run:
+```
+pytest --cov=SlothAI --cov-report=html
 ```
 
 ## Use

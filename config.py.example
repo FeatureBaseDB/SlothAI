@@ -3,7 +3,7 @@
 class DevConfig:
     PROJECT_ID = "sloth-compute"
 
-    DEV = True
+    DEV = "True"
 
     # sloth box token
     SLOTH_QUEUE = "<create_queue_put_name_here>"
@@ -30,7 +30,7 @@ class DevConfig:
 class ProdConfig:
     PROJECT_ID = "sloth-compute"
 
-    DEV = False
+    DEV = "False"
 
     # sloth box token
     SLOTH_QUEUE = "<create_queue_put_name_here>"
@@ -57,7 +57,7 @@ class ProdConfig:
 class TestingConfig:
     PROJECT_ID = "sloth-compute"
 
-    DEV = True
+    DEV = "True"
 
     # sloth box token
     SLOTH_QUEUE = "<create_queue_put_name_here>"

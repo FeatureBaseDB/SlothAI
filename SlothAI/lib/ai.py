@@ -10,7 +10,7 @@ import openai
 import traceback
 from string import Template
 
-import config
+from flask import current_app as app
 
 # supress OpenAI resource warnings for unclosed sockets
 import warnings
@@ -38,7 +38,7 @@ def ai(model_method, model, document={}):
 		document = models[model_method](model, document)
 
 	except Exception as ex:
-		if config.dev:
+		if app.config['DEV'] == "True":
 			print(traceback.format_exc())
 		print(traceback.format_exc())
 		document['error'] = "model *%s* errors with %s." % (model_method, ex)
@@ -87,10 +87,10 @@ def gpt_dict_completion(prompt, model):
 	ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
 
 	try:
-	    ai_dict = ast.literal_eval(ai_dict_str)
+		ai_dict = ast.literal_eval(ai_dict_str)
 	except (ValueError, SyntaxError):
-	    print("Error: Invalid JSON format in ai_dict_str.")
-	    ai_dict = {}
+		print("Error: Invalid JSON format in ai_dict_str.")
+		ai_dict = {}
 
 	return ai_dict
 
@@ -101,7 +101,7 @@ def gpt_dict_completion(prompt, model):
 def instructor(ai_model, document):
 	ip_address = document.get('ip_address') # TODO: move this into the model
 
-	password = config.sloth_token
+	password = app.config['SLOTH_TOKEN']
 	url = f"http://sloth:{password}@{ip_address}:9898/embed"
 
 	# Set the headers to indicate that you're sending JSON data
@@ -127,7 +127,7 @@ def instructor(ai_model, document):
 def sloth_keyterms(ai_model, document):
 	ip_address = document.get('ip_address')
 
-	password = config.sloth_token
+	password = app.config['SLOTH_TOKEN']
 	url = f"http://sloth:{password}@{ip_address}:9898/keyterms"
 
 	# Set the headers to indicate that you're sending JSON data

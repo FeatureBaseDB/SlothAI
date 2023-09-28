@@ -72,7 +72,7 @@ def list_tasks(uid):
 	_tasks = []
 	# Iterate through the tasks and print task information
 	for task in tasks:
-		if app.config['DEV']:
+		if app.config['DEV'] == "True":
 			url = task.http_request.url
 		else:
 			url = task.app_engine_http_request.relative_uri
@@ -102,7 +102,7 @@ def create_task(document):
 	parent = client.queue_path(project_id, "us-east1", app.config['SLOTH_QUEUE'])
 	converted_payload = json.dumps(document).encode()
 
-	if app.config['DEV']:
+	if app.config['DEV'] == "True":
 		task = {
 			"http_request": {
 				"url": f"{app.config['NGROK_URL']}/tasks/process/{app.config['CRON_KEY']}/{document.get('uid')}",
