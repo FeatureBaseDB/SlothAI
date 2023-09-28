@@ -37,6 +37,9 @@
     <a href="/tables" class="highlighted-link">
         <i class="fas fa-code-branch"></i> Pipelines
     </a>
+    <a href="/query">
+        <i class="fas fa-search"></i> Query
+    </a>
     <a href="/models">
         <i class="fas fa-cogs"></i> Models
     </a>
@@ -66,15 +69,23 @@
                 <strong>{{ model.name }}</strong>
                 {% endfor %}
             </p>
-<p class="card-text">{% if table.models|length == 0 %}This pipeline inserts directly into FeatureBase.{% else %}This pipeline is running: {% endif %}
-        {% for model in table.models %}
-            {{ model['name'] }}
-        {% endfor %}
+<p class="card-text">
+    This pipeline is running: 
+    {% for model in table.models %}
+        {% if "embedding" in model.kind %}
+            <span class="badge badge-primary">{{ model.kind }} with {{ model.name }}</span>
+        {% elif "keyterm" in model.kind %}
+            <span class="badge badge-warning">{{ model.kind }} with {{ model.name }}</span>
+        {% elif "question" in model.kind %}
+            <span class="badge badge-success">{{ model.kind }} with {{ model.name }}</span>
+        {% endif %}
+    {% endfor %}
+    <span class="badge badge-dark">write to database</span>
 </p>
 
             <p class="card-text">This is the ingestion endpoint for your pipeline:</p>
 
-			<pre><span></span>http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre>
+			<code>http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/tables/{{ table.tid }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
             <p class="card-text">
                 <strong>Task:</strong> Send data to the <strong>{{table.name}}</strong> pipeline to create a <strong>{{table.name}}</strong> table in your FeatureBase.
@@ -89,7 +100,12 @@
 "http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/tables/{{table.tid}}/ingest?token={{token}}"
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
-            <p class="card-text">Sample results:</p>
+<p class="card-text"><strong>Graph Layout</strong></p>
+<div class="mermaid">
+{{mermaid_string}}
+</div>
+
+<p class="card-text">Sample response:</p>
 <code>{
   "data": {
     "attributes": [
@@ -103,13 +119,12 @@
   },
   "job_id": "2578086926602701263",
   "models": {
-    {% for model in table.get('models') %} "{{ model['name'] }}"{% if not loop.last %},{% endif %}
-    {% endfor %}
+    {% for model in table.get('models') %} "{{ model['name'] }}"{% if not loop.last %},{% endif %}{% endfor %}
   },
   "name": "{{table.name}}",
   "tid": "{{table.tid}}"
 }</code>
-            <p class="card-text">Once the pipeline task has run, check your FeatureBase Cloud account for data:</p>
+            <p class="card-text">Once the pipeline task has run, check your <a href="https://cloud.featurebase.com/">FeatureBase Cloud</a> account for data:</p>
 <code>SELECT _id, keyterms, text, embedding FROM {{table.name}};
 
 +---------+------------+-------------------+------------+
@@ -134,7 +149,14 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
 
+    // Initialize Mermaid when the page is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        mermaid.initialize({ startOnLoad: true });
+    });
+</script>
 
 <script type="text/javascript">
 $(document).ready(function() {
@@ -163,6 +185,7 @@ $(document).ready(function() {
 		var text = preElement.text().trim();
 		var copyTextarea = document.createElement('textarea');
 		copyTextarea.value = text;
+        console.log(text);
 		document.body.appendChild(copyTextarea);
 		copyTextarea.select();
 		document.execCommand('copy');

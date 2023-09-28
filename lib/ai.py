@@ -88,18 +88,18 @@ def gpt_dict_completion(prompt, model):
 		)
 	except Exception as ex:
 		print(ex)
-		document['error'] = f"exception talking to OpenAI chat completion: {ex}"
-		return document
+		ai_dict = {"error": f"exception talking to OpenAI chat completion: {ex}"}
+		return ai_dict
 
 	answer = completion.choices[0].message
 
-	ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
+	ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "")
 	ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
 
 	try:
-	    ai_dict = ast.literal_eval(ai_dict_str)
+	    ai_dict = eval(ai_dict_str)
 	except (ValueError, SyntaxError):
-	    print("Error: Invalid JSON format in ai_dict_str.")
+	    print("Error: Invalid dictionary format in ai_dict_str.")
 	    ai_dict = {}
 
 	return ai_dict
@@ -107,6 +107,30 @@ def gpt_dict_completion(prompt, model):
 
 # model functions
 # ===============
+@model
+def query_analyze(ai_model, document):
+	# load openai key then drop it from the document
+	openai.api_key = config.openai_token
+
+	# substitute things
+	try:
+		template = load_template("query_analyze")
+		prompt = template.substitute(document)
+		print(prompt)
+	except Exception as ex:
+		print(ex)
+		document['error'] = "template wouldn't load"
+		return document
+
+	# get the template's dict
+	ai_dict = gpt_dict_completion(prompt, ai_model)
+
+	# extract the keyterms and stuff into the document
+	document['sql'] = ai_dict.get('suggested_sql')
+	document['explain'] = ai_dict.get('explain')
+	return document
+
+
 @model 
 def instructor(ai_model, document):
 	ip_address = document.get('ip_address') # TODO: move this into the model
@@ -218,12 +242,14 @@ def gpt_keyterms(ai_model, document):
 # handle old name
 @model
 def chatgpt_extract_keyterms(ai_model, document):
+	print("TODO: get this model method renamed: ", ai_model.get('ai_model'))
 	return  gpt_keyterms(ai_model, document)
 
 
 # get a question	
 @model
 def gpt_question(ai_model, document):
+	print("form question")
 	# load openai key then drop it from the document
 	openai.api_key = document.get('openai_token')
 

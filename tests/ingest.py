@@ -53,7 +53,8 @@ async def main():
             records = []
 
     # send the last batch
-    tasks.append(send_batch(url, records))
+    if len(records) > 0:
+        tasks.append(send_batch(url, records))
 
     # Execute all tasks concurrently and wait for them to finish
     await asyncio.gather(*tasks)

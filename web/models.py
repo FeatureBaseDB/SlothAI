@@ -73,6 +73,13 @@ class Models(ndb.Model):
 		with client.context():
 			return cls.query(cls.name == name).get().to_dict()
 			
+	@classmethod
+	def get_by_name_ai_model(cls, name, ai_model):
+		if not name or ai_model:
+			return None
+		with client.context():
+			return cls.query(cls.name == name, cls.ai_model == ai_model).get().to_dict()
+
 
 class Table(ndb.Model):
 	tid = ndb.StringProperty()
@@ -117,12 +124,17 @@ class Table(ndb.Model):
 			
 	@classmethod
 	def get_all_by_uid(cls, uid):
+		_tables = []
 		with ndb.Client().context():
 			tables = cls.query(cls.uid == uid).fetch()
-		if tables:
-			return tables
-		else:
-			return False
+
+			for table in tables:
+				_tables.append(table.to_dict())
+
+			if tables:
+				return _tables
+			else:
+				return False
 
 	@classmethod
 	def get_by_uid_name(cls, uid, name):
