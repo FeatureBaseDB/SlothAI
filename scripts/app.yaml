@@ -1,9 +1,6 @@
-entrypoint: gunicorn -b :$PORT main:app -w 2 -t 200
+entrypoint: gunicorn -b :8080 "SlothAI:create_app(config='prod')" -w 2 -t 200
 
 runtime: python38
-
-env_variables:
-    DEV: False
 
 automatic_scaling:
   min_instances: 1

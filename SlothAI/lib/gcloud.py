@@ -1,14 +1,8 @@
-import os
-import sys
 import random
 import string
-import time
-import json
-
 import requests
-from string import Template
 
-import config
+from flask import current_app as app
 
 # random strings
 def random_string(size=6, chars=string.ascii_letters + string.digits):
@@ -20,7 +14,7 @@ def box_status(box_id="", zone=""):
 		# get all status
 		
 		# reach out to the controller box
-		url = f"http://{config.sloth_controller_username}:{config.sloth_token}@{config.sloth_controller_ip}:8787/api/instance/list?token={config.sloth_token}"
+		url = f"http://{app.config['SLOTH_CONTROLLER_USERNAME']}:{app.config['SLOTH_TOKEN']}@{app.config['SLOTH_CONTROLLER_IP']}:8787/api/instance/list?token={app.config['SLOTH_TOKEN']}"
 
 		headers = {"Content-Type": "application/json"}
 		response = requests.get(url, headers=headers)
@@ -45,7 +39,7 @@ def box_status(box_id="", zone=""):
 
 		# reach out to the controller box
 		# /api/instance/<zone>/<instance_id>/status
-		url = f"http://{config.sloth_controller_username}:{config.sloth_token}@{config.sloth_controller_ip}:8787/api/instance/{zone}/{box_id}/status?token={config.sloth_token}"
+		url = f"http://{app.config['SLOTH_CONTROLLER_USERNAME']}:{app.config['SLOTH_TOKEN']}@{app.config['SLOTH_CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/status?token={app.config['SLOTH_TOKEN']}"
 
 		headers = {"Content-Type": "application/json"}
 		response = requests.get(url, headers=headers)
@@ -64,7 +58,7 @@ def box_status(box_id="", zone=""):
 def box_start(box_id="", zone="us-central1-a"):
 		# reach out to the controller box
 		# /api/instance/<zone>/<instance_id>/start
-		url = f"http://{config.sloth_controller_username}:{config.sloth_token}@{config.sloth_controller_ip}:8787/api/instance/{zone}/{box_id}/start?token={config.sloth_token}"
+		url = f"http://{app.config['SLOTH_CONTROLLER_USERNAME']}:{app.config['SLOTH_TOKEN']}@{app.config['SLOTH_CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/start?token={app.config['SLOTH_TOKEN']}"
 
 		headers = {"Content-Type": "application/json"}
 		response = requests.get(url, headers=headers)
@@ -73,7 +67,7 @@ def box_start(box_id="", zone="us-central1-a"):
 def box_stop(box_id="", zone="us-central1-a"):
 		# reach out to the controller box
 		# /api/instance/<zone>/<instance_id>/start
-		url = f"http://{config.sloth_controller_username}:{config.sloth_token}@{config.sloth_controller_ip}:8787/api/instance/{zone}/{box_id}/stop?token={config.sloth_token}"
+		url = f"http://{app.config['SLOTH_CONTROLLER_USERNAME']}:{app.config['SLOTH_TOKEN']}@{app.config['SLOTH_CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/stop?token={app.config['SLOTH_TOKEN']}"
 
 		headers = {"Content-Type": "application/json"}
 		response = requests.get(url, headers=headers)

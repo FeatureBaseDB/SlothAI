@@ -1,18 +1,16 @@
 import os
 import json
 import random
-from lib.schemar import Schemar
+from SlothAI.lib.schemar import Schemar
 from datetime import datetime, timedelta
 
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
-from lib.gcloud import box_start
-from web.models import Models, Box
-import config
+from SlothAI.lib.gcloud import box_start
+from SlothAI.web.models import Models, Box
 
-# Set your Google Cloud Project ID
-project_id = config.project_id
+from flask import current_app as app
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
@@ -59,11 +57,14 @@ def box_required(pipeline_models):
 	return _box_required, selected_box
 
 def list_tasks(uid):
+	# Set your Google Cloud Project ID
+	project_id = app.config['PROJECT_ID']
+	
 	# Create a Cloud Tasks client
 	client = tasks_v2.CloudTasksClient()
 
 	# Define the queue name
-	queue_name = client.queue_path(project_id, "us-east1", config.sloth_queue)
+	queue_name = client.queue_path(project_id, "us-east1", app.config['SLOTH_QUEUE'])
 
 	# List tasks in the specified queue
 	tasks = client.list_tasks(parent=queue_name)
@@ -71,7 +72,7 @@ def list_tasks(uid):
 	_tasks = []
 	# Iterate through the tasks and print task information
 	for task in tasks:
-		if config.dev:
+		if app.config['DEV']:
 			url = task.http_request.url
 		else:
 			url = task.app_engine_http_request.relative_uri
@@ -91,17 +92,20 @@ def list_tasks(uid):
 
 def create_task(document):
 
+	# Set your Google Cloud Project ID
+	project_id = app.config['PROJECT_ID']
+
 	# Create a Cloud Tasks client
 	client = tasks_v2.CloudTasksClient()
 
 	# Create a task
-	parent = client.queue_path(project_id, "us-east1", config.sloth_queue)
+	parent = client.queue_path(project_id, "us-east1", app.config['SLOTH_QUEUE'])
 	converted_payload = json.dumps(document).encode()
 
-	if config.dev:
+	if app.config['DEV']:
 		task = {
 			"http_request": {
-				"url": f"{config.ngrok_url}/tasks/process/{config.cron_key}/{document.get('uid')}",
+				"url": f"{app.config['NGROK_URL']}/tasks/process/{app.config['CRON_KEY']}/{document.get('uid')}",
 				"headers": {"Content-type": "application/json"},
 				"http_method": tasks_v2.HttpMethod.POST
 			}
@@ -112,7 +116,7 @@ def create_task(document):
 			"app_engine_http_request": {
 				"http_method": tasks_v2.HttpMethod.POST,
 				"app_engine_routing": {"version": os.environ['GAE_VERSION']},
-				"relative_uri": f"/tasks/process/{config.cron_key}/{document.get('uid')}",
+				"relative_uri": f"/tasks/process/{app.config['CRON_KEY']}/{document.get('uid')}",
 				"headers": {"Content-type": "application/json"}
 			}
 		}

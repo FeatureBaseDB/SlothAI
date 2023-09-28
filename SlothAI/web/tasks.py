@@ -1,20 +1,20 @@
 import json
-import config
 from flask import Blueprint
 from flask import request
-from lib.util import random_string
-from lib.ai import ai
-from lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
-from lib.tasks import box_required, create_task, get_task_schema, retry_task
-from lib.schemar import string_to_datetime, datetime_to_string
-from web.models import User, Table, Models
+from flask import current_app as app
+from SlothAI.lib.util import random_string
+from SlothAI.lib.ai import ai
+from SlothAI.lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
+from SlothAI.lib.tasks import box_required, create_task, get_task_schema, retry_task
+from SlothAI.lib.schemar import string_to_datetime, datetime_to_string
+from SlothAI.web.models import User, Table, Models
 
 tasks = Blueprint('tasks', __name__)
 
 @tasks.route('/tasks/process/<cron_key>/<uid>', methods=['POST'])
 def start_tasks(cron_key, uid):
 	# validate call with a key
-	if cron_key != config.cron_key:
+	if cron_key != app.config['CRON_KEY']:
 		print(f"ERROR: invalid cron_key. dropping task.")
 		return f"Not authenticated. Flushing request.", 200
 

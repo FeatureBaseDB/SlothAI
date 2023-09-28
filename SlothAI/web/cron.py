@@ -1,27 +1,16 @@
-import os
-import sys
-import json
-import random
+from flask import Blueprint
+from flask import current_app as app
 
-import requests
+from SlothAI.lib.gcloud import box_status
 
-from flask import Blueprint, render_template, flash
-from flask import make_response, Response
-from flask import redirect, url_for, abort
-from flask import request, send_file
-
-from lib.gcloud import box_status
-
-from web.models import Box
+from SlothAI.web.models import Box
 
 cron = Blueprint('cron', __name__)
-
-import config
 
 # get box status
 @cron.route('/cron/boxes/<box_id>/<cron_key>', methods=['GET'])
 def status_handler(box_id="all", cron_key=""):
-	if cron_key != config.cron_key:
+	if cron_key != app.config['CRON_KEY']:
 		return
 
 	if box_id == "all":

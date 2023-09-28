@@ -13,20 +13,19 @@ from flask import Blueprint, render_template, flash
 from flask import make_response, Response
 from flask import redirect, url_for, abort
 from flask import request, send_file
+from flask import current_app as app
 
 import flask_login
 from flask_login import current_user
 
-from lib.util import random_string
-from lib.ai import ai
-from lib.tasks import list_tasks
-from lib.database import table_exists
+from SlothAI.lib.util import random_string
+from SlothAI.lib.ai import ai
+from SlothAI.lib.tasks import list_tasks
+from SlothAI.lib.database import table_exists
 
-from web.models import Table, Models
+from SlothAI.web.models import Table, Models
 
 site = Blueprint('site', __name__)
-
-import config
 
 # client connection
 client = ndb.Client()
@@ -78,7 +77,7 @@ def query():
 			_tables.append(table)
 
 	return render_template(
-		'pages/query.html', username=username, dev=config.dev, dbid=dbid, models=models, tables=_tables
+		'pages/query.html', username=username, dev=app.config['DEV'], dbid=dbid, models=models, tables=_tables
 	)
 
 
@@ -92,7 +91,7 @@ def models():
 	models = Models.get_all()
 
 	return render_template(
-		'pages/models.html', username=username, dev=config.dev, api_token=api_token, dbid=dbid, models=models
+		'pages/models.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, models=models
 	)
 
 @site.route('/animate', methods=['GET'])

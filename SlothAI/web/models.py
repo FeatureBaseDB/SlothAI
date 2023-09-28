@@ -1,14 +1,12 @@
 import datetime
-import json
-import random
 
 from google.cloud import ndb
 
 import flask_login
 
-from lib.util import random_name, random_string, generate_token
+from SlothAI.lib.util import random_name, random_string, generate_token
 
-import config
+import config as config
 
 # client connection
 client = ndb.Client()
