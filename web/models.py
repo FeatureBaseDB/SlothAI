@@ -73,6 +73,13 @@ class Models(ndb.Model):
 		with client.context():
 			return cls.query(cls.name == name).get().to_dict()
 			
+	@classmethod
+	def get_by_name_ai_model(cls, name, ai_model):
+		if not name or ai_model:
+			return None
+		with client.context():
+			return cls.query(cls.name == name, cls.ai_model == ai_model).get().to_dict()
+
 
 class Table(ndb.Model):
 	tid = ndb.StringProperty()

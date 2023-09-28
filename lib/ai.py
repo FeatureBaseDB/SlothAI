@@ -242,12 +242,14 @@ def gpt_keyterms(ai_model, document):
 # handle old name
 @model
 def chatgpt_extract_keyterms(ai_model, document):
+	print("TODO: get this model method renamed: ", ai_model.get('ai_model'))
 	return  gpt_keyterms(ai_model, document)
 
 
 # get a question	
 @model
 def gpt_question(ai_model, document):
+	print("form question")
 	# load openai key then drop it from the document
 	openai.api_key = document.get('openai_token')
 

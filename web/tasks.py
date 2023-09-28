@@ -47,14 +47,10 @@ def start_tasks(cron_key, uid):
 	# popping ai methods called by name from document.embedding -> lib/ai.py
 	models = document.get('models', []).copy()
 	for _model in models:
-		# TODO: refactor for clarity as this uses the AI model decorator		
-		ai_model = Models.get_by_name(_model.get("name"))
-		
-		# process the model
-		if ai_model:
-			document = ai(ai_model.get('ai_model', None), ai_model, document)
-			if 'error' in document:
-				return f"got error in {_model}: {document['error']}", 400
+		# rework this soon to get the model flavor not in the name
+		document = ai(_model.get('ai_model', None), _model, document)
+		if 'error' in document:
+			return f"got error in {_model}: {document['error']}", 400
 		
 		document['models'].remove(_model)
 
