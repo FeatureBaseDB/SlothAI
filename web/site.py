@@ -148,8 +148,41 @@ def table_view(tid):
 
 	if not _table:
 		return redirect(url_for('site.tables'))
-	
-	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table)
 
+	# (rest of your code remains unchanged...)
+	mermaid_string = "graph TD\n"
+	mermaid_string += "A[Input Data] -->|JSON| B[Ingest POST]\n"
+	mermaid_string += "B -->|Response| G[JSON]\n"
+	mermaid_string += "G -->|job_id: int| H[User]\n"
+	mermaid_string += "B -->|JSON| J[schemer]\n"
+	mermaid_string += "J -->|schema: auto| F{FeatureBase}\n"
+
+	# check if models are present
+	if _table and _table.get('models'):
+		previous_model = 'B'  # initially, Ingest POST
+
+		output = ""
+		for idx, model in enumerate(_table['models']):
+			current_model = chr(67 + idx)  # 67 is ASCII for 'C'
+			model_name = model['name']
+
+			mermaid_string += f"{previous_model} -->{output}{current_model}[{model_name}]\n"
+
+			# define the specific output based on model 'kind'
+			if model['kind'] == 'keyterms':
+				output = "|keyterms: stringset|"
+			elif model['kind'] == 'embedding':
+				output = "|embedding: vector|"
+			elif model['kind'] == 'form_question':
+				output = "|question: string|"
+			else:
+				output = "|text: string|"  # default case
+			previous_model = current_model
+
+
+		# After the loop ends, link the last model to the FeatureBase
+		mermaid_string += f"{current_model} -->{output}F\n"
+	print(mermaid_string)
+	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table, mermaid_string=mermaid_string)
 
 

@@ -76,14 +76,13 @@
                   </li>
                 </ul>
             </p>
+
+            {% if tables|length > 0 %}
             <p class="card-text">You can use FeatureBaseAI's API to search data intelligently, once it is saved in your FeatureBase. Use the pulldown to select the table to query and then write any type of query to test a search. If you have attributes saved as set fields, their pulldowns may be used to limit the search.</p>
 
             {% for message in get_flashed_messages() %}
             <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
-            {% endfor %}
-            
-            <!-- Inside the <select> element, use a for loop to populate the options -->
-            {% if tables|length > 0 %}
+            {% endfor %}   
             <select class="form-select" id="tableSelect">
                 <option selected>Select Table</option>
                 {% for table in tables %}
