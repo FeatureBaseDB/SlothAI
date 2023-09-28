@@ -119,8 +119,7 @@
   },
   "job_id": "2578086926602701263",
   "models": {
-    {% for model in table.get('models') %} "{{ model['name'] }}"{% if not loop.last %},{% endif %}
-    {% endfor %}
+    {% for model in table.get('models') %} "{{ model['name'] }}"{% if not loop.last %},{% endif %}{% endfor %}
   },
   "name": "{{table.name}}",
   "tid": "{{table.tid}}"

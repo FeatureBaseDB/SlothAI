@@ -114,13 +114,7 @@ def create_task(document):
 				"app_engine_routing": {"version": os.environ['GAE_VERSION']},
 				"relative_uri": f"/tasks/process/{config.cron_key}/{document.get('uid')}",
 				"headers": {"Content-type": "application/json"}
-			},
-			"retry_config": {
-        		"max_attempts": 100,  # Number of retry attempts
-		        "max_backoff": {"seconds": 3600},  # 3600 seconds maxBackoff
-		        "max_doublings": 16,
-		        "min_backoff": {"seconds": 5},  # 5 seconds minBackoff
-    		},
+			}
 		}
 		task["app_engine_http_request"]["body"] = converted_payload
 

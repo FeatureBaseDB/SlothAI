@@ -161,7 +161,7 @@ def table_view(tid):
 	if _table and _table.get('models'):
 		previous_model = 'B'  # initially, Ingest POST
 
-		output = ""
+		output = "|text: string|"
 		for idx, model in enumerate(_table['models']):
 			current_model = chr(67 + idx)  # 67 is ASCII for 'C'
 			model_name = model['name']
