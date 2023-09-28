@@ -247,7 +247,7 @@ addModelButton.click(function () {
     const selectedModel = selectedModelDropdown.val();
 
     // Check if the selectedModel is not empty and is not already in the list
-    if (selectedModel && !selectedModels.includes(selectedModel)) {
+    if (selectedModel !== "None" && selectedModel && !selectedModels.includes(selectedModel)) {
         // Retrieve the data-mid attribute of the selected option
         const selectedOption = selectedModelDropdown.find(':selected');
         const selectedMid = selectedOption.data('mid');
@@ -271,21 +271,28 @@ addModelButton.click(function () {
                     ListMessage.text('Pipeline will write directly to FeatureBase.');
                 }
 
-                // Add the removed model back to the pull-down list
-                const optionToAddBack = $('<option></option>', {
-                    'data-mid': selectedMid,
-                    value: selectedModel,
-                    text: selectedModel,
-                });
-                modelPulldown.append(optionToAddBack);
-
+                // Show the removed model in the pull-down list
+                modelPulldown.find(`option[data-mid='${selectedMid}']`).css('display', 'block');
+                
                 // After removing the model, re-check and toggle the OpenAI Token field visibility
+                selectedModelDropdown.val("None");
                 toggleOpenAITokenField();
+                
+                const newModelStartingWord = selectedModel.split(' ')[0];
+                $('#modelPulldown option').each(function () {
+                    const optionModel = $(this).text();
+                    const optionStartingWord = optionModel.split(' ')[0];
+                    if (newModelStartingWord === optionStartingWord) {
+                        $(this).css('display', 'block');
+                    }
+                });
             },
             css: {
                 cursor: 'pointer' // Change cursor to pointer on hover
             }
         });
+
+        selectedModelDropdown.val("None");
 
         // Create a list item containing the model name, a space, and the badge
         if (selectedModel.includes("embedding") ) {
@@ -301,8 +308,19 @@ addModelButton.click(function () {
 
         ListMessage.text('Pipeline execution order:');
 
-        // Remove the selected model from the pull-down list
-        selectedOption.remove();
+        // hide the selected model from the pull-down list
+        selectedOption.css('display', 'none');
+
+        // hide other models with the same starting word
+        // TODO fix this mess by allowing certain kinds of models to be hidden when a similar kind is in the pipeline
+        const newModelStartingWord = selectedModel.split(' ')[0];
+        $('#modelPulldown option').each(function () {
+            const optionModel = $(this).text();
+            const optionStartingWord = optionModel.split(' ')[0];
+            if (newModelStartingWord === optionStartingWord) {
+                $(this).css('display', 'none');
+            }
+        });
 
         // After adding the model, re-check and toggle the OpenAI Token field visibility
         toggleOpenAITokenField();
