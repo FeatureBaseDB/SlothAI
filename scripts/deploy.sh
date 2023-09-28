@@ -44,14 +44,15 @@ do
 
 done
 
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Deploy based on the selected environment
 if [ -n "$environment" ]; then
   echo "Deploying to $environment environment..."
   if [ "$environment" == "staging" ]; then
-    gcloud app deploy ./app.yaml --no-promote --version staging
+    gcloud app deploy "$script_dir/../app.yaml" --no-promote --version staging
   elif [ "$environment" == "production" ]; then
-    gcloud app deploy ./app.yaml --version production
+    gcloud app deploy "$script_dir/../app.yaml" --version production
   fi
   exit 0
 else

@@ -115,3 +115,6 @@ venv.bak/
 
 # config file
 config.py
+
+# google cloud
+.gcloudignore

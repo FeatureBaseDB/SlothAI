@@ -1,37 +1,82 @@
 # config.py
-project_id = "sloth-compute"
 
-# development
-import os
-try:
+class DevConfig:
+    PROJECT_ID = "sloth-compute"
 
-	if "True" in os.environ['DEV']:
-		dev = True
-	else:
-		dev = False
-except:
-	dev = False
+    DEV = "True"
 
-# sloth box token
-sloth_token = ""
-sloth_controller_username = "controller"
-sloth_controller_ip = ""
+    # sloth box token
+    SLOTH_QUEUE = "<create_queue_put_name_here>"
+    SLOTH_TOKEN = ""
+    SLOTH_CONTROLLER_IP = ""
+    SLOTH_CONTROLLER_USERNAME = "controller"
 
-sloth_queue = "<create_queue_put_name_here>"
+    # task processing
+    NGROK_URL = "https://<ngrok_subdomain>.ngrok-free.app"
 
-# task processing
-ngrok_url = "https://<ngrok_subdomain>.ngrok-free.app"
+    # cron key
+    CRON_KEY = ""
 
-# cron key
-cron_key = ""
+    # secret key for the app
+    SECRET_KEY = ""
 
-# secret key for the app
-secret_key = ""
+    # featurebase endpoint URL
+    FEATUREBASE_ENDPOINT = "query.featurebase.com/v2"
 
-# featurebase endpoint URL
-featurebase_endpoint = "query.featurebase.com/v2"
+    # OpenAI
+    OPENAI_TOKEN = ""
+    COMPLETION_MODEL = "gpt-4-0613"
 
-# OpenAI
-openai_token = "<token>"
-completion_model = "gpt-4-0613"
+class ProdConfig:
+    PROJECT_ID = "sloth-compute"
 
+    DEV = "False"
+
+    # sloth box token
+    SLOTH_QUEUE = "<create_queue_put_name_here>"
+    SLOTH_TOKEN = ""
+    SLOTH_CONTROLLER_IP = ""
+    SLOTH_CONTROLLER_USERNAME = "controller"
+
+    # task processing
+    NGROK_URL = "https://<ngrok_subdomain>.ngrok-free.app"
+
+    # cron key
+    CRON_KEY = ""
+
+    # secret key for the app
+    SECRET_KEY = ""
+
+    # featurebase endpoint URL
+    FEATUREBASE_ENDPOINT = "query.featurebase.com/v2"
+
+    # OpenAI
+    OPENAI_TOKEN = ""
+    COMPLETION_MODEL = "gpt-4-0613"
+
+class TestingConfig:
+    PROJECT_ID = "sloth-compute"
+
+    DEV = "True"
+
+    # sloth box token
+    SLOTH_QUEUE = "<create_queue_put_name_here>"
+    SLOTH_TOKEN = ""
+    SLOTH_CONTROLLER_IP = ""
+    SLOTH_CONTROLLER_USERNAME = "controller"
+
+    # task processing
+    NGROK_URL = "https://<ngrok_subdomain>.ngrok-free.app"
+
+    # cron key
+    CRON_KEY = ""
+
+    # secret key for the app
+    SECRET_KEY = ""
+
+    # featurebase endpoint URL
+    FEATUREBASE_ENDPOINT = "query.featurebase.com/v2"
+
+    # OpenAI
+    OPENAI_TOKEN = ""
+    COMPLETION_MODEL = "gpt-4-0613"

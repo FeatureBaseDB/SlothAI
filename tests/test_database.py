@@ -1,7 +1,12 @@
+import sys
+import os
 import unittest
 
-# Import the modify_sql_query function from your code
-from database import add_filters_to_sql
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..'))
+sys.path.append(project_root)
+
+import SlothAI.lib.database as db
 
 class TestAddFiltersToSql(unittest.TestCase):
 
@@ -37,7 +42,7 @@ class TestAddFiltersToSql(unittest.TestCase):
 
     def test_add_filters_to_sql(self):
         for test in self.tests:
-            modified_sql_query = add_filters_to_sql(test['original_sql_query'], test['column_value_dict'])
+            modified_sql_query = db.add_filters_to_sql(test['original_sql_query'], test['column_value_dict'])
             self.assertEqual(modified_sql_query, test['expected_query'], f"test {test['name']} failed")
 
 if __name__ == "__main__":

@@ -4,14 +4,13 @@ import json
 from google.cloud import ndb
 
 from flask import Blueprint, render_template, make_response, redirect, url_for, request, session, flash
+from flask import current_app as app
 from flask_login import login_user, login_manager, logout_user, login_required, current_user
 import flask_login
 
-from web.models import User, Transaction, Table
+from SlothAI.web.models import User, Transaction, Table
 
-from lib.util import random_string
-
-import config
+from SlothAI.lib.util import random_string
 
 # client connection
 client = ndb.Client()
@@ -65,7 +64,7 @@ def login():
 
 		return render_template(
 			'pages/login.html',
-			config=config,
+			config=app.config,
 			session=session,
 			app_id = random_string(9),
 			transaction_id = transaction_id,
@@ -104,7 +103,7 @@ def login_post():
 	else:
 		return redirect(url_for('auth.login'))
 
-	from lib.database import featurebase_query
+	from SlothAI.lib.database import featurebase_query
 
 	# check for access to FeatureBase database
 	resp, err = featurebase_query(

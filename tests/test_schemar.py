@@ -1,6 +1,13 @@
+import os
+import sys
 import unittest
 from datetime import datetime, timezone
-from schemar import FBTypes, Schemar, InvalidData, UnhandledDataType, string_to_datetime, datetime_to_string
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..'))
+sys.path.append(project_root)
+
+from SlothAI.lib.schemar import FBTypes, Schemar, InvalidData, UnhandledDataType, string_to_datetime, datetime_to_string
 
 class TestSchemar(unittest.TestCase):
 

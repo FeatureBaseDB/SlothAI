@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export DEV="True"
-
 # Get your public IP address
 MY_IP=$(curl -s https://ipinfo.io/ip)
 
@@ -21,4 +19,4 @@ if ! gcloud compute firewall-rules describe "$FIREWALL_RULE_NAME" &>/dev/null; t
         --rules=tcp:8787  # You can customize the allowed ports
 fi
 
-python3 ./main.py
+flask --app SlothAI run --port 8080 --debug

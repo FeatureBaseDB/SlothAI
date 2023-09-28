@@ -7,6 +7,8 @@ import config
 import featurebase
 from urllib.error import HTTPError, URLError, ContentTooShortError
 
+from flask import current_app as app
+
 ###############
 # FeatureBase #
 ###############
@@ -33,7 +35,7 @@ def featurebase_query(document, debug=False):
 	db_token = document.get('db_token')
 
 	fb_client = featurebase.client(
-		hostport=config.featurebase_endpoint,
+		hostport=app.config['FEATUREBASE_ENDPOINT'],
 		database=dbid,
 		apikey=db_token
 	)
@@ -80,7 +82,7 @@ def featurebase_querybatch(document, debug=False):
 	db_token = document.get('db_token')
 
 	fb_client = featurebase.client(
-		hostport=config.featurebase_endpoint,
+		hostport=app.config['FEATUREBASE_ENDPOINT'],
 		database=dbid,
 		apikey=db_token
 	)
