@@ -101,6 +101,7 @@ class Table(ndb.Model):
 
 			return table.to_dict()
 
+
 	@classmethod
 	def delete(cls, tid):
 		with ndb.Client().context():
