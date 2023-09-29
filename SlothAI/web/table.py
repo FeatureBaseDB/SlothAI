@@ -5,8 +5,9 @@ from flask import Blueprint, flash, jsonify, request
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.tasks import create_task, get_task_schema
-
+from SlothAI.lib.ai import ai
+from SlothAI.lib.tasks import create_task, get_task_schema, box_required
+from SlothAI.lib.database import get_columns, get_unique_column_values, featurebase_query
 from SlothAI.web.models import Table, Models
 
 table = Blueprint('table', __name__)
@@ -19,6 +20,129 @@ client = ndb.Client()
 @flask_login.login_required
 def tables_list():
 	return None
+
+# API QUERY
+@table.route('/tables/<tid>/query', methods=['POST'])
+@flask_login.login_required
+def query(tid):
+	table = Table.get_by_uid_tid(current_user.uid, tid)
+	print(table.get('models'))
+	if table:
+		try:
+			json_data = request.get_json()
+		except Exception as ex:
+			return jsonify({"response": f"Check your JSON! {ex}"}), 400
+
+		if not json_data.get('query', None):
+			return jsonify({"response": "'query' field is required"}), 406 # todo get error code
+
+	# populate with the query and the table name
+	document = {"query": f"{json_data.get('query')}", "table_name": table.get("name")}
+
+	emb = {"data": {"text": json_data.get('query')}}
+
+	# models requiring boxes get deferred
+	defer, selected_box = box_required(table.get('models'))
+	if defer:
+		return f"Starting GPUs...", 418 # return resource starting
+	
+	# grab the IP for locally run models and stuff it into the document
+	if selected_box:
+		emb['ip_address'] = selected_box.get('ip_address')
+
+	for model in table.get('models', None):
+		kind = model.get('kind', None)
+		if kind == 'embedding':
+			ai_model = model.get('ai_model', None)
+			ai(ai_model, model, emb) #emb['data']['embedding'] for the embedding
+
+	# use the table and get the column schema
+	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
+	document['columns'] = get_columns(table.get('name'), auth)[0]
+
+	document = ai("query_analyze", "gpt-3.5-turbo", document)
+
+	document = {"sql": document.get('sql'), "explain": f"{document.get('explain')}"}
+
+	if "{embedding}" in document['sql']:
+		document['sql'] = document['sql'].replace("{embedding}", f"{emb['data']['embedding']}")
+
+	return document, 200
+
+
+# table schema
+@table.route('/tables/<tid>/schema', methods=['GET'])
+@flask_login.login_required
+def get_schema(tid):
+	table = Table.get_by_uid_tid(current_user.uid, tid)
+	if table:
+		# use the table and get the column schema
+		auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
+		schema, err = get_columns(table.get('name'), auth)		
+		
+		if err:
+			return jsonify({"error": err}), 400
+
+		return jsonify(schema), 200
+
+	return jsonify({"error": "table not found"}), 404
+
+
+# Distinct values
+@table.route('/tables/<tid>/unique_values', methods=['POST'])
+@flask_login.login_required
+def set_values(tid):
+	table = Table.get_by_uid_tid(current_user.uid, tid)
+	if table:
+		try:
+			json_data = request.get_json()
+		except Exception as ex:
+			return jsonify({"response": f"request data must be valid JSON: {ex}"}), 400
+
+		if not json_data.get('columns', None):
+			return jsonify({"response": "'columns' field with list of column names is required"}), 400
+		else:
+			columns = json_data['columns']
+			if not isinstance(columns, list):
+				return jsonify({"response": "'columns' field with list of column names is required"}), 400
+
+
+		# use the table and get the column schema
+		auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
+
+		vals, err = get_unique_column_values(table.get("name"), columns, auth)
+		if err:
+			return jsonify({"error": err}), 400
+
+		return jsonify(vals), 200
+
+	return jsonify({"error": "table not found"}), 404
+
+# Distinct values
+@table.route('/tables/<tid>/sql', methods=['GET'])
+@flask_login.login_required
+def sql(tid):
+	table = Table.get_by_uid_tid(current_user.uid, tid)
+	if table:
+		try:
+			json_data = request.get_json()
+		except Exception as ex:
+			return jsonify({"response": f"request data must be valid JSON: {ex}"}), 400
+
+		if not json_data.get('sql', None):
+			return jsonify({"response": "'sql' field with a sql query is required"}), 400
+
+		# use the table and get the column schema
+		sql_doc = {"sql": json_data['sql'], "dbid": current_user.dbid, "db_token": current_user.db_token}
+
+		vals, err = featurebase_query(sql_doc)
+		if err:
+			return jsonify({"error": err}), 400
+
+		return jsonify({"schema": vals.schema, "data": vals.data}), 200
+
+	return "table not found", 400
+
 
 # API INGEST
 @table.route('/tables/<tid>/ingest', methods=['POST'])
