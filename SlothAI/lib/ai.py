@@ -40,7 +40,6 @@ def ai(model_method, model, document={}):
 	except Exception as ex:
 		if app.config['DEV'] == "True":
 			print(traceback.format_exc())
-		print(traceback.format_exc())
 		document['error'] = "model *%s* errors with %s." % (model_method, ex)
 		document['explain'] = "I encountered an error talking with my AI handler."
 
@@ -52,7 +51,7 @@ def ai(model_method, model, document={}):
 # load template
 def load_template(name="default"):
 	# file path
-	file_path = "./templates/prompts/%s.txt" % (name)
+	file_path = "./SlothAI/templates/prompts/%s.txt" % (name)
 
 	try:
 		with open(file_path, 'r', encoding='utf-8') as f:
@@ -97,6 +96,29 @@ def gpt_dict_completion(prompt, model):
 
 # model functions
 # ===============
+@model
+def query_analyze(ai_model, document):
+	# load openai key then drop it from the document
+	openai.api_key = app.config['OPENAI_TOKEN']
+
+	# substitute things
+	try:
+		template = load_template("query_analyze")
+		prompt = template.substitute(document)
+	except Exception as ex:
+		print(ex)
+		document['error'] = "template wouldn't load"
+		return document
+
+	# get the template's dict
+	ai_dict = gpt_dict_completion(prompt, ai_model)
+
+	# extract the keyterms and stuff into the document
+	document['sql'] = ai_dict.get('suggested_sql')
+	document['explain'] = ai_dict.get('explain')
+	return document
+
+
 @model 
 def instructor(ai_model, document):
 	ip_address = document.get('ip_address') # TODO: move this into the model

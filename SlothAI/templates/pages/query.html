@@ -209,10 +209,10 @@ $(document).ready(function() {
             success: function(response) {
                 // Handle the success response by updating the resultDiv
                 const resultHtml = `
-                    <strong>SQL Query:</strong>
-                    <pre>${response.sql}</pre>
                     <strong>Explaination:</strong>
                     <pre>${response.explain}</pre>
+                    <strong>SQL Query:</strong>
+                    <pre>${response.sql}</pre>
                 `;
                 $("#resultDiv").html(resultHtml);
             },

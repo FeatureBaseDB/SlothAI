@@ -154,7 +154,7 @@ def table_view(tid):
 	mermaid_string += "B -->|Response| G[JSON]\n"
 	mermaid_string += "G -->|job_id: int| H[User]\n"
 	mermaid_string += "B -->|JSON| J[schemer]\n"
-	mermaid_string += "J -->|schema: auto| F{FeatureBase}\n"
+	mermaid_string += "J -->|schema: auto| F{FeatureBase\n%s}\n" % _table.get("name")
 
 	# check if models are present
 	if _table and _table.get('models'):
@@ -164,8 +164,9 @@ def table_view(tid):
 		for idx, model in enumerate(_table['models']):
 			current_model = chr(67 + idx)  # 67 is ASCII for 'C'
 			model_name = model['name']
+			model_kind = model['kind']
 
-			mermaid_string += f"{previous_model} -->{output}{current_model}[{model_name}]\n"
+			mermaid_string += f"{previous_model} -->{output}{current_model}[{model_kind}\n{model_name}]\n"
 
 			# define the specific output based on model 'kind'
 			if model['kind'] == 'keyterms':
@@ -181,7 +182,7 @@ def table_view(tid):
 
 		# After the loop ends, link the last model to the FeatureBase
 		mermaid_string += f"{current_model} -->{output}F\n"
-	print(mermaid_string)
+
 	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table, mermaid_string=mermaid_string)
 
 
