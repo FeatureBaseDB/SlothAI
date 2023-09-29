@@ -2,12 +2,11 @@ import json
 from flask import Blueprint
 from flask import request
 from flask import current_app as app
-from SlothAI.lib.util import random_string
+from SlothAI.lib.util import random_string, handle_quotes
 from SlothAI.lib.ai import ai
 from SlothAI.lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
-from SlothAI.lib.tasks import box_required, create_task, get_task_schema, retry_task
-from SlothAI.lib.schemar import string_to_datetime, datetime_to_string
-from SlothAI.web.models import User, Table, Models
+from SlothAI.lib.tasks import box_required, get_task_schema, retry_task, process_data_dict_for_insert
+from SlothAI.web.models import User, Table
 
 tasks = Blueprint('tasks', __name__)
 
@@ -75,12 +74,12 @@ def start_tasks(cron_key, uid):
 			retry_task(document)
 			return "retrying", 200
 
-	columns_dict, document['error'] = get_columns(document.get('name'), auth)
+	column_type_map, document['error'] = get_columns(document.get('name'), auth)
 	if document.get("error", None):
 		retry_task(document)
 		return "retrying", 200
 	
-	columns = [k for k in columns_dict.keys()]
+	columns = [k for k in column_type_map.keys()]
 
 	# add columns if data key cannot be found as an existing column
 	for key in document['data'].keys():
@@ -94,38 +93,16 @@ def start_tasks(cron_key, uid):
 			if document['error']:
 				retry_task(document)
 				return "retrying", 200
-			columns_dict[key] = document["schema"][key]
+			column_type_map[key] = document["schema"][key]
 
-	values = []
-	value_columns = []
-	document['data']['_id'] = 'dummy_value'
 
-	for i in range(len(document['data']['text'])):
-		value = "("
-		for column in document['data'].keys():
-			if column == "_id":
-				if columns_dict['_id'] == "string":
-					value += f"'{random_string(6)}', "
-				else: # id
-					value += f"identifier('{document.get('name')}'), "
-				if i == 0:
-					value_columns.append(column)
-				continue
-			if len(document['data'][column]) > i:
-				if i == 0:
-					value_columns.append(column)
-				v = document['data'][column][i]
-				typ = columns_dict[column]
-				if "timestamp" in typ: # format timestamp
-					dt = string_to_datetime(v)
-					v = datetime_to_string(dt)
-				if isinstance(v, str):
-					v = v.replace("'", "''")
-					v = f"'{v}'" 
-				value += f"{v}, "
-		values.append(value[:-2] + ")")
+	records = []
+	columns = ['_id'] + list(document['data'].keys())
 
-	sql = f"INSERT INTO {document.get('name')} ({','.join(value_columns)}) VALUES {','.join(values)};"
+	columns, records = process_data_dict_for_insert(document['data'], column_type_map, document.get('name'))
+
+	sql = f"INSERT INTO {document.get('name')} ({','.join(columns)}) VALUES {','.join(records)};"
+	print(sql[:200])
 	_, document['error'] = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
 	if document.get("error", None):
 		retry_task(document)

@@ -1,6 +1,6 @@
 import flask_login
 
-from flask import Flask, request, render_template, make_response, redirect
+from flask import Flask, render_template, make_response
 
 from google.cloud import ndb
 
@@ -14,7 +14,7 @@ from SlothAI.web.models import User
 import config as config 
 
 def create_app(conf='dev'):
-    # create app
+
     app = Flask(__name__)
 
     if conf == 'testing':
@@ -25,8 +25,6 @@ def create_app(conf='dev'):
         app.config.from_object(config.ProdConfig)
     else:
         raise Exception("invalid conf argument: must be 'testing', 'dev', or 'prod'.") 
-    
-    print(app.config)
 
     # logins
     login_manager = flask_login.LoginManager()
