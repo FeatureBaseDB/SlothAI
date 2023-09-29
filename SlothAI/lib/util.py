@@ -1,3 +1,4 @@
+import re
 import random
 import string
 import secrets
@@ -18,3 +19,12 @@ def random_name(size=3):
 def generate_token(size=30):
 	# generate a secrets token, less the dashes for better copy pasta
 	return secrets.token_urlsafe(size).replace('-','')
+
+def handle_quotes(object):
+	if isinstance(object, str):
+		pattern = r"(?<!')'(?!')"
+		object = re.sub(pattern, "''", object)
+	if isinstance(object, list):
+		for i, _ in enumerate(object):
+			object[i] = handle_quotes(object[i])
+	return object

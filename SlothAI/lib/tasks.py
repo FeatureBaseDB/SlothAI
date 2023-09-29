@@ -9,6 +9,8 @@ from google.protobuf import timestamp_pb2
 
 from SlothAI.lib.gcloud import box_start
 from SlothAI.web.models import Models, Box
+from SlothAI.lib.util import random_string, handle_quotes
+from SlothAI.lib.schemar import string_to_datetime, datetime_to_string, FBTypes
 
 from flask import current_app as app
 
@@ -169,3 +171,61 @@ def retry_task(document):
 	print(f"ERROR: {document['error']}. {document['retries']} total retries. retrying.")
 	del document['error']
 	create_task(document)
+
+
+def process_data_dict_for_insert(data, column_type_map, table):
+	"""
+	Process data from a dictionary for insertion into a database table.
+
+	This function takes data in the form of a dictionary, a mapping of column types,
+	and the target table name. It generates records suitable for insertion into
+	the specified table and returns the list of columns and records.
+
+	Parameters:
+	- data (dict): A dictionary containing data to be inserted into the table.
+	- column_type_map (dict): A dictionary mapping column names to their data types.
+	- table (str): The name of the target database table.
+
+	Returns:
+	- columns (list): A list of column names including '_id'.
+	- records (list): A list of records, each formatted as a tuple for insertion.
+
+	Example:
+	data = {
+		'text': ['Record 1', 'Record 2'],
+		'value': [42, 57]
+	}
+	column_type_map = {
+		'_id': 'string',
+		'text': 'string',
+		'value': 'int'
+	}
+	table = 'my_table'
+	columns, records = process_data_dict_for_insert(data, column_type_map, table)
+	# columns = ['_id', 'text', 'value']
+	# records = ["('abc123','Record 1',42)", "('def456','Record 2',57)"]
+	"""
+    
+	records = []
+	columns = ['_id'] + list(data.keys())
+
+	# build insert tuple for each record
+	for i, _ in enumerate(data['text']):
+		record = ""
+		for column in columns:
+			col_type = column_type_map[column]
+			if column == '_id':
+				value = f"'{random_string(6)}'" if col_type == "string" else f"identifier('{table}')"
+			else:
+				value = data[column][i]
+				if FBTypes.TIMESTAMP in col_type:
+					value = f"'{datetime_to_string(string_to_datetime(value))}'"
+				if col_type == FBTypes.STRING:
+					value = f"'{handle_quotes(value)}'"
+				if col_type == FBTypes.STRINGSET:
+					value = "['" + "','".join(handle_quotes(value)) + "']"	
+			record += f"{value},"
+		records.append(f"({record[:-1]})")
+
+	return columns, records
+	
