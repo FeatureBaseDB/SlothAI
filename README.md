@@ -10,7 +10,7 @@ Machine learning box deployment is managed using [Laminoid](https://github.com/F
 ## But, Why?
 SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide software opinionated model chains and model method management. Unlike these other solutions, SlothAI addresses asynchronous inferencing while making it easy to edit templates and manage pipeline flows.
 
-SlothAI's strategy for simplicity and scale is based on opinionated storage and compute layers. SlothAI requires using a SQL engine that can run both binary set operations and vector similarity running on containers using task queues.
+SlothAI's strategy for simplicity and scale is based on opinionated storage and compute layers. SlothAI requires using a SQL engine that can run both binary set operations and vector similarity inside containers using task queues.
 
 ## Pipeline Strategy
 SlothAI creates *ingest pipelines* which contain *models*. Models run in sequence during ingestion. Their output is sent to a database table layer, which is currently FeatureBase. 
