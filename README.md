@@ -77,12 +77,12 @@ What was the outcome of the fair use case involving Google copying the Java SE A
 What organization issued a DMCA takedown to YouTube-dl?,YouTube-dl has received a DMCA takedown from RIAA,0
 ```
 
-## Release Notes
-* Authentication is supported with FeatureBase.
-* Embeddings and keyterm extraction pipelines are supported.
-* Local queue managment is supported.
-* Templates and vector balancing are under development.
-* Storage layer for PostgreSQL is under development.
+## Development Notes
+* Embeddings, keyterm extraction, and question forming models are supported.
+* Creation of ingestion pipelines is supported.
+* Versioning for templates and model methods, query pipeline creation, and vector balancing are under development.
+* Support for new model deployment occurs in the Laminoid project.
+* Storage layer for PostgreSQL/pgvector is in planning.
 * Alternate auth methods are being considered.
 
 ## Authentication
