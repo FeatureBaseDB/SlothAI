@@ -1,5 +1,5 @@
 # SlothAI: A Model Pipeline Manager
-SlothAI provides a simple and ansycronous methodology to implement document-based pipelines (chains) for various models. It is designed to be fast as hell.
+SlothAI provides a simple and ansycronous methodology to implement document-based pipelines (chains) for various machine learning models. It is designed to be fast as hell.
 
 <img src="https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothAI/static/sloth.png?raw=true" width="240"/>
 
