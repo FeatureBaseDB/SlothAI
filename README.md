@@ -13,7 +13,7 @@ SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine lear
 ## Pipeline Strategy
 SlothAI creates *ingest pipelines* which contain *models*. Models run in sequence during ingestion. Their output is sent to a database table layer, which is currently FeatureBase. 
 
-**NOTE:** The rationale for using FeatureBase is due to its ability to process SQL to a) retreive normal "tabular" data, b) run fast set operations (feature sets) using FB's binary tree storage layer, and c) run vector comparisons using FB's tuple storage layer. Subsequent updates to this repo will implement other storage layers, such as PostgreSQL with pgvector support.
+**NOTE:** The opinionated reason for using FeatureBase is due to its ability to process SQL to a) retreive normal "tabular" data, b) run fast set operations (feature sets) using FB's binary tree storage layer, and c) run vector comparisons using FB's tuple storage layer. Subsequent updates to this repo will implement other storage layers, such as PostgreSQL with pgvector support.
 
 SlothAI also creates instances of *query pipelines*, which connect to a table and then batch resulting document data into a series of *ingest pipelines*. This combination of pipeline types allows for a wide variety of use cases.
 
