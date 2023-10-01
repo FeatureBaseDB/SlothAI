@@ -1,0 +1,24 @@
+<div class="mermaid">
+graph TD
+A[User's Code\nIngestion] --> I[JSON]
+I[JSON] --> |POST /ingest| B[slothy pipeline]
+B --> |job_id: int| A
+B --> |JSON| J[schemer]
+J --> |schema: auto| F{FeatureBase\nslothy table}
+B --> |text: string| C[sloth-extract\nkeyterms]
+C --> |keyterms: stringset\n text: string| D[instructor-xl\nembedding]
+D  --> |keyterms: stringset\n text: string\nembeding: vector| E[gpt-3.5-turbo\nform_question]
+E --> |keyterms: stringset\n text: string\nembeding: vector\nquestion: string| F
+K(templates) --> C
+K(templates) --> D
+K(templates) --> E
+</div>
+
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+    // Initialize Mermaid when the page is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        mermaid.initialize({ startOnLoad: true });
+    });
+</script>

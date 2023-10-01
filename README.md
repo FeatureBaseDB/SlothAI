@@ -7,6 +7,14 @@ SlothAI is implemented in Python to run on AppEngine containers, and takes advan
 
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
+## Strategy
+SlothAI creates instances of model pipelines, which run in sequence. Their output is sent to a database table layer, which is currently using FeatureBase. The rationale for using FeatureBase is due to the ability to write SQL to a) query normal tabular data, b) query with set operations on FB's binary storage layer, and query with vector comparisons to FB's tuple storage layer.
+
+
+
+SlothAI also creates instances of query pipelines, which connect to the database and then run resulting document data through a series of pipelines.
+
+
 ## Sample Ingestion and Results
 A sample pipeline using the instructor-xl embedding model & gpt-3.5-turbo to extract keyterms:
 
