@@ -3,17 +3,17 @@ SlothAI provides a simple and ansycronous methodology to implement document-base
 
 <img src="https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothAI/static/sloth.png?raw=true" width="240"/>
 
-SlothAI is implemented in Python to run on AppEngine containers, and takes advantage of Cloud Task queues. SlothAI uses queues to asyncronously run inferencing on documents.
+SlothAI is implemented in Python to run on AppEngine containers, and takes advantage of Cloud Task queues. SlothAI uses queues to asynchronously run inferencing on documents.
 
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
 ## But Why?
-SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide model chains and model method managment. Unlike these other opinionated solutions, SlothAI addresses the asyncronous nature of inferencing while making it easy to edit templates and manage pipeline flows. Its strategy is focused on simplicity and ease-of-use, while still being highly scalable.
+SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide model chains and model method management. Unlike these other opinionated solutions, SlothAI addresses asynchronous inferencing while making it easy to edit templates and manage pipeline flows. Its strategy is focused on simplicity and ease-of-use, while still being highly scalable.
 
 ## Pipeline Strategy
 SlothAI creates *ingest pipelines* which contain *models*. Models run in sequence during ingestion. Their output is sent to a database table layer, which is currently FeatureBase. 
 
-**NOTE:** The opinionated reason for using FeatureBase is due to its ability to process SQL to a) retreive normal "tabular" data, b) run fast set operations (feature sets) using FB's binary tree storage layer, and c) run vector comparisons using FB's tuple storage layer. Subsequent updates to this repo will implement other storage layers, such as PostgreSQL with pgvector support.
+**NOTE:** The opinionated reason for using FeatureBase is due to its ability to process SQL to a) retrieve normal "tabular" data, b) run fast set operations (feature sets) using FB's binary tree storage layer, and c) run vector comparisons using FB's tuple storage layer. Subsequent updates to this repo will implement other storage layers, such as PostgreSQL with pgvector support.
 
 SlothAI also creates instances of *query pipelines*, which connect to a table and then batch resulting document data into a series of *ingest pipelines*. This combination of pipeline types allows for a wide variety of use cases.
 
@@ -31,7 +31,7 @@ The following graph outlines a *query pipeline* for processing documents stored 
 
 <img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/query_graph.png" width="360"/>
 
-In the above graph, the *slothy-answers* pipeline respresents a series of *models* run on the batch requests, as seen above in the *ingest pipeline*.
+In the above graph, the *slothy-answers* pipeline represents a series of *models* run on the batch requests, as seen above in the *ingest pipeline*.
 
 ## Sample Ingestion and Results
 A sample ingestion pipeline use with instructor-xl embedding model & gpt-3.5-turbo to extract keyterms:
