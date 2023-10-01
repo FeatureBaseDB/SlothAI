@@ -31,7 +31,7 @@ The following graph outlines a *query pipeline* for processing documents stored 
 
 <img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/query_graph.png" width="360"/>
 
-In the above graph, the *slothy-answers* pipeline respresents a series of *model pipelines* run on the batch requests.
+In the above graph, the *slothy-answers* pipeline respresents a series of *models* run on the batch requests, as seen above in the *ingest pipeline*.
 
 ## Sample Ingestion and Results
 A sample ingestion pipeline use with instructor-xl embedding model & gpt-3.5-turbo to extract keyterms:
