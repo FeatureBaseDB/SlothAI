@@ -8,7 +8,9 @@ SlothAI is implemented in Python to run on AppEngine containers, and takes advan
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
 ## But Why?
-SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide model chains and model method management. Unlike these other opinionated solutions, SlothAI addresses asynchronous inferencing while making it easy to edit templates and manage pipeline flows. Its strategy is focused on simplicity and ease-of-use, while still being highly scalable.
+SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide model chains and model method management. Unlike these other opinionated solutions, SlothAI addresses asynchronous inferencing while making it easy to edit templates and manage pipeline flows. 
+
+Its strategy is focused on simplicity and ease-of-use, while still being highly scalable.
 
 ## Pipeline Strategy
 SlothAI creates *ingest pipelines* which contain *models*. Models run in sequence during ingestion. Their output is sent to a database table layer, which is currently FeatureBase. 
