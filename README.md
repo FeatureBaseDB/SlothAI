@@ -7,16 +7,34 @@ SlothAI is implemented in Python to run on AppEngine containers, and takes advan
 
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
-## Strategy
-SlothAI creates instances of model pipelines, which run in sequence. Their output is sent to a database table layer, which is currently using FeatureBase. The rationale for using FeatureBase is due to the ability to write SQL to a) query normal tabular data, b) query with set operations on FB's binary storage layer, and query with vector comparisons to FB's tuple storage layer.
+## But Why?
+SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide model chains and model method managment. Unlike these other opinionated solutions, SlothAI addresses the asyncronous nature of inferencing while making it easy to edit templates and manage pipeline flows. Its strategy is focused on simplicity and ease-of-use, while still being highly scalable.
 
+## Pipeline Strategy
+SlothAI creates *ingest pipelines* which contain *models*. Models run in sequence during ingestion. Their output is sent to a database table layer, which is currently FeatureBase. 
 
+**NOTE:** The rationale for using FeatureBase is due to its ability to process SQL to a) retreive normal "tabular" data, b) run fast set operations (feature sets) using FB's binary tree storage layer, and c) run vector comparisons using FB's tuple storage layer. Subsequent updates to this repo will implement other storage layers, such as PostgreSQL with pgvector support.
 
-SlothAI also creates instances of query pipelines, which connect to the database and then run resulting document data through a series of pipelines.
+SlothAI also creates instances of *query pipelines*, which connect to a table and then batch resulting document data into a series of *ingest pipelines*. This combination of pipeline types allows for a wide variety of document flows use cases.
 
+**NOTE:** SlothAI uses dynamic templates which are stored on Github for version control. It also uses dynamic AI methods stored on Github, or ones synthesized by the LLM, to process the templates. Eventually a *schemer* model will be used to update the templates from the schema detected in the POST payload.
+
+### Sample Ingestion Graph
+The following graph outlines an *ingestion pipeline* for new data that extracts keyterms, embeds the text and keyterms together, then forms a question about the text and keyterms using GPT-3.5-turbo:
+
+<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/pipeline_graph.png" width="360"\>
+
+**NOTE:** An alternate strategy would be to form the questions from a given text fragment from a larger document by first storing the vectors and keyterms in FB, then running a query pipeline on the resulting dataset to allow for similarity search across all ingested documents, instead of just the text fragment and keyterms.
+
+### Sample Query Graph
+The following graph outlines a *query pipeline* for processing documents stored with keyterms, embeddings and questions. The output is an "answer" for the question posed, which is then stored in a new table:
+
+<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/query_graph.png" width="360"\>
+
+In the above graph, the *slothy-answers* pipeline respresents a series of *model pipelines* run on the batch requests.
 
 ## Sample Ingestion and Results
-A sample pipeline using the instructor-xl embedding model & gpt-3.5-turbo to extract keyterms:
+A sample ingestion pipeline use with instructor-xl embedding model & gpt-3.5-turbo to extract keyterms:
 
 ```
 curl -X POST \
