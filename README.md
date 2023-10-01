@@ -22,14 +22,14 @@ SlothAI also creates instances of *query pipelines*, which connect to a table an
 ### Sample Ingestion Graph
 The following graph outlines an *ingestion pipeline* for new data that extracts keyterms, embeds the text and keyterms together, then forms a question about the text and keyterms using GPT-3.5-turbo:
 
-<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/pipeline_graph.png" width="360"\>
+<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/pipeline_graph.png" width="360"/>
 
 **NOTE:** An alternate strategy would be to form the questions from a given text fragment from a larger document by first storing the vectors and keyterms in FB, then running a query pipeline on the resulting dataset to allow for similarity search across all ingested documents, instead of just the text fragment and keyterms.
 
 ### Sample Query Graph
 The following graph outlines a *query pipeline* for processing documents stored with keyterms, embeddings and questions. The output is an "answer" for the question posed, which is then stored in a new table:
 
-<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/query_graph.png" width="360"\>
+<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/query_graph.png" width="360"/>
 
 In the above graph, the *slothy-answers* pipeline respresents a series of *model pipelines* run on the batch requests.
 
