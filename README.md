@@ -8,18 +8,18 @@ SlothAI is implemented in Python to run on AppEngine containers, and takes advan
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
 ## But, Why?
-SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide model chains and model method management. Unlike these other opinionated solutions, SlothAI addresses asynchronous inferencing while making it easy to edit templates and manage pipeline flows. 
+SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide software opinionated model chains and model method management. Unlike these other  solutions, SlothAI addresses both asynchronous inferencing while making it easy to edit templates and manage pipeline flows.
 
-Its strategy is focused on simplicity and ease-of-use, while still being highly scalable.
+SlothAI's strategy for simplicity and scale is based on opinionated storage and compute layers. SlothAI requires you must use a database that a SQL engine that can run both binary set operations and vector support while running on a containerized system with task queues.
 
 ## Pipeline Strategy
 SlothAI creates *ingest pipelines* which contain *models*. Models run in sequence during ingestion. Their output is sent to a database table layer, which is currently FeatureBase. 
 
-**NOTE:** The opinionated reason for using FeatureBase is due to its ability to process SQL to a) retrieve normal "tabular" data, b) run fast set operations (feature sets) using FB's binary tree storage layer, and c) run vector comparisons using FB's tuple storage layer. Subsequent updates to this repo will implement other storage layers, such as PostgreSQL with pgvector support.
+**NOTE:** The opinionated reason for using FeatureBase is due to its ability to process SQL to a) retrieve normal "tabular" data, b) run fast set operations (feature sets) using FB's binary tree storage layer, and c) run vector comparisons using FB's tuple storage layer. Subsequent updates to this repo will implement other storage layers, such as PostgreSQL with pgvector support and binary tree operations.
 
 SlothAI also creates instances of *query pipelines*, which connect to a table and then batch resulting document data into a series of *ingest pipelines*. This combination of pipeline types allows for a wide variety of use cases.
 
-**NOTE:** SlothAI uses dynamic templates which are stored on Github for version control. It also uses dynamic AI methods stored on Github, or ones synthesized by the LLM, to process the templates. Eventually a *schemer* model will be used to update the templates from the schema detected in the POST payload.
+**NOTE:** SlothAI uses dynamic templates which are stored on Github for version control. It also uses dynamic AI methods stored on Github, or ones synthesized by the LLM, to process the templates. A *schemer* model is used to update the templates from the schema detected in the POST payload.
 
 ### Sample Ingestion Graph
 The following graph outlines an *ingestion pipeline* for new data that extracts keyterms, embeds the text and keyterms together, then forms a question about the text and keyterms using GPT-3.5-turbo:
