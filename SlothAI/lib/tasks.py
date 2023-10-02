@@ -20,6 +20,9 @@ def delete_task(name):
 
 # probaby not the best place for this, so welcome to agile!
 def box_required(pipeline_models):
+	from ping3 import ping
+	from SlothAI.lib.util import check_webserver_connection
+
 	# get all boxes
 	boxes = Box.get_boxes() # change this to use the Box model TODO
 
@@ -32,13 +35,24 @@ def box_required(pipeline_models):
 
 		if _model.get('gpu') == "t4":
 			active_t4s = []
-			other_t4s = []
+			halted_t4s = []
 			if boxes:
 				for box in boxes:
-					if box.get('status') == 'RUNNING':
-						active_t4s.append(box)
+					# if the box is START, PROVISIONING, STAGING, RUNNING
+					if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
+						# can we ping it?
+						response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
+
+						if response_time and check_webserver_connection(box.get('ip_address'), 9898):
+							print("pinging", box.get('ip_address'), response_time, box.get('status'))
+							# ping worked and the server responded
+							active_t4s.append(box)
+						else:
+							print("box is not running")
+							halted_t4s.append(box)
 					else:
-						other_t4s.append(box)
+						# box wasn't RUNNING or at START
+						halted_t4s.append(box)
 
 			if active_t4s:
 				# If there are active boxes, select one at random
@@ -47,16 +61,25 @@ def box_required(pipeline_models):
 				break
 			else:
 				# pick a random startable box
-				alternate_box = random.choice(other_t4s)
+				alternate_box = random.choice(halted_t4s)
 
-				# start a box
-				box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
+				# start the box and set the new status
+				if box.get('status') != "START":
+					print("starting box ", box.get('box_id'))
+					box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
+					Box.start_box(alternate_box.get('box_id'), "START") # sets status to 'START'
+				
 				selected_box = None
 				_box_required = True
+				
+				# return to ensure we don't start multiple boxes
+				break
+
 	else:
 		selected_box = None
 
 	return _box_required, selected_box
+
 
 def list_tasks(uid):
 	# Set your Google Cloud Project ID

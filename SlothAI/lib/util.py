@@ -2,6 +2,7 @@ import re
 import random
 import string
 import secrets
+import socket
 
 from coolname import generate_slug
 
@@ -28,3 +29,13 @@ def handle_quotes(object):
 		for i, _ in enumerate(object):
 			object[i] = handle_quotes(object[i])
 	return object
+
+def check_webserver_connection(host, port):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(2)
+        s.connect((host, port))
+        s.close()
+        return True
+    except Exception as e:
+        return False

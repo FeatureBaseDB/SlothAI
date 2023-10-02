@@ -26,7 +26,6 @@ def tables_list():
 @flask_login.login_required
 def query(tid):
 	table = Table.get_by_uid_tid(current_user.uid, tid)
-	print(table.get('models'))
 	if table:
 		try:
 			json_data = request.get_json()
@@ -44,7 +43,7 @@ def query(tid):
 	# models requiring boxes get deferred
 	defer, selected_box = box_required(table.get('models'))
 	if defer:
-		return f"Starting GPUs...", 418 # return resource starting
+		return f"Starting GPUs...please wait.", 418 # return resource starting
 	
 	# grab the IP for locally run models and stuff it into the document
 	if selected_box:
@@ -54,17 +53,20 @@ def query(tid):
 		kind = model.get('kind', None)
 		if kind == 'embedding':
 			ai_model = model.get('ai_model', None)
-			ai(ai_model, model, emb) #emb['data']['embedding'] for the embedding
+			emb = ai(ai_model, model, emb) #emb['data']['embedding'] for the embedding
 
 	# use the table and get the column schema
 	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
 	document['columns'] = get_columns(table.get('name'), auth)[0]
 
+	# determine if it's sql
 	document = ai("query_analyze", "gpt-3.5-turbo", document)
 
-	document = {"sql": document.get('sql'), "explain": f"{document.get('explain')}"}
+	if document.get('rewrite').lower() == "true":
+		document = ai("query_rewrite", "gpt-3.5-turbo", document)
+		print(document)
 
-	if "{embedding}" in document['sql']:
+	if "{embedding}" in document['sql'] :
 		document['sql'] = document['sql'].replace("{embedding}", f"{emb['data']['embedding']}")
 
 	return document, 200

@@ -1,0 +1,14 @@
+# complete create dict task
+1. The user has entered the following query. This is what the user actually typed in:
+"""
+$query
+""".
+2. The user has selected the "$table_name" table. That table has the following schema:
+"""
+table_name=$table_name
+$columns
+"""
+3. For key "explain", explain the reasoning behind rewriting the SQL using the schema in step 2?
+4. For key "sql", put the SQL you believe will work best using the schema in step 2:
+# finish the python dictionary
+python_dict = 

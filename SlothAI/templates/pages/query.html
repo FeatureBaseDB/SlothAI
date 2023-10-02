@@ -120,6 +120,14 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
+    // Function to update the flashed message
+    function updateFlashedMessage(message) {
+        const tempNotice = document.getElementById('tempNotice');
+        if (tempNotice) {
+            tempNotice.innerText = message;
+            tempNotice.classList.add('alert', 'alert-info', 'show'); // Add Bootstrap classes
+        }
+    }
 
     function createPulldowns(data) {
         // Identify the container where you want to append the pulldowns.
@@ -181,6 +189,7 @@ $(document).ready(function() {
         });
     });
 
+
     $("form").submit(function(event) {
         event.preventDefault(); // Prevent the default form submission
         
@@ -213,12 +222,15 @@ $(document).ready(function() {
                     <pre>${response.explain}</pre>
                     <strong>SQL Query:</strong>
                     <pre>${response.sql}</pre>
+                    <strong>Rewrite:</strong>
+                    <pre>${response.rewrite}</pre>
                 `;
                 $("#resultDiv").html(resultHtml);
             },
             error: function(xhr, status, error) {
                 // Handle errors here
                 console.error(xhr.responseText);
+                updateFlashedMessage("xhr.responseText");
             }
         });
     });
