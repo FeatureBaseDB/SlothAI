@@ -8,15 +8,13 @@ $query
 table_name=$table_name
 $columns
 """
-3. Determine if the query contains SQL or fragments of SQL based on the schema in step 2.
-4. Determine if the query is plain text. If it is plain text, think about an augmented user query:
-"""
-The user appears to be searching for "$query", which if it isn't SQL, can probably be found by running the embedding on the query and doing cosine distances on the database entries:
-SELECT _id, cosine_distance(\{embedding\}, embedding) FROM $table_name;
-$query
-"""
-4. build a dict with "query", "suggested_sql", and "explain" keys:
-# "query" is the user's query, which is "$query"
-# "sql" is an interpretation of the correct SQL for satifying the user's input query
-# "explain" provides an explaination for why you generated the required dictionary
+3. For key "explain", is there a <good_reason> to believe you can safely rewrite the SQL using the schema in step 2?
+4. For key "rewrite", do you believe the SQL can safely be rewritten using the schema in step 2?
+4. For key "sql", does the query contains valid SQL?
+5. Write a python dictionary to respond:
+# examples
+# "safe" things are things like "selects", but not like "drop"
+# python_dict = {"explain": "Can't be written to SQL because <good_reason>", "sql": "false", "rewrite": "false"}
+# python_dict = {"explain": "It is valid SQL because <good_reason>", "sql": "true", "rewrite": "true"}
+# python_dict = {"explain": "It isn't valid SQL, but it can be rewritten", "sql": "false", "rewrite": "true"}
 python_dict = 

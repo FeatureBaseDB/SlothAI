@@ -93,9 +93,7 @@ def gpt_dict_completion(prompt, model):
 
 	return ai_dict
 
-
-# model functions
-# ===============
+# analyze the query object
 @model
 def query_analyze(ai_model, document):
 	# load openai key then drop it from the document
@@ -114,10 +112,33 @@ def query_analyze(ai_model, document):
 	ai_dict = gpt_dict_completion(prompt, ai_model)
 
 	# extract the keyterms and stuff into the document
-	document['sql'] = ai_dict.get('suggested_sql')
+	document['sql'] = ai_dict.get('sql')
 	document['explain'] = ai_dict.get('explain')
+	document['rewrite'] = ai_dict.get('rewrite')
 	return document
 
+# rewrite the query object
+@model
+def query_rewrite(ai_model, document):
+	# load openai key then drop it from the document
+	openai.api_key = app.config['OPENAI_TOKEN']
+
+	# substitute things
+	try:
+		template = load_template("query_rewrite")
+		prompt = template.substitute(document)
+	except Exception as ex:
+		print(ex)
+		document['error'] = "template wouldn't load"
+		return document
+
+	# get the template's dict
+	ai_dict = gpt_dict_completion(prompt, ai_model)
+
+	# extract the keyterms and stuff into the document
+	document['sql'] = ai_dict.get('sql')
+	document['explain'] = ai_dict.get('explain')
+	return document
 
 @model 
 def instructor(ai_model, document):

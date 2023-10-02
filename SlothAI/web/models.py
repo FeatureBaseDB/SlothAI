@@ -158,7 +158,7 @@ class Box(ndb.Model):
 	box_id = ndb.StringProperty()
 	ip_address = ndb.StringProperty()
 	zone = ndb.StringProperty()
-	status = ndb.StringProperty(default='available')
+	status = ndb.StringProperty(default='NEW') # PROVISIONING, STAGING, RUNNING, STOPPING, SUSPENDING, SUSPENDED, REPAIRING, and TERMINATED
 	expires = ndb.DateTimeProperty()
 	runs_models = ndb.JsonProperty() # models it runs
 
@@ -192,19 +192,24 @@ class Box(ndb.Model):
 	@classmethod
 	def get_boxes(cls):
 		with ndb.Client().context():
-			entities = cls.query().fetch()
-			return [entity.to_dict() for entity in entities]
-							
-	def start_box(self):
-		# Code to start the box or spot instance
-		self.status = 'running'
-		self.put()
-			
-	def stop_box(self):
-		# Code to stop the box or spot instance
-		self.status = 'stopped'
-		self.put()
+			boxes = cls.query().fetch()
+			return [box.to_dict() for box in boxes]
 
+	@classmethod
+	def start_box(cls, box_id, status="START"):
+		with ndb.Client().context():
+			box = cls.query(cls.box_id == box_id).get()
+			box.status = status
+			box.put()
+			return box.to_dict()
+
+	@classmethod
+	def stop_box(cls, box_id, status="STOP"):
+		with ndb.Client().context():
+			box = cls.query(cls.box_id == box_id).get()
+			box.status = status
+			box.put()
+			return box.to_dict()
 
 # user inherits from flask_login and ndb
 class User(flask_login.UserMixin, ndb.Model):
