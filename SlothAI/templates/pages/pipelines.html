@@ -61,12 +61,12 @@
     <div class="card rounded-lg">
         <div class="card-body">
             <h4 class="card-title card-callout">Task: Create More Pipelines</h4>
-            <p class="card-body">Pipelines route your data to AI models, which interact with  and store the outcomes within your FeatureBase database. Send in your JSON and then head over to <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> to query it with SQL. Behind the scene, AI models will ensure your data is delivered into the correct table formats.</p>
+            <p class="card-body">Pipelines route data from AI nodes to and from the database. Your database is located over to <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> where you can query results of ingestion with SQL.</p>
             <table class="table table-striped">
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Models</th>
+                        <th>Nodes</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -108,7 +108,7 @@
             <div class="card-body">
                 <h4 class="card-title card-callout">Task: Create a new pipeline.</h4>
                 <p class="card-text">
-                    Click on the "Add Pipeline" button to create a new pipeline. Pipelines without models insert directly into FeatureBase.
+                    Click on the "Add Pipeline" button to create a new pipeline. Pipelines without nodes insert directly into FeatureBase.
                 </p>
 
                 <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">

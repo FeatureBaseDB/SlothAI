@@ -98,8 +98,8 @@ def pipelines():
 	username = current_user.name
 	hostname = request.host
 	pipelines = Pipeline.get(uid=current_user.uid)
-	nodes = Node.get(uid=current_user.uid)
-
+	nodes = Node.get_all_by_uid(uid=current_user.uid)
+	
 	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines)
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
