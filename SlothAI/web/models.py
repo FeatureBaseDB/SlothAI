@@ -103,7 +103,7 @@ class Node(ndb.Model):
 		existing_node = cls.query(cls.name == name, cls.uid == uid).get()
 
 		if not existing_node:
-			node_id = cls.random_string(13)
+			node_id = random_string(13)
 			node = cls(
 				node_id=node_id,
 				name=name,
@@ -199,7 +199,7 @@ class Pipeline(ndb.Model):
 
 		if not existing_pipeline:
 			nodes = [Node.query(Node.node_id == node_id).get() for node_id in node_ids if Node.query(Node.node_id == node_id).get()]
-			pipe_id = cls.random_string(13)
+			pipe_id = random_string(13)
 			pipe = cls(
 				pipe_id=pipe_id,
 				uid=uid,
