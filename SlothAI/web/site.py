@@ -23,7 +23,7 @@ from SlothAI.lib.ai import ai
 from SlothAI.lib.tasks import list_tasks
 from SlothAI.lib.database import table_exists
 
-from SlothAI.web.models import Table, Models
+from SlothAI.web.models import Pipeline, Node, Models
 
 site = Blueprint('site', __name__)
 
@@ -57,33 +57,6 @@ def settings():
 		'pages/settings.html', username=username, api_token=api_token, dbid=dbid
 	)
 
-@site.route('/query', methods=['GET'])
-@flask_login.login_required
-def query():
-	# get the user and their tables
-	username = current_user.name
-	api_token = current_user.api_token
-	dbid = current_user.dbid
-	models = Models.get_all()
-	tables = Table.get_all_by_uid(current_user.uid)
-
-	if not tables:
-		flash("No tables to query. Create a new pipeline and ingest data.")
-		return redirect(url_for('site.tables'))
-
-	# see if they are created
-	auth = {"dbid": current_user.dbid, "db_token": current_user.db_token}
-
-	_tables = []
-	for table in tables:
-		exists, err = table_exists(table.get('name'), auth)				
-		if exists:
-			_tables.append(table)
-
-	return render_template(
-		'pages/query.html', username=username, dev=app.config['DEV'], dbid=dbid, models=models, tables=_tables
-	)
-
 
 @site.route('/models', methods=['GET'])
 @flask_login.login_required
@@ -97,6 +70,7 @@ def models():
 	return render_template(
 		'pages/models.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, models=models
 	)
+
 
 @site.route('/animate', methods=['GET'])
 def serve_markdown():
@@ -117,25 +91,16 @@ def serve_markdown():
 
 
 @site.route('/', methods=['GET'])
-@site.route('/tables', methods=['GET'])
+@site.route('/pipelines', methods=['GET'])
 @flask_login.login_required
-def tables():
+def pipelines():
 	# get the user and their tables
 	username = current_user.name
-
 	hostname = request.host
-
-	tables = Table.get_all_by_uid(uid=current_user.uid)
-
-	_tables = []
-	with client.context():
-		if tables:
-			for table in tables:
-				_tables.append(table)
-
+	pipelines = Pipeline.get_all_by_uid(uid=current_user.uid)
 	models = Models.get_all()
 
-	return render_template('pages/tables.html', username=username, hostname=hostname, tables=_tables, models=models)
+	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines)
 
 @site.route('/tables/<tid>', methods=['GET'])
 @flask_login.login_required

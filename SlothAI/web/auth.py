@@ -8,7 +8,7 @@ from flask import current_app as app
 from flask_login import login_user, login_manager, logout_user, login_required, current_user
 import flask_login
 
-from SlothAI.web.models import User, Transaction, Table
+from SlothAI.web.models import User, Transaction, Pipeline
 
 from SlothAI.lib.util import random_string
 
@@ -36,7 +36,7 @@ def remove():
 	uid = current_user.uid
 	logout_user()
 	User.remove_by_uid(uid)
-	Table.remove_by_uid(uid)
+	Pipeline.remove_by_uid(uid)
 	flash("Account information deleted.")
 	return redirect(url_for('auth.login'))
 

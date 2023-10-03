@@ -3,8 +3,7 @@
 """
 "Christopher Robin, you must shoot the balloon with your gun. Have you
 got your gun?" "Of course I have," you said. "But if I do that, it will spoil the
-balloon," you said. "But if you _don't_," said Pooh, "I shall have to let go, and that would
-spoil _me_." When he put it like this, you saw how it was, and you aimed very
+balloon," you said. "But if you _don't_," said Pooh, "I shall have to let go, and that would spoil _me_." When he put it like this, you saw how it was, and you aimed very
 carefully at the balloon, and fired.
 """
 # EXAMPLE: Create a python dictionary with a question key and the value

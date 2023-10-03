@@ -1,0 +1,66 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  {% block description %}
+  <meta name="description" content='A FeatureBase for your Models.' />
+  {% endblock %}
+  
+  <meta property='og:image' content='https://ai.featurebase.com/static/sloth.png' />
+  <meta property='og:description' content='{{app_description}}' />
+  <meta property='og:url' content='https://ai.featurebase.com/' />
+
+  {% block title %}
+  <title>{{ app_name }}</title>
+  <meta property='og:title' content='FeatureBaseAI' />
+  {% endblock %}
+
+  <meta property="og:image" content="https://ai.featurebase.com/static/sloth.png" />
+  <meta property="og:description" content="A FeatureBase for your Models." />
+  <meta property="og:url" content="https://ai.featurebase.com/" />
+  <meta property="og:title" content="FeatureBaseAI" />
+  
+  <meta name="twitter:card" content="summary_large_image" /> <!-- This specifies a large image card -->
+  <meta name="twitter:site" content="@FeatureBase" /> <!-- Replace with your Twitter handle -->
+  <meta name="twitter:title" content="FeatureBaseAI" />
+  <meta name="twitter:description" content="A FeatureBase for your Models." />
+  <meta name="twitter:image" content="https://ai.featurebase.com/static/sloth.png" />
+
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+  
+  {% block style %}
+  {% endblock %}
+  
+  <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+
+</head>
+
+<body>
+  <div id="body">
+    {% block content %}
+    {% endblock %}
+    {% block footer %}
+    {% endblock %}
+  </div>
+
+{% block javascript %}
+  <script type="text/javascript">
+    $(document).ready(function(){
+      // redirect to https
+      if ("{{dev}}"=="True") {
+        console.log("developer logs");
+      } else {
+        if (location.protocol!=='https:') {
+          location.replace(`https:${location.href.substring(location.protocol.length)}`);
+        }
+      }
+    });
+  </script>
+{% endblock %}
+</body>
+</html>

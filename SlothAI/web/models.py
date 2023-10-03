@@ -11,33 +11,41 @@ import config as config
 # client connection
 client = ndb.Client()
 
-timestring = "%Y-%m-%dT%H:%M:%SZ"
+# Create a context manager decorator
+def ndb_context_manager(func):
+	def wrapper(*args, **kwargs):
+		with ndb.Client().context():
+			result = func(*args, **kwargs)
+		return result  # Return the result outside the context
+	return wrapper
 
-# transactions secure queries
 class Transaction(ndb.Model):
-	uid = ndb.StringProperty() # owner
+	uid = ndb.StringProperty()
 	tid = ndb.StringProperty()
 	created = ndb.DateTimeProperty()
 
 	@classmethod
+	@ndb_context_manager
 	def get_old(cls, timestamp):
-		with client.context():
-			return cls.query(cls.created < timestamp)
+		entities = cls.query(cls.created < timestamp).fetch()
+		return [entity.to_dict() for entity in entities]
 
 	@classmethod
+	@ndb_context_manager
 	def get_by_tid(cls, tid):
-		with client.context():
-			return cls.query(cls.tid == tid).get()
+		entity = cls.query(cls.tid == tid).get()
+		return entity.to_dict() if entity else None
 
 	@classmethod
+	@ndb_context_manager
 	def create(cls, tid=None, uid=None):
-		with client.context():
-			cls(
-				tid = tid,
-				uid = uid,
-				created = datetime.datetime.utcnow()
-			).put()
-			return cls.query(cls.tid == tid).get()
+		table = cls(
+			tid=tid,
+			uid=uid,
+			created=datetime.datetime.utcnow()
+		)
+		table.put()
+		return table.to_dict()
 
 
 class Models(ndb.Model):
@@ -79,142 +87,216 @@ class Models(ndb.Model):
 			return cls.query(cls.name == name, cls.ai_model == ai_model).get().to_dict()
 
 
-class Table(ndb.Model):
-	tid = ndb.StringProperty()
+class Node(ndb.Model):
+	node_id = ndb.StringProperty()
+	name = ndb.StringProperty()
+	uid = ndb.StringProperty()
+	input_keys = ndb.JsonProperty()
+	output_keys = ndb.JsonProperty()
+	params = ndb.JsonProperty()  # auth, flavor, service, method, template, sql, etc.
+	created = ndb.DateTimeProperty()
+
+	@classmethod
+	@ndb_context_manager
+	def create(cls, name, uid, params, input_keys, output_keys):
+		current_utc_time = datetime.datetime.utcnow()
+		existing_node = cls.query(cls.name == name, cls.uid == uid).get()
+
+		if not existing_node:
+			node_id = cls.generate_node_id()
+			node = cls(
+				node_id=node_id,
+				uid=uid,
+				name=name,
+				input_keys=input_keys,
+				output_keys=output_keys,
+				params=params,
+				created=current_utc_time
+			)
+			node.put()
+			return node.to_dict()
+		else:
+			return existing_node.to_dict()
+
+	@classmethod
+	@ndb_context_manager
+	def get_by_node_id(cls, node_id, uid):
+		entity = cls.query(cls.node_id == node_id, cls.uid == uid).get()
+		
+		if entity:
+			return entity.to_dict()
+		else:
+			return None
+
+	@classmethod
+	@ndb_context_manager
+	def get_all(cls):
+		entities = cls.query().fetch()
+		result = []
+		for entity in entities:
+			entity_dict = entity.to_dict()
+			result.append(entity_dict)
+		return result
+
+	@classmethod
+	@ndb_context_manager
+	def get_by_name_uid(cls, name, uid):
+		entity = cls.query(cls.name == name, cls.uid == uid).get()
+		if entity:
+			entity_dict = entity.to_dict()
+			return entity_dict
+		else:
+			return None
+
+	@classmethod
+	@ndb_context_manager
+	def delete_by_node_id(cls, node_id):
+		entity = cls.query(cls.node_id == node_id, cls.uid == uid).get()
+		if entity:
+			entity.key.delete()
+			return True
+		else:
+			return False
+
+
+class Pipeline(ndb.Model):
+	pipe_id = ndb.StringProperty()
 	uid = ndb.StringProperty()
 	name = ndb.StringProperty()
-	models = ndb.JsonProperty()
-	schema = ndb.JsonProperty()
-	openai_token = ndb.StringProperty()
+	nodes = ndb.KeyProperty(kind=Node, repeated=True)
+	created = ndb.DateTimeProperty()
 
 	@classmethod
-	def create(cls, uid, name, models, openai_token):
-		with ndb.Client().context():
-			print(models)
-			print("in create")
-			current_utc_time = datetime.datetime.utcnow()
-			table = cls.query(cls.uid == uid,cls.name == name).get()
-			if not table:
-				tid = random_string(size=17)
-				table = cls(tid=tid, uid=uid, name=name, models=models, openai_token=openai_token)
-				table.put()
+	@ndb_context_manager
+	def create(cls, uid, name, node_ids):
+		current_utc_time = datetime.datetime.utcnow()
+		existing_pipeline = cls.query(cls.uid == uid, cls.name == name).get()
 
-			return table.to_dict()
+		if not existing_pipeline:
+			nodes = [Node.query(Node.node_id == node_id).get() for node_id in node_ids if Node.query(Node.node_id == node_id).get()]
+			pipe_id = cls.generate_pipe_id()
+			pipe = cls(
+				pipe_id=pipe_id,
+				uid=uid,
+				name=name,
+				nodes=nodes,
+				created=current_utc_time
+			)
+			pipe.put()
 
+			node_ids = [node.node_id for node in nodes]
+			delattr(pipe, 'nodes')
+			response_dict = pipe.to_dict()
+			response_dict["nodes"] = node_ids
+
+			return response_dict
+		else:
+			return existing_pipeline.to_dict()
 
 	@classmethod
-	def delete(cls, tid):
-		with ndb.Client().context():
-			table = cls.query(cls.tid == tid).get()
-			if table:
-				table.key.delete()
-				return True
-			else:
-				return False
+	@ndb_context_manager
+	def get_by_pipe_id(cls, pipe_id):
+		pipe = cls.query(cls.pipe_id == pipe_id).get()
+		if pipe:
+			nodes = [Node.query(Node.node_id == node_id).get() for node_id in node_ids if Node.query(Node.node_id == node_id).get()]
+
+			node_ids = [node.node_id for node in nodes]
+			delattr(pipe, 'nodes')
+			response_dict = pipe.to_dict()
+			response_dict["nodes"] = node_ids
+
+			return response_dict
+		else:
+			return None
 
 	@classmethod
-	def remove_by_uid(cls, uid):
-		with ndb.Client().context():
-			tables = cls.query(cls.uid == uid).fetch()
-			for table in tables:
-				table.key.delete() 
-			
-			return True
-			
-	@classmethod
+	@ndb_context_manager
 	def get_all_by_uid(cls, uid):
-		_tables = []
-		with ndb.Client().context():
-			tables = cls.query(cls.uid == uid).fetch()
+		pipes = cls.query(cls.uid == uid).fetch()
+		result = []
+		
+		for pipe in pipes:
+			node_ids = [node.node_id for node in pipe.nodes]
+			delattr(pipe, 'nodes')
+			pipe_dict = pipe.to_dict()
+			pipe_dict['nodes'] = node_ids
+			result.append(pipe_dict)
 
-			for table in tables:
-				_tables.append(table.to_dict())
-
-			if tables:
-				return _tables
-			else:
-				return False
-
-	@classmethod
-	def get_by_uid_name(cls, uid, name):
-		with ndb.Client().context():
-			table = cls.query(cls.uid == uid, cls.name == name).get()
-		if table:
-			return table.to_dict()
-		else:
-			return False
+		return result
 
 	@classmethod
-	def get_by_uid_tid(cls, uid, tid):
-		with ndb.Client().context():
-			table = cls.query(cls.uid == uid, cls.tid == tid).get()
-		if table:
-			return table.to_dict()
-		else:
-			return False
+	@ndb_context_manager
+	def delete_by_pipe_id(cls, pipe_id):
+		pipe = cls.query(cls.pipe_id == pipe_id).get()
+		if pipe:
+			pipe.key.delete()
+			return True
+		return False
 
 
 class Box(ndb.Model):
 	box_id = ndb.StringProperty()
 	ip_address = ndb.StringProperty()
 	zone = ndb.StringProperty()
-	status = ndb.StringProperty(default='NEW') # PROVISIONING, STAGING, RUNNING, STOPPING, SUSPENDING, SUSPENDED, REPAIRING, and TERMINATED
-	expires = ndb.DateTimeProperty()
-	runs_models = ndb.JsonProperty() # models it runs
+	status = ndb.StringProperty(default='NEW')  # PROVISIONING, STAGING, RUNNING, STOPPING, SUSPENDING, SUSPENDED, REPAIRING, and TERMINATED
+	created = ndb.DateTimeProperty()
+	runs = ndb.JsonProperty()  # models it runs
 
 	@classmethod
+	@ndb_context_manager
 	def create(cls, box_id, ip_address, zone, status):
-		with ndb.Client().context():
-			# update or create box
-			current_utc_time = datetime.datetime.utcnow()
-			expiration_time = current_utc_time + datetime.timedelta(days=7)  # Expiry in 7 days
-			box = cls.query(cls.box_id == box_id).get()
-			if not box:
-				box = cls(box_id=box_id, ip_address=ip_address, zone=zone, status=status, expires=expiration_time)
-			else:
-				box.ip_address = ip_address
-				box.status = status
+		current_utc_time = datetime.datetime.utcnow()
+		expiration_time = current_utc_time + datetime.timedelta(days=7)  # Expiry in 7 days
 
-			box.put()
+		box = cls.query(cls.box_id == box_id).get()
+		if not box:
+			box = cls(box_id=box_id, ip_address=ip_address, zone=zone, status=status, created=current_utc_time)
+		else:
+			box.ip_address = ip_address
+			box.status = status
 
-			return cls.query(cls.box_id == box_id).get()
+		box.put()
+		return box.to_dict()
 
 	@classmethod
+	@ndb_context_manager
 	def delete(cls, box_id):
-		with ndb.Client().context():
-			box = cls.query(cls.box_id == box_id).get()
-			if box:
-				box.key.delete()
-				return True
-			else:
-				return False
+		box = cls.query(cls.box_id == box_id).get()
+		if box:
+			box.key.delete()
+			return True
+		return False
 
 	@classmethod
+	@ndb_context_manager
 	def get_boxes(cls):
-		with ndb.Client().context():
-			boxes = cls.query().fetch()
-			return [box.to_dict() for box in boxes]
+		boxes = cls.query().fetch()
+		return [box.to_dict() for box in boxes]
 
 	@classmethod
+	@ndb_context_manager
 	def start_box(cls, box_id, status="START"):
-		with ndb.Client().context():
-			box = cls.query(cls.box_id == box_id).get()
+		box = cls.query(cls.box_id == box_id).get()
+		if box:
 			box.status = status
 			box.put()
 			return box.to_dict()
+		return None
 
 	@classmethod
+	@ndb_context_manager
 	def stop_box(cls, box_id, status="STOP"):
-		with ndb.Client().context():
-			box = cls.query(cls.box_id == box_id).get()
+		box = cls.query(cls.box_id == box_id).get()
+		if box:
 			box.status = status
 			box.put()
 			return box.to_dict()
+		return None
 
-# user inherits from flask_login and ndb
+
 class User(flask_login.UserMixin, ndb.Model):
-	uid = ndb.StringProperty() # user_id
-	name = ndb.StringProperty() # assigned name
+	uid = ndb.StringProperty()  # user_id
+	name = ndb.StringProperty()  # assigned name
 	created = ndb.DateTimeProperty()
 	updated = ndb.DateTimeProperty()
 	expires = ndb.DateTimeProperty()
@@ -233,7 +315,7 @@ class User(flask_login.UserMixin, ndb.Model):
 	api_token = ndb.StringProperty()
 
 	# flask-login
-	def is_active(self): # all accounts are active
+	def is_active(self):  # all accounts are active
 		return self.active
 
 	def get_id(self):
@@ -245,84 +327,71 @@ class User(flask_login.UserMixin, ndb.Model):
 	def is_anonymous(self):
 		return self.anonymous
 
+	@classmethod
+	@ndb_context_manager
+	def token_reset(cls, uid):
+		user = cls.query(cls.uid == uid).get()
+		user.api_token = generate_token()
+		user.put()
+		return user.to_dict()
 
 	@classmethod
-	def token_reset(cls, uid=uid):
-		with client.context():
-			user = cls.query(cls.uid == uid).get()
-			user.api_token = generate_token()
-			user.put()
-			return user.to_dict()
-
-	@classmethod
+	@ndb_context_manager
 	def create(cls, dbid="", db_token=""):
 		name = random_name(3)
 		uid = random_string(size=17)
-		with client.context():
-			cls(
-				uid = uid,
-				name = name,
-				created = datetime.datetime.utcnow(),
-				updated = datetime.datetime.utcnow(),
-				expires = datetime.datetime.utcnow() + datetime.timedelta(days=15),
-				admin = False,
-				dbid = dbid,
-				db_token = db_token,
-				api_token = generate_token()
-			).put()
-
-			return cls.query(cls.dbid == dbid).get().to_dict()
+		user = cls(
+			uid=uid,
+			name=name,
+			created=datetime.datetime.utcnow(),
+			updated=datetime.datetime.utcnow(),
+			expires=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+			admin=False,
+			dbid=dbid,
+			db_token=db_token,
+			api_token=generate_token()
+		)
+		user.put()
+		return cls.query(cls.dbid == dbid).get().to_dict()
 
 	@classmethod
+	@ndb_context_manager
 	def remove_by_uid(cls, uid):
-		with ndb.Client().context():
-			user = cls.query(cls.uid == uid).get()
-			if user:
-				user.key.delete() 
-			else:
-				return False
+		user = cls.query(cls.uid == uid).get()
+		if user:
+			user.key.delete()
 			return True
+		return False
 
 	@classmethod
+	@ndb_context_manager
 	def authenticate(cls, uid):
-		with client.context():
-			user = cls.query(cls.uid == uid).get()
-			user.authenticated = True
-			user.put()
-			return user
+		user = cls.query(cls.uid == uid).get()
+		user.authenticated = True
+		user.put()
+		return user
 
 	@classmethod
+	@ndb_context_manager
 	def get_by_name(cls, name):
-		with client.context():
-			result = cls.query(cls.name == name).get()
-			if result:
-				return result.to_dict()
-			else:
-				return None
+		result = cls.query(cls.name == name).get()
+		return result.to_dict() if result else None
 
 	@classmethod
+	@ndb_context_manager
 	def get_by_dbid(cls, dbid):
-		with client.context():
-			result = cls.query(cls.dbid == dbid).get()
-			if result:
-				return result.to_dict()
-			else:
-				return None
+		result = cls.query(cls.dbid == dbid).get()
+		return result.to_dict() if result else None
 
 	@classmethod
+	@ndb_context_manager
 	def get_by_uid(cls, uid):
-		with client.context():
-			result = cls.query(cls.uid == uid).get()
-			if result:
-				return result.to_dict()
-			else:
-				return None
+		result = cls.query(cls.uid == uid).get()
+		return result.to_dict() if result else None
 
 	@classmethod
+	@ndb_context_manager
 	def get_by_token(cls, api_token):
-		with client.context():
-			result = cls.query(cls.api_token == api_token).get()
-			if result:
-				return result.to_dict()
-			else:
-				return None
+		result = cls.query(cls.api_token == api_token).get()
+		return result.to_dict() if result else None
+

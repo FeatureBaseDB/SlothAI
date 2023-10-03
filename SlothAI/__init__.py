@@ -7,7 +7,7 @@ from google.cloud import ndb
 from SlothAI.web.site import site
 from SlothAI.web.auth import auth
 from SlothAI.web.cron import cron
-from SlothAI.web.table import table
+from SlothAI.web.pipelines import pipeline
 from SlothAI.web.tasks import tasks
 from SlothAI.web.models import User
 
@@ -72,7 +72,7 @@ def create_app(conf='dev'):
         app.register_blueprint(auth)
         app.register_blueprint(cron)
         app.register_blueprint(tasks)
-        app.register_blueprint(table)
+        app.register_blueprint(pipeline)
 
     login_manager.blueprint_login_views = {
         'site': "/login",
