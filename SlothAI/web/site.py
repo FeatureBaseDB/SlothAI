@@ -98,11 +98,11 @@ def pipelines():
 	username = current_user.name
 	hostname = request.host
 	pipelines = Pipeline.get_all_by_uid(uid=current_user.uid)
-	models = Models.get_all()
-
+	nodes = Node.get_all_by_uid(uid=current_user.uid)
+	print(nodes)
 	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines)
 
-@site.route('/tables/<tid>', methods=['GET'])
+@site.route('/piplines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
 def table_view(tid):
 	# get the user and their tables

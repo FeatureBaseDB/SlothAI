@@ -93,24 +93,24 @@ class Node(ndb.Model):
 	uid = ndb.StringProperty()
 	input_keys = ndb.JsonProperty()
 	output_keys = ndb.JsonProperty()
-	params = ndb.JsonProperty()  # auth, flavor, service, method, template, sql, etc.
+	extras = ndb.JsonProperty()  # auth, flavor, service, method, template, sql, etc.
 	created = ndb.DateTimeProperty()
 
 	@classmethod
 	@ndb_context_manager
-	def create(cls, name, uid, params, input_keys, output_keys):
+	def create(cls, name, uid, extras, input_keys, output_keys):
 		current_utc_time = datetime.datetime.utcnow()
 		existing_node = cls.query(cls.name == name, cls.uid == uid).get()
 
 		if not existing_node:
-			node_id = cls.generate_node_id()
+			node_id = cls.random_string(13)
 			node = cls(
 				node_id=node_id,
-				uid=uid,
 				name=name,
+				uid=uid,
 				input_keys=input_keys,
 				output_keys=output_keys,
-				params=params,
+				extras=extras,
 				created=current_utc_time
 			)
 			node.put()
@@ -129,9 +129,34 @@ class Node(ndb.Model):
 			return None
 
 	@classmethod
-	@ndb_context_manager
-	def get_all(cls):
-		entities = cls.query().fetch()
+	def get_all_by_uid(cls, uid):
+		with client.context():
+			entities = cls.query(cls.uid == uid).fetch()
+		
+		if not entities:
+			# Begin creating new ones for the user
+			from SlothAI.lib.nodes import nodes
+			
+			for node in nodes:
+				# Generate a random name with 2 characters
+				name = random_name(2)
+				
+				# Create a new node and add it to the database
+				extras = {}
+				for extra_name in node['extras']:
+					if extra_name in node:
+						extras[extra_name] = node[extra_name]
+					else:
+						extras[extra_name] = None
+				
+				Node.create(
+					name=name,
+					uid=uid,
+					extras=extras,
+					input_keys=node['input_keys'],
+					output_keys=node['output_keys']
+				)
+
 		result = []
 		for entity in entities:
 			entity_dict = entity.to_dict()
@@ -174,7 +199,7 @@ class Pipeline(ndb.Model):
 
 		if not existing_pipeline:
 			nodes = [Node.query(Node.node_id == node_id).get() for node_id in node_ids if Node.query(Node.node_id == node_id).get()]
-			pipe_id = cls.generate_pipe_id()
+			pipe_id = cls.random_string(13)
 			pipe = cls(
 				pipe_id=pipe_id,
 				uid=uid,
