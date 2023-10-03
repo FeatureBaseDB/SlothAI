@@ -58,7 +58,7 @@ def settings():
 	)
 
 
-@site.route('/models', methods=['GET'])
+@site.route('/nodes', methods=['GET'])
 @flask_login.login_required
 def models():
 	# get the user and their tables
@@ -68,7 +68,7 @@ def models():
 	models = Models.get_all()
 
 	return render_template(
-		'pages/models.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, models=models
+		'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, models=models
 	)
 
 
@@ -97,25 +97,23 @@ def pipelines():
 	# get the user and their tables
 	username = current_user.name
 	hostname = request.host
-	pipelines = Pipeline.get_all_by_uid(uid=current_user.uid)
-	nodes = Node.get_all_by_uid(uid=current_user.uid)
-	print(nodes)
+	pipelines = Pipeline.get(uid=current_user.uid)
+	nodes = Node.get(uid=current_user.uid)
+
 	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines)
 
-@site.route('/piplines/<pipe_id>', methods=['GET'])
+@site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
-def table_view(tid):
+def pipeline_view(pipe_id):
 	# get the user and their tables
 	username = current_user.name
 	token = current_user.api_token
 
 	hostname = request.host
 
-	# hack the _table (pipeline) up with the model info 
-	_table = Table.get_by_uid_tid(uid=current_user.uid, tid=tid)
-
-	if not _table:
-		return redirect(url_for('site.tables'))
+	pipelines = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+	if not pipelines:
+		return redirect(url_for('site.pipelines'))
 
 	# (rest of your code remains unchanged...)
 	mermaid_string = "graph TD\n"
@@ -123,14 +121,14 @@ def table_view(tid):
 	mermaid_string += "B -->|Response| G[JSON]\n"
 	mermaid_string += "G -->|job_id: int| H[User]\n"
 	mermaid_string += "B -->|JSON| J[schemer]\n"
-	mermaid_string += "J -->|schema: auto| F{FeatureBase\n%s}\n" % _table.get("name")
+	mermaid_string += "J -->|schema: auto| F{FeatureBase\n%s}\n" % pipelines.get("name")
 
 	# check if models are present
-	if _table and _table.get('models'):
+	if pipelines and pipelines.get('models'):
 		previous_model = 'B'  # initially, Ingest POST
 
 		output = "|text: string|"
-		for idx, model in enumerate(_table['models']):
+		for idx, model in enumerate(pipelines['models']):
 			current_model = chr(67 + idx)  # 67 is ASCII for 'C'
 			model_name = model['name']
 			model_kind = model['kind']
@@ -152,6 +150,6 @@ def table_view(tid):
 		# After the loop ends, link the last model to the FeatureBase
 		mermaid_string += f"{current_model} -->{output}F\n"
 
-	return render_template('pages/table.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table, mermaid_string=mermaid_string)
+	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table, mermaid_string=mermaid_string)
 
 

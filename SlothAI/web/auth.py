@@ -1,9 +1,6 @@
-import datetime
-import json
-
 from google.cloud import ndb
 
-from flask import Blueprint, render_template, make_response, redirect, url_for, request, session, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask import current_app as app
 from flask_login import login_user, login_manager, logout_user, login_required, current_user
 import flask_login
@@ -11,6 +8,8 @@ import flask_login
 from SlothAI.web.models import User, Transaction, Pipeline
 
 from SlothAI.lib.util import random_string
+
+from SlothAI.lib.database import featurebase_query
 
 # client connection
 client = ndb.Client()
@@ -28,7 +27,7 @@ auth = Blueprint('auth', __name__)
 def logout():
 	logout_user()
 	flash("You are logged out.")
-	return redirect(url_for('site.tables'))
+	return redirect(url_for('site.pipelines'))
 
 @auth.route('/remove_all_caution')
 @login_required
@@ -36,7 +35,7 @@ def remove():
 	uid = current_user.uid
 	logout_user()
 	User.remove_by_uid(uid)
-	Pipeline.remove_by_uid(uid)
+	Pipeline.delete(uid=uid)
 	flash("Account information deleted.")
 	return redirect(url_for('auth.login'))
 
@@ -60,7 +59,7 @@ def login():
 	try:
 		# secure transaction to POST
 		transaction_id = random_string(13)
-		transaction = Transaction.create(uid="anonymous", tid=transaction_id)
+		_ = Transaction.create(uid="anonymous", tid=transaction_id)
 
 		return render_template(
 			'pages/login.html',
@@ -70,18 +69,15 @@ def login():
 			transaction_id = transaction_id,
 			next=next_url
 		)
-	except Exception as ex:
-		return redirect(url_for('site.tables'))
+	except Exception:
+		return redirect(url_for('site.pipelines'))
 
 
 # LOGIN POST
 @auth.route('/login', methods=['POST'])
 def login_post():
-	# bots
-	password = request.form.get('password')
-
-	if password:
-		# there are no passwords, but there are hacker fucks
+	# bots / there are no passwords, but there are hacker fucks
+	if request.form.get('password'):
 		return "( ︶︿︶)_╭∩╮ PASSWORD REQUIRED!\nALSO, GET OFF MY LAWN.", 500
 
 	dbid = request.form.get('dbid')
@@ -102,9 +98,6 @@ def login_post():
 				return redirect(url_for('auth.login'))
 	else:
 		return redirect(url_for('auth.login'))
-
-	from SlothAI.lib.database import featurebase_query
-
 	# check for access to FeatureBase database
 	resp, err = featurebase_query(
 		{
@@ -113,6 +106,8 @@ def login_post():
 			"db_token": f"{db_token}" 
 		}
 	)
+
+	print(err)
 
 	if err:
 		if "Unauthorized" in err:
@@ -138,4 +133,4 @@ def login_post():
 
 	flash("You've been logged in.")
 
-	return redirect(url_for('site.tables'))
+	return redirect(url_for('site.pipelines'))

@@ -1,6 +1,7 @@
 import datetime
 
 from google.cloud import ndb
+from functools import reduce
 
 import flask_login
 
@@ -120,11 +121,55 @@ class Node(ndb.Model):
 
 	@classmethod
 	@ndb_context_manager
-	def get_by_node_id(cls, node_id, uid):
-		entity = cls.query(cls.node_id == node_id, cls.uid == uid).get()
-		
-		if entity:
-			return entity.to_dict()
+	def get(cls, **kwargs):
+		"""
+		Retrieve an entity from the datastore based on the provided query parameters.
+
+		This method constructs a query for the specified datastore model class based on the
+		keyword arguments provided. It dynamically creates query conditions for matching
+		the specified parameters and retrieves the first matching entity.
+
+		Args:
+			**kwargs: Keyword arguments representing query parameters.
+				- node_id (str): Node ID to filter by.
+				- name (str): Name to filter by.
+				- uid (str): User ID to filter by.
+
+		Returns:
+			dict or None: A dictionary representation of the matching entity's data if found,
+			or None if no matching entity is found.
+
+		Example usage:
+		```
+		result = Node.get(node_id='123', name='example_name')
+		if result:
+			print(result)
+		else:
+			print("Entity not found")
+		```
+
+		Note:
+			- If multiple query parameters are provided, the method combines them using the "AND" operator,
+			ensuring that all conditions must be met for a match.
+			- If no query parameters are provided, the method returns None.
+		"""
+		query_conditions = []
+
+		if 'node_id' in kwargs:
+			query_conditions.append(cls.node_id == kwargs['node_id'])
+		if 'name' in kwargs:
+			query_conditions.append(cls.name == kwargs['name'])
+		if 'uid' in kwargs:
+			query_conditions.append(cls.uid == kwargs['uid'])
+
+		if query_conditions:
+			query = reduce(ndb.AND, query_conditions)
+			entities = cls.query(query).get()
+		else:
+			entities = None
+
+		if entities:
+			return entities.to_dict()
 		else:
 			return None
 
@@ -165,20 +210,55 @@ class Node(ndb.Model):
 
 	@classmethod
 	@ndb_context_manager
-	def get_by_name_uid(cls, name, uid):
-		entity = cls.query(cls.name == name, cls.uid == uid).get()
-		if entity:
-			entity_dict = entity.to_dict()
-			return entity_dict
-		else:
-			return None
+	def delete(cls, **kwargs):
+		"""
+		Delete an entity from the datastore based on the provided query parameters.
 
-	@classmethod
-	@ndb_context_manager
-	def delete_by_node_id(cls, node_id):
-		entity = cls.query(cls.node_id == node_id, cls.uid == uid).get()
-		if entity:
-			entity.key.delete()
+		This method constructs a query for the specified datastore model class based on the
+		keyword arguments provided. It dynamically creates query conditions for matching
+		the specified parameters and deletes the first matching entity.
+
+		Args:
+			**kwargs: Keyword arguments representing query parameters.
+				- node_id (str): Node ID to filter by.
+				- name (str): Name to filter by.
+				- uid (str): User ID to filter by.
+
+		Returns:
+			bool: True if an entity was found and successfully deleted, False if no matching
+			entity is found or if an error occurs during deletion.
+
+		Example usage:
+		```
+		if Node.delete(node_id='123', name='example_name'):
+			print("Entity deleted successfully")
+		else:
+			print("Entity not found or deletion failed")
+		```
+
+		Note:
+			- If multiple query parameters are provided, the method combines them using the "AND" operator,
+			ensuring that all conditions must be met for deletion.
+			- If no query parameters are provided, the method returns False.
+			- Errors during deletion, such as permission issues, may also result in a False return value.
+		"""
+		query_conditions = []
+
+		if 'node_id' in kwargs:
+			query_conditions.append(cls.node_id == kwargs['node_id'])
+		if 'name' in kwargs:
+			query_conditions.append(cls.name == kwargs['name'])
+		if 'uid' in kwargs:
+			query_conditions.append(cls.uid == kwargs['uid'])
+
+		if query_conditions:
+			query = reduce(ndb.AND, query_conditions)
+			entities = cls.query(query).get()
+		else:
+			entities = None
+
+		if entities:
+			entities.key.delete()
 			return True
 		else:
 			return False
@@ -220,34 +300,57 @@ class Pipeline(ndb.Model):
 
 	@classmethod
 	@ndb_context_manager
-	def get_by_pipe_id(cls, pipe_id):
-		pipe = cls.query(cls.pipe_id == pipe_id).get()
-		if pipe:
-			nodes = [Node.query(Node.node_id == node_id).get() for node_id in node_ids if Node.query(Node.node_id == node_id).get()]
+	def get(cls, **kwargs):
+		"""
+		Retrieve an entity from the datastore based on the provided query parameters.
 
-			node_ids = [node.node_id for node in nodes]
-			delattr(pipe, 'nodes')
-			response_dict = pipe.to_dict()
-			response_dict["nodes"] = node_ids
+		This method constructs a query for the specified datastore model class based on the
+		keyword arguments provided. It dynamically creates query conditions for matching
+		the specified parameters and retrieves the first matching entity.
 
-			return response_dict
+		Args:
+			**kwargs: Keyword arguments representing query parameters.
+				- pipe_id (str): Pipe ID to filter by.
+				- name (str): Name to filter by.
+				- uid (str): User ID to filter by.
+
+		Returns:
+			dict or None: A dictionary representation of the matching entity's data if found,
+			or None if no matching entity is found.
+
+		Example usage:
+		```
+		result = Pipeline.get(pipe_id='123', name='example_name')
+		if result:
+			print(result)
+		else:
+			print("Entity not found")
+		```
+
+		Note:
+			- If multiple query parameters are provided, the method combines them using the "AND" operator,
+			ensuring that all conditions must be met for a match.
+			- If no query parameters are provided, the method returns None.
+		"""
+		query_conditions = []
+
+		if 'pipe_id' in kwargs:
+			query_conditions.append(cls.node_id == kwargs['pipe_id'])
+		if 'name' in kwargs:
+			query_conditions.append(cls.name == kwargs['name'])
+		if 'uid' in kwargs:
+			query_conditions.append(cls.uid == kwargs['uid'])
+
+		if query_conditions:
+			query = reduce(ndb.AND, query_conditions)
+			entities = cls.query(query).get()
+		else:
+			entities = None
+
+		if entities:
+			return entities.to_dict()
 		else:
 			return None
-
-	@classmethod
-	@ndb_context_manager
-	def get_all_by_uid(cls, uid):
-		pipes = cls.query(cls.uid == uid).fetch()
-		result = []
-		
-		for pipe in pipes:
-			node_ids = [node.node_id for node in pipe.nodes]
-			delattr(pipe, 'nodes')
-			pipe_dict = pipe.to_dict()
-			pipe_dict['nodes'] = node_ids
-			result.append(pipe_dict)
-
-		return result
 
 	@classmethod
 	@ndb_context_manager
