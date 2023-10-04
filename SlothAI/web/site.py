@@ -100,7 +100,7 @@ def nodes():
 	username = current_user.name
 	api_token = current_user.api_token
 	dbid = current_user.dbid
-	nodes = Node.get(uid=current_user.uid)
+	nodes = Node.fetch(uid=current_user.uid)
 
 	return render_template(
 		'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=nodes
