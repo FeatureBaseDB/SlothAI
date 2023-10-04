@@ -60,12 +60,12 @@
     <h2 class="page_heading">Pipelines</h2>
 
 
-    {% if tables %}
+    {% if pipelines %}
     <div class="card rounded-lg">
         <div class="card-body">
             <h4 class="card-title card-callout">Task: Create More Pipelines</h4>
             <p class="card-body">Pipelines route data from AI nodes to and from the database. Your database is located over to <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> where you can query results of ingestion with SQL.</p>
-            <table class="table table-striped">
+            <pipeline class="pipeline table-striped">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -74,11 +74,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for table in tables %}
+                    {% for pipeline in pipelines %}
                     <tr>
-                        <td><a href="/tables/{{ table.tid }}">{{ table.name }}</a></td>
+                        <td><a href="/pipelines/{{ pipeline.tid }}">{{ pipeline.name }}</a></td>
                         <td>
-                        {% for node in table.nodes %}
+                        {% for node in pipeline.nodes %}
                             {% if "embedding" in node.kind %}
                                 <span class="badge badge-primary">{{ node.kind }} with {{ node.name }}</span>
                             {% elif "keyterm" in node.kind %}
@@ -90,13 +90,13 @@
                         <span class="badge badge-dark">write to database</span>
                         </td>
                         <td>
-                            <button class="delete-button btn btn-danger" data-table-id="{{ table.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
+                            <button class="delete-button btn btn-danger" data-pipeline-id="{{ pipeline.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
 
-            </table>
+            </pipeline>
         </div>
     </div>
     <p></p>
@@ -119,7 +119,7 @@
                 </button>
                 <p class="card-text"></p>
                 <p class="card-text">
-                    The endpoint for sending the text and token for authentication will be shown once the table for the pipeline is created.
+                    The endpoint for sending the text and token for authentication will be shown once the pipeline for the pipeline is created.
                 </p>
                 <p class="card-text">
                     Using the endpoint will look like this:
@@ -154,8 +154,8 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
             <div class="modal-body">
                 <!-- New node selection section -->
                 <div class="form-group">
-                    <label for="tableName">Pipeline Name</label>
-                    <input type="text" class="form-control" id="tableName" placeholder="Enter pipeline name">
+                    <label for="pipelineName">Pipeline Name</label>
+                    <input type="text" class="form-control" id="pipelineName" placeholder="Enter pipeline name">
                 </div>
 
                 <!-- Node list section -->
@@ -168,15 +168,15 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
                     <label for="selectedNode">Add Node</label>
                     <select class="form-control" id="selectedNode">
                         <optgroup id="nodePulldown" label="Available Nodes">
-                            <option data-mid="none">None</option>
+                            <option data-node_name="none">None</option>
                             {% for node in nodes %}
-                                <option data-mid="{{ node.mid }}">{{ node.kind }} with {{ node.name }}</option>
+                                <option data-node_name="{{ node.name }}">{{ node.name }} </option>
                             {% endfor %}
                         </optgroup>
                     </select>
                 </div>
                 <button id="addNodeToList" class="btn btn-primary">Add to Pipeline</button>
-                
+
                 <div class="form-group"></div>
                 <div class="form-group" id="openaiTokenField">
                     <label for="openaiToken">OpenAI Token</label>
@@ -212,13 +212,13 @@ $(document).ready(function () {
 
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
-        var tableId = $(this).data("table-id"); // Adjust this based on your data structure
+        var pipelineId = $(this).data("pipeline-id"); // Adjust this based on your data structure
         var $this = $(this);
-        var rowCount = $(".table tbody tr").length;
+        var rowCount = $(".pipeline tbody tr").length;
         $this.addClass("flash");
-        // Send an AJAX request to delete the table with the DELETE method
+        // Send an AJAX request to delete the pipeline with the DELETE method
         $.ajax({
-            url: '/tables/' + tableId,
+            url: '/pipelines/' + pipelineId,
             type: 'DELETE',
             success: function (response) {
                 $this.closest("tr").remove();
@@ -227,7 +227,7 @@ $(document).ready(function () {
                 }
             },
             error: function (error) {
-                console.error("Error deleting table:", error);
+                console.error("Error deleting pipeline:", error);
             }
         });
     });
@@ -239,7 +239,6 @@ const ListMessage = $('#ListMessage');
 const openaiTokenField = $('#openaiToken'); // Added this line to select the OpenAI Token field
 const nodePulldown = $('#nodePulldown');
 const selectedNodes = []; // Initialize an array to store selected nodes
-const mids = []; // Initialize an array to store mids
 
 addNodeButton.click(function () {
     const selectedNode = selectedNodeDropdown.val();
@@ -248,11 +247,10 @@ addNodeButton.click(function () {
     if (selectedNode !== "None" && selectedNode && !selectedNodes.includes(selectedNode)) {
         // Retrieve the data-mid attribute of the selected option
         const selectedOption = selectedNodeDropdown.find(':selected');
-        const selectedMid = selectedOption.data('mid');
+        const selectedNode = selectedOption.data('node_name');
 
         // Add the selectedNode to the list of selected nodes and the associated mid to the mids array
         selectedNodes.push(selectedNode);
-        mids.push(selectedMid);
 
         // Create a Bootstrap-styled badge for the node
         const badge = $('<span></span>', {
@@ -262,7 +260,6 @@ addNodeButton.click(function () {
                 const indexToRemove = selectedNodes.indexOf(selectedNode);
                 if (indexToRemove !== -1) {
                     selectedNodes.splice(indexToRemove, 1);
-                    mids.splice(indexToRemove, 1);
                 }
                 listItem.remove();
                 if (nodeList.children().length === 0) {
@@ -270,9 +267,8 @@ addNodeButton.click(function () {
                 }
 
                 // Show the removed node in the pull-down list
-                nodePulldown.find(`option[data-mid='${selectedMid}']`).css('display', 'block');
+                nodePulldown.find(`option[data-node_name='${selectedNode}']`).css('display', 'block');
                 
-                // After removing the node, re-check and toggle the OpenAI Token field visibility
                 selectedNodeDropdown.val("None");
                 toggleOpenAITokenField();
                 
@@ -327,9 +323,8 @@ addNodeButton.click(function () {
 
 
 var formFields = [
-    { name: 'tableName', id: 'tableName' },
-    { name: 'openaiToken', id: 'openaiToken' },
-    { name: 'mids', id: 'mids' }
+    { name: 'pipelineName', id: 'pipelineName' },
+    { name: 'nodes', id: 'nodes' }
 ];
 
 // Function to toggle the visibility of the OpenAI Token field
@@ -360,23 +355,22 @@ $("#nodeFormModal").on("click", ".btn-dark", function () {
         formData[field.name] = $("#" + field.id).val();
     }
 
-    // Include the selected mids in the formData object
-    formData.mids = mids;
+    formData.nodes = selectedNodes
 
     // Move this to a notice in the form
-    if (!/^[a-z-]+$/.test(formData.tableName)) {
-        alert("Invalid table name. Table name should only contain lowercase letters and '-'");
+    if (!/^[a-z-_]+$/.test(formData.pipelineName)) {
+        alert("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
     } else if (selectedNodes.some(node => node.includes('gpt') || node.includes('ada')) && formData.openaiToken === "") {
         alert("OpenAI Token is required for selected options.");
     } else {
         $.ajax({
             type: "POST",
-            url: "/tables",
+            url: "/pipeline",
             data: JSON.stringify(formData), // Send data as JSON
             contentType: "application/json; charset=utf-8",
             dataType: "json",
             success: function (response) {
-                window.location.href = "/tables/" + response.tid;
+                window.location.href = "/pipelines/" + response.tid;
             },
             error: function (error) {
                 console.error("Error submitting form:", error);
