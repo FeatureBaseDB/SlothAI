@@ -49,45 +49,6 @@ class Transaction(ndb.Model):
 		return table.to_dict()
 
 
-class Models(ndb.Model):
-	mid = ndb.StringProperty()
-	name = ndb.StringProperty()
-	kind = ndb.StringProperty()
-	ai_model = ndb.StringProperty()
-	field = ndb.StringProperty()
-	gpu = ndb.StringProperty()
-
-	@classmethod
-	def get_by_mid(cls, mid):
-		with client.context():
-			return cls.query(cls.mid == mid).get().to_dict()
-
-	@classmethod
-	def get_by_kind(cls, kind):
-		with client.context():
-			entities = cls.query(cls.kind == kind).fetch()
-			return [entity.to_dict() for entity in entities]
-	@classmethod
-	def get_all(cls):
-		with client.context():
-			entities = cls.query().fetch()
-			return [entity.to_dict() for entity in entities]
-
-	@classmethod
-	def get_by_name(cls, name):
-		if not name:
-			return None
-		with client.context():
-			return cls.query(cls.name == name).get().to_dict()
-			
-	@classmethod
-	def get_by_name_ai_model(cls, name, ai_model):
-		if not name or ai_model:
-			return None
-		with client.context():
-			return cls.query(cls.name == name, cls.ai_model == ai_model).get().to_dict()
-
-
 class Node(ndb.Model):
 	node_id = ndb.StringProperty()
 	name = ndb.StringProperty()
@@ -96,10 +57,11 @@ class Node(ndb.Model):
 	output_keys = ndb.JsonProperty()
 	extras = ndb.JsonProperty()  # auth, flavor, service, method, template, sql, etc.
 	created = ndb.DateTimeProperty()
+	method = ndb.StringProperty()
 
 	@classmethod
 	@ndb_context_manager
-	def create(cls, name, uid, extras, input_keys, output_keys):
+	def create(cls, name, uid, extras, input_keys, output_keys, method):
 		current_utc_time = datetime.datetime.utcnow()
 		existing_node = cls.query(cls.name == name, cls.uid == uid).get()
 
@@ -112,7 +74,8 @@ class Node(ndb.Model):
 				input_keys=input_keys,
 				output_keys=output_keys,
 				extras=extras,
-				created=current_utc_time
+				created=current_utc_time,
+				method=method
 			)
 			node.put()
 			return node.to_dict()
@@ -164,44 +127,19 @@ class Node(ndb.Model):
 
 		if query_conditions:
 			query = reduce(ndb.AND, query_conditions)
-			entities = cls.query(query).get()
+			entities = cls.query(query).fetch()
 		else:
-			entities = None
+			entities = []
 
-		if entities:
-			return entities.to_dict()
-		else:
-			return None
+		nodes = []
+		for entity in entities:
+			nodes.append(entity.to_dict())
+		return nodes
 
 	@classmethod
+	@ndb_context_manager
 	def get_all_by_uid(cls, uid):
-		with client.context():
-			entities = cls.query(cls.uid == uid).fetch()
-		
-		if not entities:
-			# Begin creating new ones for the user
-			from SlothAI.lib.nodes import nodes
-			
-			for node in nodes:
-				# Generate a random name with 2 characters
-				name = random_name(2)
-				
-				# Create a new node and add it to the database
-				extras = {}
-				for extra_name in node['extras']:
-					if extra_name in node:
-						extras[extra_name] = node[extra_name]
-					else:
-						extras[extra_name] = None
-				
-				Node.create(
-					name=name,
-					uid=uid,
-					extras=extras,
-					input_keys=node['input_keys'],
-					output_keys=node['output_keys']
-				)
-
+		entities = cls.query(cls.uid == uid).fetch()
 		result = []
 		for entity in entities:
 			entity_dict = entity.to_dict()

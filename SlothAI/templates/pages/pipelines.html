@@ -75,13 +75,13 @@
                     <tr>
                         <td><a href="/tables/{{ table.tid }}">{{ table.name }}</a></td>
                         <td>
-                        {% for model in table.models %}
-                            {% if "embedding" in model.kind %}
-                                <span class="badge badge-primary">{{ model.kind }} with {{ model.name }}</span>
-                            {% elif "keyterm" in model.kind %}
-                                <span class="badge badge-warning">{{ model.kind }} with {{ model.name }}</span>
-                            {% elif "question" in model.kind %}
-                                <span class="badge badge-success">{{ model.kind }} with {{ model.name }}</span>
+                        {% for node in table.nodes %}
+                            {% if "embedding" in node.kind %}
+                                <span class="badge badge-primary">{{ node.kind }} with {{ node.name }}</span>
+                            {% elif "keyterm" in node.kind %}
+                                <span class="badge badge-warning">{{ node.kind }} with {{ node.name }}</span>
+                            {% elif "question" in node.kind %}
+                                <span class="badge badge-success">{{ node.kind }} with {{ node.name }}</span>
                             {% endif %}
                         {% endfor %}
                         <span class="badge badge-dark">write to database</span>
@@ -97,7 +97,7 @@
         </div>
     </div>
     <p></p>
-    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
+    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
         Add Pipeline
     </button>
 
@@ -111,7 +111,7 @@
                     Click on the "Add Pipeline" button to create a new pipeline. Pipelines without nodes insert directly into FeatureBase.
                 </p>
 
-                <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#modelFormModal">
+                <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
                     Add Pipeline
                 </button>
                 <p class="card-text"></p>
@@ -139,40 +139,40 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
     {% endif %}
 
 
-<div class="modal fade" id="modelFormModal" tabindex="-1" role="dialog" aria-labelledby="modelFormModalLabel" aria-hidden="true">
+<div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="nodeFormModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title card-callout" id="modelFormModalLabel">Create Pipeline</h4>
+                <h4 class="modal-title card-callout" id="nodeFormModalLabel">Create Pipeline</h4>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <!-- New model selection section -->
+                <!-- New node selection section -->
                 <div class="form-group">
                     <label for="tableName">Pipeline Name</label>
                     <input type="text" class="form-control" id="tableName" placeholder="Enter pipeline name">
                 </div>
 
-                <!-- Model list section -->
+                <!-- Node list section -->
                 <div class="form-group">
                     <p id="ListMessage">Pipeline will write directly to FeatureBase.</p>
-                    <ul id="modelList"></ul>
+                    <ul id="nodeList"></ul>
                 </div>
 
                 <div class="form-group">
-                    <label for="selectedModel">Add Model</label>
-                    <select class="form-control" id="selectedModel">
-                        <optgroup id="modelPulldown" label="Available Models">
+                    <label for="selectedNode">Add Node</label>
+                    <select class="form-control" id="selectedNode">
+                        <optgroup id="nodePulldown" label="Available Nodes">
                             <option data-mid="none">None</option>
-                            {% for model in models %}
-                                <option data-mid="{{ model.mid }}">{{ model.kind }} with {{ model.name }}</option>
+                            {% for node in nodes %}
+                                <option data-mid="{{ node.mid }}">{{ node.kind }} with {{ node.name }}</option>
                             {% endfor %}
                         </optgroup>
                     </select>
                 </div>
-                <button id="addModelToList" class="btn btn-primary">Add to Pipeline</button>
+                <button id="addNodeToList" class="btn btn-primary">Add to Pipeline</button>
                 
                 <div class="form-group"></div>
                 <div class="form-group" id="openaiTokenField">
@@ -229,55 +229,55 @@ $(document).ready(function () {
         });
     });
 
-const selectedModelDropdown = $('#selectedModel');
-const addModelButton = $('#addModelToList');
-const modelList = $('#modelList');
+const selectedNodeDropdown = $('#selectedNode');
+const addNodeButton = $('#addNodeToList');
+const nodeList = $('#nodeList');
 const ListMessage = $('#ListMessage');
 const openaiTokenField = $('#openaiToken'); // Added this line to select the OpenAI Token field
-const modelPulldown = $('#modelPulldown');
-const selectedModels = []; // Initialize an array to store selected models
+const nodePulldown = $('#nodePulldown');
+const selectedNodes = []; // Initialize an array to store selected nodes
 const mids = []; // Initialize an array to store mids
 
-addModelButton.click(function () {
-    const selectedModel = selectedModelDropdown.val();
+addNodeButton.click(function () {
+    const selectedNode = selectedNodeDropdown.val();
 
-    // Check if the selectedModel is not empty and is not already in the list
-    if (selectedModel !== "None" && selectedModel && !selectedModels.includes(selectedModel)) {
+    // Check if the selectedNode is not empty and is not already in the list
+    if (selectedNode !== "None" && selectedNode && !selectedNodes.includes(selectedNode)) {
         // Retrieve the data-mid attribute of the selected option
-        const selectedOption = selectedModelDropdown.find(':selected');
+        const selectedOption = selectedNodeDropdown.find(':selected');
         const selectedMid = selectedOption.data('mid');
 
-        // Add the selectedModel to the list of selected models and the associated mid to the mids array
-        selectedModels.push(selectedModel);
+        // Add the selectedNode to the list of selected nodes and the associated mid to the mids array
+        selectedNodes.push(selectedNode);
         mids.push(selectedMid);
 
-        // Create a Bootstrap-styled badge for the model
+        // Create a Bootstrap-styled badge for the node
         const badge = $('<span></span>', {
             class: 'badge badge-danger clickable-badge',
             text: 'x',
             click: function () {
-                const indexToRemove = selectedModels.indexOf(selectedModel);
+                const indexToRemove = selectedNodes.indexOf(selectedNode);
                 if (indexToRemove !== -1) {
-                    selectedModels.splice(indexToRemove, 1);
+                    selectedNodes.splice(indexToRemove, 1);
                     mids.splice(indexToRemove, 1);
                 }
                 listItem.remove();
-                if (modelList.children().length === 0) {
+                if (nodeList.children().length === 0) {
                     ListMessage.text('Pipeline will write directly to FeatureBase.');
                 }
 
-                // Show the removed model in the pull-down list
-                modelPulldown.find(`option[data-mid='${selectedMid}']`).css('display', 'block');
+                // Show the removed node in the pull-down list
+                nodePulldown.find(`option[data-mid='${selectedMid}']`).css('display', 'block');
                 
-                // After removing the model, re-check and toggle the OpenAI Token field visibility
-                selectedModelDropdown.val("None");
+                // After removing the node, re-check and toggle the OpenAI Token field visibility
+                selectedNodeDropdown.val("None");
                 toggleOpenAITokenField();
                 
-                const newModelStartingWord = selectedModel.split(' ')[0];
-                $('#modelPulldown option').each(function () {
-                    const optionModel = $(this).text();
-                    const optionStartingWord = optionModel.split(' ')[0];
-                    if (newModelStartingWord === optionStartingWord) {
+                const newNodeStartingWord = selectedNode.split(' ')[0];
+                $('#nodePulldown option').each(function () {
+                    const optionNode = $(this).text();
+                    const optionStartingWord = optionNode.split(' ')[0];
+                    if (newNodeStartingWord === optionStartingWord) {
                         $(this).css('display', 'block');
                     }
                 });
@@ -287,37 +287,37 @@ addModelButton.click(function () {
             }
         });
 
-        selectedModelDropdown.val("None");
+        selectedNodeDropdown.val("None");
 
-        // Create a list item containing the model name, a space, and the badge
-        if (selectedModel.includes("embedding") ) {
+        // Create a list item containing the node name, a space, and the badge
+        if (selectedNode.includes("embedding") ) {
             var badgeType = "badge-primary";
-        } else if (selectedModel.includes("keyterm") ) {
+        } else if (selectedNode.includes("keyterm") ) {
             var badgeType = "badge-warning";
         } else {
             var badgeType = "badge-success";
         }
-        const listItem = $('<li></li>').html("<span class='badge "+badgeType+"'>"+selectedModel + "</span> ").append(badge);
+        const listItem = $('<li></li>').html("<span class='badge "+badgeType+"'>"+selectedNode + "</span> ").append(badge);
 
-        modelList.append(listItem);
+        nodeList.append(listItem);
 
         ListMessage.text('Pipeline execution order:');
 
-        // hide the selected model from the pull-down list
+        // hide the selected node from the pull-down list
         selectedOption.css('display', 'none');
 
-        // hide other models with the same starting word
-        // TODO fix this mess by allowing certain kinds of models to be hidden when a similar kind is in the pipeline
-        const newModelStartingWord = selectedModel.split(' ')[0];
-        $('#modelPulldown option').each(function () {
-            const optionModel = $(this).text();
-            const optionStartingWord = optionModel.split(' ')[0];
-            if (newModelStartingWord === optionStartingWord) {
+        // hide other nodes with the same starting word
+        // TODO fix this mess by allowing certain kinds of nodes to be hidden when a similar kind is in the pipeline
+        const newNodeStartingWord = selectedNode.split(' ')[0];
+        $('#nodePulldown option').each(function () {
+            const optionNode = $(this).text();
+            const optionStartingWord = optionNode.split(' ')[0];
+            if (newNodeStartingWord === optionStartingWord) {
                 $(this).css('display', 'none');
             }
         });
 
-        // After adding the model, re-check and toggle the OpenAI Token field visibility
+        // After adding the node, re-check and toggle the OpenAI Token field visibility
         toggleOpenAITokenField();
     }
 });
@@ -331,8 +331,8 @@ var formFields = [
 
 // Function to toggle the visibility of the OpenAI Token field
 function toggleOpenAITokenField() {
-    // Check if any of the selected models contain "gpt" or "ada"
-    const isGptOrAdaSelected = selectedModels.some(model => model.includes('gpt') || model.includes('ada'));
+    // Check if any of the selected nodes contain "gpt" or "ada"
+    const isGptOrAdaSelected = selectedNodes.some(node => node.includes('gpt') || node.includes('ada'));
     
     // Select the entire group (including label and input)
     const openaiTokenFieldGroup = $('#openaiTokenField');
@@ -348,7 +348,7 @@ function toggleOpenAITokenField() {
 
 toggleOpenAITokenField(); // Initial state
 
-$("#modelFormModal").on("click", ".btn-dark", function () {
+$("#nodeFormModal").on("click", ".btn-dark", function () {
     var formData = {};
 
     // Populate formData object from formFields array
@@ -363,7 +363,7 @@ $("#modelFormModal").on("click", ".btn-dark", function () {
     // Move this to a notice in the form
     if (!/^[a-z-]+$/.test(formData.tableName)) {
         alert("Invalid table name. Table name should only contain lowercase letters and '-'");
-    } else if (selectedModels.some(model => model.includes('gpt') || model.includes('ada')) && formData.openaiToken === "") {
+    } else if (selectedNodes.some(node => node.includes('gpt') || node.includes('ada')) && formData.openaiToken === "") {
         alert("OpenAI Token is required for selected options.");
     } else {
         $.ajax({

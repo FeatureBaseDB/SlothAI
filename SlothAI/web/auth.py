@@ -10,6 +10,7 @@ from SlothAI.web.models import User, Transaction, Pipeline
 from SlothAI.lib.util import random_string
 
 from SlothAI.lib.database import featurebase_query
+from SlothAI.lib.nodes import initilize_nodes
 
 # client connection
 client = ndb.Client()
@@ -130,6 +131,8 @@ def login_post():
 	# just log them in
 	_user = User.authenticate(user.get('uid'))
 	login_user(_user)
+
+	initilize_nodes(user.get('uid'))
 
 	flash("You've been logged in.")
 

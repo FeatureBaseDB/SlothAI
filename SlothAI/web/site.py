@@ -1,29 +1,20 @@
 import os
-import sys
-import json
-
-import requests
-
 import markdown
 import markdown.extensions.fenced_code
 
 from google.cloud import ndb
 
-from flask import Blueprint, render_template, flash
-from flask import make_response, Response
-from flask import redirect, url_for, abort
-from flask import request, send_file
+from flask import Blueprint, render_template
+from flask import redirect, url_for
+from flask import request
 from flask import current_app as app
 
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.util import random_string
-from SlothAI.lib.ai import ai
 from SlothAI.lib.tasks import list_tasks
-from SlothAI.lib.database import table_exists
 
-from SlothAI.web.models import Pipeline, Node, Models
+from SlothAI.web.models import Pipeline, Node
 
 site = Blueprint('site', __name__)
 
@@ -60,15 +51,15 @@ def settings():
 
 @site.route('/nodes', methods=['GET'])
 @flask_login.login_required
-def models():
+def nodes():
 	# get the user and their tables
 	username = current_user.name
 	api_token = current_user.api_token
 	dbid = current_user.dbid
-	models = Models.get_all()
+	nodes = Node.get(uid=current_user.uid)
 
 	return render_template(
-		'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, models=models
+		'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=nodes
 	)
 
 
@@ -100,7 +91,7 @@ def pipelines():
 	pipelines = Pipeline.get(uid=current_user.uid)
 	nodes = Node.get_all_by_uid(uid=current_user.uid)
 	
-	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines)
+	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=nodes)
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required

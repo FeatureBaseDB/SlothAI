@@ -2,11 +2,10 @@ import json
 from flask import Blueprint
 from flask import request
 from flask import current_app as app
-from SlothAI.lib.util import random_string, handle_quotes
 from SlothAI.lib.ai import ai
 from SlothAI.lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
 from SlothAI.lib.tasks import box_required, get_task_schema, retry_task, process_data_dict_for_insert
-from SlothAI.web.models import User, Pipeline, Models
+from SlothAI.web.models import User
 
 tasks = Blueprint('tasks', __name__)
 

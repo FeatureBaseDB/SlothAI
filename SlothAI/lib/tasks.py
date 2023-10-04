@@ -8,7 +8,7 @@ from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
 from SlothAI.lib.gcloud import box_start
-from SlothAI.web.models import Models, Box
+from SlothAI.web.models import Box
 from SlothAI.lib.util import random_string, handle_quotes
 from SlothAI.lib.schemar import string_to_datetime, datetime_to_string, FBTypes
 

@@ -8,7 +8,6 @@ from flask_login import current_user
 from SlothAI.lib.ai import ai
 from SlothAI.lib.tasks import create_task, get_task_schema, box_required
 from SlothAI.lib.database import get_columns, get_unique_column_values, featurebase_query
-from SlothAI.web.models import Table, Models
 
 table = Blueprint('table', __name__)
 
