@@ -63,9 +63,9 @@
     {% if pipelines %}
     <div class="card rounded-lg">
         <div class="card-body">
-            <h4 class="card-title card-callout">Task: Create More Pipelines</h4>
+            <h4 class="card-title card-callout">Current Pipelines</h4>
             <p class="card-body">Pipelines route data from AI nodes to and from the database. Your database is located over to <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> where you can query results of ingestion with SQL.</p>
-            <pipeline class="pipeline table-striped">
+            <table class="table table-striped">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -76,27 +76,23 @@
                 <tbody>
                     {% for pipeline in pipelines %}
                     <tr>
-                        <td><a href="/pipelines/{{ pipeline.tid }}">{{ pipeline.name }}</a></td>
+                        <td><a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a></td>
                         <td>
-                        {% for node in pipeline.nodes %}
-                            {% if "embedding" in node.kind %}
-                                <span class="badge badge-primary">{{ node.kind }} with {{ node.name }}</span>
-                            {% elif "keyterm" in node.kind %}
-                                <span class="badge badge-warning">{{ node.kind }} with {{ node.name }}</span>
-                            {% elif "question" in node.kind %}
-                                <span class="badge badge-success">{{ node.kind }} with {{ node.name }}</span>
-                            {% endif %}
-                        {% endfor %}
-                        <span class="badge badge-dark">write to database</span>
+                            {% for node in pipeline.node_ids %}
+                            <span class="badge badge-warning">{{ node }}</span>
+                            {% endfor %}
                         </td>
                         <td>
-                            <button class="delete-button btn btn-danger" data-pipeline-id="{{ pipeline.tid }}"><i class="fas fa-trash-alt"></i> Delete</button>
+                            <span class="badge badge-dark">write to database</span>
+                        </td>
+                        <td>
+                            <button class="delete-button btn btn-danger" data-pipeline-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i> Delete</button>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
-
-            </pipeline>
+            </table>
+            
         </div>
     </div>
     <p></p>
@@ -170,7 +166,7 @@ https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
                         <optgroup id="nodePulldown" label="Available Nodes">
                             <option data-node_name="none">None</option>
                             {% for node in nodes %}
-                                <option data-node_name="{{ node.name }}">{{ node.name }} </option>
+                                <option data-node_name="{{ node.name }}" data-node_method="{{ node.method }}">{{ node.name }} ({{ node.method }})</option>
                             {% endfor %}
                         </optgroup>
                     </select>
@@ -241,14 +237,12 @@ const nodePulldown = $('#nodePulldown');
 const selectedNodes = []; // Initialize an array to store selected nodes
 
 addNodeButton.click(function () {
-    const selectedNode = selectedNodeDropdown.val();
-
+    const selectedNodeOption = selectedNodeDropdown.find(':selected');
+    const selectedNode = selectedNodeOption.val();
+    const selectedNodeMethod = selectedNodeOption.data('node_method');
+    
     // Check if the selectedNode is not empty and is not already in the list
     if (selectedNode !== "None" && selectedNode && !selectedNodes.includes(selectedNode)) {
-        // Retrieve the data-mid attribute of the selected option
-        const selectedOption = selectedNodeDropdown.find(':selected');
-        const selectedNode = selectedOption.data('node_name');
-
         // Add the selectedNode to the list of selected nodes and the associated mid to the mids array
         selectedNodes.push(selectedNode);
 
@@ -266,20 +260,17 @@ addNodeButton.click(function () {
                     ListMessage.text('Pipeline will write directly to FeatureBase.');
                 }
 
-                // Show the removed node in the pull-down list
-                nodePulldown.find(`option[data-node_name='${selectedNode}']`).css('display', 'block');
-                
-                selectedNodeDropdown.val("None");
-                toggleOpenAITokenField();
-                
-                const newNodeStartingWord = selectedNode.split(' ')[0];
-                $('#nodePulldown option').each(function () {
-                    const optionNode = $(this).text();
-                    const optionStartingWord = optionNode.split(' ')[0];
-                    if (newNodeStartingWord === optionStartingWord) {
-                        $(this).css('display', 'block');
+                // Add options back to the dropdown based on their node_method
+                nodePulldown.find('option').each(function () {
+                    const option = $(this);
+                    const optionNodeMethod = option.data('node_method');
+                    if (optionNodeMethod === selectedNodeMethod) {
+                        option.show();
                     }
                 });
+
+                selectedNodeDropdown.val("None");
+                toggleOpenAITokenField();
             },
             css: {
                 cursor: 'pointer' // Change cursor to pointer on hover
@@ -289,32 +280,23 @@ addNodeButton.click(function () {
         selectedNodeDropdown.val("None");
 
         // Create a list item containing the node name, a space, and the badge
-        if (selectedNode.includes("embedding") ) {
+        if (selectedNodeMethod === "embedding" ) {
             var badgeType = "badge-primary";
-        } else if (selectedNode.includes("keyterm") ) {
+        } else if (selectedNodeMethod == "keyterm" ) {
             var badgeType = "badge-warning";
         } else {
             var badgeType = "badge-success";
         }
-        const listItem = $('<li></li>').html("<span class='badge "+badgeType+"'>"+selectedNode + "</span> ").append(badge);
+        const listItem = $('<li></li>').html("<span class='badge "+badgeType+"'>"+ selectedNode + "</span> ").append(badge);
 
         nodeList.append(listItem);
 
         ListMessage.text('Pipeline execution order:');
 
         // hide the selected node from the pull-down list
-        selectedOption.css('display', 'none');
+        selectedNodeOption.css('display', 'none');
 
-        // hide other nodes with the same starting word
-        // TODO fix this mess by allowing certain kinds of nodes to be hidden when a similar kind is in the pipeline
-        const newNodeStartingWord = selectedNode.split(' ')[0];
-        $('#nodePulldown option').each(function () {
-            const optionNode = $(this).text();
-            const optionStartingWord = optionNode.split(' ')[0];
-            if (newNodeStartingWord === optionStartingWord) {
-                $(this).css('display', 'none');
-            }
-        });
+        nodePulldown.find(`option[data-node_method='${selectedNodeMethod}']`).hide();
 
         // After adding the node, re-check and toggle the OpenAI Token field visibility
         toggleOpenAITokenField();
@@ -360,8 +342,6 @@ $("#nodeFormModal").on("click", ".btn-dark", function () {
     // Move this to a notice in the form
     if (!/^[a-z-_]+$/.test(formData.pipelineName)) {
         alert("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
-    } else if (selectedNodes.some(node => node.includes('gpt') || node.includes('ada')) && formData.openaiToken === "") {
-        alert("OpenAI Token is required for selected options.");
     } else {
         $.ajax({
             type: "POST",

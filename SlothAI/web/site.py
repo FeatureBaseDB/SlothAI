@@ -34,7 +34,7 @@ def pipelines():
 	# get the user and their tables
 	username = current_user.name
 	hostname = request.host
-	pipelines = Pipeline.get(uid=current_user.uid)
+	pipelines = Pipeline.fetch(uid=current_user.uid)
 	nodes = Node.fetch(uid=current_user.uid)
 	
 	initilize_nodes(current_user.uid)

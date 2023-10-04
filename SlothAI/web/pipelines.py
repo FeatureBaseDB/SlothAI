@@ -17,7 +17,7 @@ client = ndb.Client()
 @flask_login.login_required
 def pipeline_add():
 	user_id = current_user.uid
-	pipelines = Pipeline.get(uid=user_id)
+	pipelines = Pipeline.fetch(uid=user_id)
 
 	# Make sure request is valid JSON
 	if request.is_json:
@@ -27,6 +27,8 @@ def pipeline_add():
 		# Make sure request JSON contains name and node_ids keys
 		name = json_data.get('pipelineName', None)
 		nodes = json_data.get('nodes', None)
+		nodes = [node.split(" ")[0] for node in nodes]
+
 		if not name or not nodes:
 			return jsonify({"error": "Invalid JSON Object", "message": "The request body must be valid JSON data and contain a 'name' and 'nodess' key."}), 400
 		
@@ -36,7 +38,7 @@ def pipeline_add():
 		# Make sure pipeline name is avaliable
 		if pipelines:
 			for pipeline in pipelines:
-				if pipeline.name == name:
+				if pipeline.get('name') == name:
 					return jsonify({"error": "Invalid Pipeline Name", "message": f"A pipeline already exists with name {name}"}), 400
  
 		# Make sure all nodes exist
@@ -44,7 +46,7 @@ def pipeline_add():
 			print(f"name: {node}")
 			print(f"user_id: {user_id}")
 			
-			node = Node.get(name=node, uid=user_id)
+			node = Node.fetch(name=node, uid=user_id)
 			print(node)
 			if not node:
 				return jsonify({"error": "Invalid Node ID", "message": f"Unable to find a node with name {node}"}), 400

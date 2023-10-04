@@ -267,7 +267,7 @@ class Pipeline(ndb.Model):
         query_conditions = []
 
         if 'pipe_id' in kwargs:
-            query_conditions.append(cls.node_id == kwargs['pipe_id'])
+            query_conditions.append(cls.pipe_id == kwargs['pipe_id'])
         if 'name' in kwargs:
             query_conditions.append(cls.name == kwargs['name'])
         if 'uid' in kwargs:
