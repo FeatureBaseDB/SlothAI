@@ -47,9 +47,9 @@ nodes = [
         'node_method': 'keyterm',
         'box_type': 'service',
         'model': 'gpt-3.5-turbo',
-        'input_keys': [{'question': "string"}],
-        'output_keys': [{'answer': "string"}],
-        'template': 'form_answer',
+        'input_keys': [{'text': "string"}],
+        'output_keys': [{'keyterms': "stringset"}],
+        'template': 'form_keyterms',
         'extras': ['box_type', 'model', 'openai_token', 'template']
     },
     {
