@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FeatureBase AI - Table Details</title>
+    <title>☕ | Nodes | FeatureBase AI</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -43,10 +43,13 @@
         <i class="fas fa-code-branch"></i> Pipelines
     </a>
     <a href="/nodes" class="highlighted-link">
-        <i class="fas fa-cogs"></i> Nodes
+        <i class="fas fa-coffee"></i> Nodes
     </a>
-    <a href="/jobs">
-        <i class="fas fa-tasks"></i> Jobs
+    <a href="/templates">
+        <i class="fas fa-pen"></i> Templates
+    </a>
+    <a href="/tasks">
+        <i class="fas fa-tasks"></i> Tasks
     </a>
     <a href="/settings">
         <i class="fas fa-cog"></i> Settings
@@ -64,98 +67,48 @@
     <div class="card rounded-lg">
         <div class="card-body">
             <h4 class="card-title card-callout">Current Nodes</h4>
-			<p class="card-text">Nodes that are currently registered and that can be used in pipelines:</p>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Type</th>
-                            <th>Model</th>
-                            <th>Input</th>
-                            <th>Ouptput</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for node in nodes %}
-                        <tr>
-                            <td>{{ node.node_id }}</td>
-                            <td>{{ node.method }}</td>
-                            <td>{{ node.extras.model }}</td>                            
-                            <td>{{ node.input_keys }}</td>
-                            <td>{{ node.output_keys }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-        </div>
-        <div class="card-body">
-            <h4 class="card-title card-callout">Embedding Nodes</h4>
-			<p class="card-text">Embedding nodes create dense vectors for text sent to table endpoints:</p>
-			<p class="card-text">
-				<ul>
-                {% for node in nodes %}
-                    {% if node.kind == 'embedding' %}
-                        <li>{{ node.name }}</li>
-                    {% endif %}
-                {% endfor %}
-				</ul>
-			</p>
-			<p class="card-text">A common application of text embeddings is measuring text similarity. The resulting vectors from these types of nodes can be weighted to quantify how similar or dissimilar texts are to each other.</p>
-        </div>
-        <div class="card-body">
-            <h4 class="card-title card-callout">Question Nodes</h4>
-            <p class="card-text">Question nodes form questions about the text that is ingested:</p>
-            <p class="card-text">
-                <ul>
-                {% for node in nodes %}
-                    {% if node.kind == 'form_question' %}
-                        <li>{{ node.name }}</li>
-                    {% endif %}
-                {% endfor %}
-                </ul>
-            </p>
-            <p class="card-text">A common application of text embeddings is measuring text similarity. The resulting vectors from these types of nodes can be weighted to quantify how similar or dissimilar texts are to each other.</p>
-        </div>
-        <div class="card-body">
-            <h4 class="card-title card-callout">Keyterm Nodes</h4>
-			<p class="card-text">Keyterm nodes create keyterms for text sent to table endpoints:</p>
-			<p class="card-text">
-				<ul>
+			<p class="card-text">The following nodes are available for use in your pipelines.</p>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Model</th>
+                        <th>Inputs</th>
+                        <th>Outputs</th>
+                    </tr>
+                </thead>
+                <tbody>
                     {% for node in nodes %}
-                        {% if node.kind == 'keyterms' %}
-                            <li>{{ node.name }}</li>
-                        {% endif %}
+                    <tr>
+                        <td><a href="/nodes/{{ node.node_id }}">{{ node.name }}</a></td>
+                        <td>{{ node.method }}</td>
+                        <td>{{ node.extras.model }}</td>
+                        <td>
+                            {% for input_key in node.input_keys %}
+                                {% for key, value in input_key.items() %}
+                                    <span class="badge badge-dark">{{ key }}: {{ value }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </td>
+
+                        <td>
+                            {% for output_key in node.output_keys %}
+                                {% for key, value in output_key.items() %}
+                                    <span class="badge badge-dark">{{ key }}: {{ value }}</span>
+                                {% endfor %}
+                            {% endfor %}
+                        </td>
+                    </tr>
                     {% endfor %}
-				</ul>
-			</p>
-			<p class="card-text">Keyterm extraction is used by FeatureBaseAI in conjunction with embeddings to create a balanced graph of entries in FeatureBase using a technique called <a href="https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothANN.md">SlothANN</a>. Because FeatureBase can scale to millions or billions of entries, these graphs can be used to segment the vector space for efficient similarity searches.</p>
-
-            <div class="alert alert-success" role="alert">
-              <strong>sloth-extract:</strong> A FeatureBase ensemble of MiniLM, H2-keywordextractor, BERT and Fasttext nodes.
-            </div>
-
-			<p class="card-text">
-	        <button type="button" class="btn btn-dark" data-toggle="modal" id="nodeFormModal">
-	            Add Pipeline
-	        </button>
-        </div>
-        <div class="card-body">
-            <h4 class="card-title card-callout">Other Nodes</h4>
-			<p class="card-text">In the near term, FeatureBaseAI is planning on supporting many different types of nodes for processing text and other data sent to its endpoints. Templates will become available for nodes added to the system, which will likely include:</p>
-			<p class="card-text">
-				<ul>
-				    <li>CodeLLaMa Instruct</li>
-				    <li>LLaMa 2
-				    <li>Claude v2</li>
-				    <li>OpenAI's GPT</li>
-				    <li>Bard</li>
-				</ul>
-			</p>
-			<p class="card-text">Nodes may be considered a union of templates, data storage for prompting, and a specific trained node. Additionally, FeatureBaseAI will also provide support for training nodes in the near future, using datasets created by training the nodes on the data ingested previously.</p>
-			<p class="card-text">
+                </tbody>
+            </table>
         </div>
     </div>
-
+    <p></p>
+    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
+        Add Node
+    </button>
 </div>
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
@@ -166,9 +119,7 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-	$("#nodeFormModal").on("click", function() {
-	    window.location.href = "/pipelines";
-	});
+
 });
 </script>
 

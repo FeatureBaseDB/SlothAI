@@ -15,6 +15,7 @@ from flask_login import current_user
 from SlothAI.lib.tasks import list_tasks
 
 from SlothAI.web.models import Pipeline, Node
+from SlothAI.lib.nodes import initilize_nodes
 
 site = Blueprint('site', __name__)
 
@@ -25,61 +26,6 @@ client = ndb.Client()
 def sitemap():
 	return render_template('pages/sitemap.txt')
 
-@site.route('/tasks')
-@site.route('/jobs')
-@flask_login.login_required
-def get_all_tasks():
-	_tasks = list_tasks(current_user.uid)
-	username = current_user.name
-	return render_template(
-		'pages/tasks.html', tasks=_tasks, username=username
-	)
-
-# main route
-@site.route('/settings', methods=['GET'])
-@flask_login.login_required
-def settings():
-	# get the user and their tables
-	username = current_user.name
-	api_token = current_user.api_token
-	dbid = current_user.dbid
-
-	return render_template(
-		'pages/settings.html', username=username, api_token=api_token, dbid=dbid
-	)
-
-
-@site.route('/nodes', methods=['GET'])
-@flask_login.login_required
-def nodes():
-	# get the user and their tables
-	username = current_user.name
-	api_token = current_user.api_token
-	dbid = current_user.dbid
-	nodes = Node.get(uid=current_user.uid)
-
-	return render_template(
-		'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=nodes
-	)
-
-
-@site.route('/animate', methods=['GET'])
-def serve_markdown():
-	# Get the directory containing the script (one level above)
-	script_directory = os.path.dirname(os.path.abspath(__file__))
-	parent_directory = os.path.abspath(os.path.join(script_directory, '../static/'))
-
-	# Define the relative path to your Markdown file
-	relative_file_path = 'animate.mmd'
-
-
-	readme_file = open(os.path.join(parent_directory, relative_file_path), "r")
-	md_template_string = markdown.markdown(
-		readme_file.read(), extensions=["fenced_code"]
-	)
-
-	return md_template_string
-
 
 @site.route('/', methods=['GET'])
 @site.route('/pipelines', methods=['GET'])
@@ -89,9 +35,12 @@ def pipelines():
 	username = current_user.name
 	hostname = request.host
 	pipelines = Pipeline.get(uid=current_user.uid)
-	nodes = Node.get_all_by_uid(uid=current_user.uid)
+	nodes = Node.fetch(uid=current_user.uid)
+	
+	initilize_nodes(current_user.uid)
 	
 	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=nodes)
+
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
@@ -142,5 +91,68 @@ def pipeline_view(pipe_id):
 		mermaid_string += f"{current_model} -->{output}F\n"
 
 	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table, mermaid_string=mermaid_string)
+
+
+@site.route('/nodes', methods=['GET'])
+@flask_login.login_required
+def nodes():
+	# get the user and their tables
+	username = current_user.name
+	api_token = current_user.api_token
+	dbid = current_user.dbid
+	nodes = Node.get(uid=current_user.uid)
+
+	return render_template(
+		'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=nodes
+	)
+
+
+@site.route('/nodes/<node_id>', methods=['GET'])
+@flask_login.login_required
+def node_detail(node_id):
+	# get the user and their tables
+	username = current_user.name
+	api_token = current_user.api_token
+	dbid = current_user.dbid
+	node = Node.get(uid=current_user.uid,node_id=node_id)[0]
+
+	return render_template(
+		'pages/node.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, node=node
+	)
+
+
+@site.route('/templates')
+@flask_login.login_required
+def templates():
+	username = current_user.name
+	templates = Template.get(uid=current_user.uid)
+	
+	return render_template(
+		'pages/templates.html', templates=templates
+	)
+
+
+@site.route('/tasks')
+@flask_login.login_required
+def get_all_tasks():
+	tasks = list_tasks(current_user.uid)
+	username = current_user.name
+	return render_template(
+		'pages/tasks.html', tasks=tasks, username=username
+	)
+
+
+# main route
+@site.route('/settings', methods=['GET'])
+@flask_login.login_required
+def settings():
+	# get the user and their tables
+	username = current_user.name
+	api_token = current_user.api_token
+	dbid = current_user.dbid
+
+	return render_template(
+		'pages/settings.html', username=username, api_token=api_token, dbid=dbid
+	)
 
 

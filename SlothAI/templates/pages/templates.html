@@ -45,13 +45,13 @@
     <a href="/nodes">
         <i class="fas fa-coffee"></i> Nodes
     </a>
-    <a href="/templates">
+    <a href="/templates" class="highlighted-link">
         <i class="fas fa-pen"></i> Templates
     </a>
     <a href="/tasks">
         <i class="fas fa-tasks"></i> Tasks
     </a>
-    <a href="/settings" class="highlighted-link">
+    <a href="/settings">
         <i class="fas fa-cog"></i> Settings
     </a>
 </div>
@@ -62,23 +62,27 @@
         <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
     {% endfor %}
     
-    <h2 class="page_heading">Settings</h2>
+    <h2 class="page_heading">Models</h2>
 
     <div class="card rounded-lg">
         <div class="card-body">
-            <h4 class="card-title card-callout">Welcome, {{ username }}</h4>
-			<p class="card-text"></p>
-
-			<h5 class="card-title">This is your API Token:</h5>
-            <p class="card-text"><pre><span></span>{{api_token}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre></p>
-            <p class="card-text">If you delete your account, any secure tokens you have given us will be permanently deleted. This process is irrevokable.</p>
+            <h4 class="card-title card-callout">Embedding Models</h4>
+			<p class="card-text">Embedding models create dense vectors for text sent to table endpoints:</p>
 			<p class="card-text">
-                <button class="btn btn-danger delete-button" data-table-id="{{ dbid }}">Delete Login</button>
-        	</p>
-        	<p class="card-text"><strong>Note:</strong> Your data on FeatureBase Cloud will be left intact, and you may elect to remove it manually there.</p>
+				<ul>
+                {% for model in models %}
+                    {% if model.kind == 'embedding' %}
+                        <li>{{ model.name }}</li>
+                    {% endif %}
+                {% endfor %}
+				</ul>
+			</p>
+			<p class="card-text">A common application of text embeddings is measuring text similarity. The resulting vectors from these types of models can be weighted to quantify how similar or dissimilar texts are to each other.</p>
         </div>
     </div>
-
+    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
+        Add Node
+    </button>
 </div>
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
@@ -89,27 +93,9 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-	// copy things
-	$('span.command-copy').click(function(e) {
-		var preElement = $(this).closest('pre');
-		var text = preElement.text().trim();
-		var copyTextarea = document.createElement('textarea');
-		copyTextarea.value = text;
-		document.body.appendChild(copyTextarea);
-		copyTextarea.select();
-		document.execCommand('copy');
-		document.body.removeChild(copyTextarea);
-		$(this).addClass('flash');
-		setTimeout(function() {
-			$('span.command-copy').removeClass('flash');
-		}, 500);
+	$("#modelFormModal").on("click", function() {
+	    window.location.href = "/pipelines";
 	});
-   $(".delete-button").click(function() {
-        if (confirm("Are you sure you want to delete your account? This action is irreversible.")) {
-            // If confirmed, navigate to the /remove_all_caution path
-            window.location.href = "/remove_all_caution";
-        }
-    });
 });
 </script>
 

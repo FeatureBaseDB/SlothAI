@@ -1,6 +1,10 @@
-from SlothAI.web.models import Node
-from SlothAI.lib.util import random_name
 import enum
+import os
+
+from SlothAI.web.models import Node, Template
+from SlothAI.lib.util import random_name
+
+from flask import current_app
 
 class NodeType(enum.Enum):
     EMBEDDING = "embedding"
@@ -67,7 +71,6 @@ init_nodes = [
     },
     {
         'node_method': NodeType.QUESTION,
-        'node_method': 'question',
         'box_type': 'service',
         'model': 'gpt-3.5-turbo',
         'input_keys': [{'text': "string", 'openai_token': "string"}],
@@ -89,9 +92,37 @@ init_nodes = [
 
 def initilize_nodes(uid):
     current_nodes = Node.get(uid=uid)
-
+    print(current_nodes)
     if not current_nodes:
         for node in init_nodes:
+            # check the template
+            if node.get('template'):
+                template = Template.get(uid=uid, name=node.get('template'))
+                print("===========")
+                print(template)
+                print("===========")
+                if not template:
+                    import os
+                    file_name = "%s.txt" % node.get('template')
+                    file_path = os.path.join(current_app.root_path, 'templates', 'prompts', file_name)
+                    try:
+                        with open(file_path, 'r') as file:
+                            text = file.read()
+                    except FileNotFoundError:
+                        print("File not found.")
+                        text = ""
+
+                    template = Template.create(
+                        name=node.get('template'),
+                        uid=uid,
+                        text=text 
+                    )
+                    print(template)
+
+                template_id = template.get('template_id')
+            else:
+                template_id = None
+
             # Generate a random name with 2 characters
             name = random_name(2)
 
@@ -103,11 +134,13 @@ def initilize_nodes(uid):
                 else:
                     extras[extra_name] = None
 
-            Node.create(
+            node = Node.create(
                 name=name,
                 uid=uid,
                 extras=extras,
                 input_keys=node['input_keys'],
                 output_keys=node['output_keys'],
-                method=node['node_method'].value
+                method=node['node_method'].value,
+                template_id=template_id
             )
+            print(node)
