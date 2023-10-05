@@ -37,7 +37,8 @@ def pipelines():
 	pipelines = Pipeline.fetch(uid=current_user.uid)
 	nodes = Node.fetch(uid=current_user.uid)
 	
-	initilize_nodes(current_user.uid)
+	if not nodes:
+		initilize_nodes(current_user.uid)
 	
 	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=nodes)
 
@@ -114,7 +115,7 @@ def node_detail(node_id):
 	username = current_user.name
 	api_token = current_user.api_token
 	dbid = current_user.dbid
-	node = Node.get(uid=current_user.uid,node_id=node_id)[0]
+	node = Node.get(uid=current_user.uid,node_id=node_id)
 
 	return render_template(
 		'pages/node.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, node=node
