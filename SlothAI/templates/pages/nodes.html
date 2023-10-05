@@ -74,6 +74,7 @@
                         <th>Name</th>
                         <th>Type</th>
                         <th>Model</th>
+                        <th>Template</th>
                         <th>Inputs</th>
                         <th>Outputs</th>
                     </tr>
@@ -84,6 +85,8 @@
                         <td><a href="/nodes/{{ node.node_id }}">{{ node.name }}</a></td>
                         <td>{{ node.method }}</td>
                         <td>{{ node.extras.model }}</td>
+                        <td><a href="/templates/{{ node.template_id }}">{{ node.get('template_name') }}</a></td>
+
                         <td>
 
                         </td>

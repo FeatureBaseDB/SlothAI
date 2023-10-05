@@ -25,153 +25,169 @@ client = ndb.Client()
 
 @site.route('/sitemap.txt')
 def sitemap():
-	return render_template('pages/sitemap.txt')
+    return render_template('pages/sitemap.txt')
 
 
 @site.route('/', methods=['GET'])
 @site.route('/pipelines', methods=['GET'])
 @flask_login.login_required
 def pipelines():
-	# get the user and their tables
-	username = current_user.name
-	hostname = request.host
-	pipelines = Pipeline.fetch(uid=current_user.uid)
-	nodes = Node.fetch(uid=current_user.uid)
-	
-	if not nodes:
-		initilize_nodes(current_user.uid)
-		nodes = Node.fetch(uid=current_user.uid)
-	
-	return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=nodes)
+    # get the user and their tables
+    username = current_user.name
+    hostname = request.host
+    pipelines = Pipeline.fetch(uid=current_user.uid)
+    nodes = Node.fetch(uid=current_user.uid)
+    
+    if not nodes:
+        initilize_nodes(current_user.uid)
+        nodes = Node.fetch(uid=current_user.uid)
+    
+    return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=nodes)
 
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
 def pipeline_view(pipe_id):
-	# get the user and their tables
-	username = current_user.name
-	token = current_user.api_token
-	hostname = request.host
+    # get the user and their tables
+    username = current_user.name
+    token = current_user.api_token
+    hostname = request.host
 
-	pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
-	if not pipeline:
-		return redirect(url_for('site.pipelines'))
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+    if not pipeline:
+        return redirect(url_for('site.pipelines'))
 
-	# (rest of your code remains unchanged...)
-	mermaid_string = "graph TD\n"
-	mermaid_string += "A[Input Data] -->|JSON| B[Ingest POST]\n"
-	mermaid_string += "B -->|Response| G[JSON]\n"
-	mermaid_string += "G -->|job_id: int| H[User]\n"
-	mermaid_string += "B -->|JSON| J[schemer]\n"
-	mermaid_string += "J -->|schema: auto| F{FeatureBase\n%s}\n" % pipeline.get("name")
+    # (rest of your code remains unchanged...)
+    mermaid_string = "graph TD\n"
+    mermaid_string += "A[Input Data] -->|JSON| B[Ingest POST]\n"
+    mermaid_string += "B -->|Response| G[JSON]\n"
+    mermaid_string += "G -->|job_id: int| H[User]\n"
+    mermaid_string += "B -->|JSON| J[schemer]\n"
+    mermaid_string += "J -->|schema: auto| F{FeatureBase\n%s}\n" % pipeline.get("name")
 
-	# check if models are present
-	if pipeline and pipeline.get('node_ids'):
-		previous_model = 'B'  # initially, Ingest POST
+    # check if models are present
+    if pipeline and pipeline.get('node_ids'):
+        previous_model = 'B'  # initially, Ingest POST
 
-		output = "|text: string|"
-		for i, n in enumerate(pipeline['node_ids']):
-			node = Node.get(uid=current_user.uid, name=n)
+        output = "|text: string|"
+        for i, n in enumerate(pipeline['node_ids']):
+            node = Node.get(uid=current_user.uid, name=n)
 
-			current_model = chr(67 + i)  # 67 is ASCII for 'C'
-			mermaid_string += f"{previous_model} -->{output}{current_model}[{node.get('method')}\n{node.get('name')}]\n"
+            current_model = chr(67 + i)  # 67 is ASCII for 'C'
+            mermaid_string += f"{previous_model} -->{output}{current_model}[{node.get('method')}\n{node.get('name')}]\n"
 
-			# define the specific output based on model 'kind'
-			if node.get('method') == 'keyterm':
-				output = "|keyterms: stringset|"
-			elif node.get('method') == 'embedding':
-				output = "|embedding: vector|"
-			elif node.get('method') == 'form_question':
-				output = "|question: string|"
-			else:
-				output = "|text: string|"  # default case
-			previous_model = current_model
+            # define the specific output based on model 'kind'
+            if node.get('method') == 'keyterm':
+                output = "|keyterms: stringset|"
+            elif node.get('method') == 'embedding':
+                output = "|embedding: vector|"
+            elif node.get('method') == 'form_question':
+                output = "|question: string|"
+            else:
+                output = "|text: string|"  # default case
+            previous_model = current_model
 
 
-		# After the loop ends, link the last model to the FeatureBase
-		mermaid_string += f"{current_model} -->{output}F\n"
+        # After the loop ends, link the last model to the FeatureBase
+        mermaid_string += f"{current_model} -->{output}F\n"
 
-	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, mermaid_string=mermaid_string)
+    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, mermaid_string=mermaid_string)
 
 
 @site.route('/nodes', methods=['GET'])
 @flask_login.login_required
 def nodes():
-	# get the user and their tables
-	username = current_user.name
-	api_token = current_user.api_token
-	dbid = current_user.dbid
-	nodes = Node.fetch(uid=current_user.uid)
+    # get the user and their tables
+    username = current_user.name
+    api_token = current_user.api_token
+    dbid = current_user.dbid
+    nodes = Node.fetch(uid=current_user.uid)
 
-	if not nodes:
-		initilize_nodes(current_user.uid)
-		nodes = Node.fetch(uid=current_user.uid)
+    if not nodes:
+        initilize_nodes(current_user.uid)
+        nodes = Node.fetch(uid=current_user.uid)
 
-	return render_template(
-		'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=nodes
-	)
+    templates = Template.fetch(uid=current_user.uid)
+
+    # Create a dictionary to look up template names by template_id
+    template_lookup = {template['template_id']: template['name'] for template in templates}
+
+    # update the template names
+    _nodes = []
+    for node in nodes:
+        if node.get('template_id'):
+            template_id = node['template_id']
+            template_name = template_lookup.get(template_id, "")
+            node['template_name'] = template_name
+        else:
+            node['template_name'] = ""
+        _nodes.append(node)
+
+    return render_template(
+        'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes
+    )
 
 
 @site.route('/nodes/<node_id>', methods=['GET'])
 @flask_login.login_required
 def node_detail(node_id):
-	# get the user and their tables
-	username = current_user.name
-	api_token = current_user.api_token
-	dbid = current_user.dbid
-	node = Node.get(uid=current_user.uid,node_id=node_id)
+    # get the user and their tables
+    username = current_user.name
+    api_token = current_user.api_token
+    dbid = current_user.dbid
+    node = Node.get(uid=current_user.uid,node_id=node_id)
 
-	return render_template(
-		'pages/node.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, node=node
-	)
+    return render_template(
+        'pages/node.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, node=node
+    )
 
 
 @site.route('/templates')
 @flask_login.login_required
 def templates():
-	username = current_user.name
-	templates = Template.fetch(uid=current_user.uid)
+    username = current_user.name
+    templates = Template.fetch(uid=current_user.uid)
 
-	return render_template(
-		'pages/templates.html', templates=templates
-	)
+    return render_template(
+        'pages/templates.html', templates=templates
+    )
 
 
 @site.route('/templates/<template_id>', methods=['GET'])
 @flask_login.login_required
 def template_detail(template_id):
-	# get the user and their tables
-	username = current_user.name
-	api_token = current_user.api_token
-	dbid = current_user.dbid
-	template = Template.get(uid=current_user.uid,template_id=template_id)
+    # get the user and their tables
+    username = current_user.name
+    api_token = current_user.api_token
+    dbid = current_user.dbid
+    template = Template.get(uid=current_user.uid,template_id=template_id)
 
-	return render_template(
-		'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template
-	)
+    return render_template(
+        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template
+    )
 
 
 @site.route('/tasks')
 @flask_login.login_required
 def get_all_tasks():
-	tasks = list_tasks(current_user.uid)
-	username = current_user.name
-	return render_template(
-		'pages/tasks.html', tasks=tasks, username=username
-	)
+    tasks = list_tasks(current_user.uid)
+    username = current_user.name
+    return render_template(
+        'pages/tasks.html', tasks=tasks, username=username
+    )
 
 
 # main route
 @site.route('/settings', methods=['GET'])
 @flask_login.login_required
 def settings():
-	# get the user and their tables
-	username = current_user.name
-	api_token = current_user.api_token
-	dbid = current_user.dbid
+    # get the user and their tables
+    username = current_user.name
+    api_token = current_user.api_token
+    dbid = current_user.dbid
 
-	return render_template(
-		'pages/settings.html', username=username, api_token=api_token, dbid=dbid
-	)
+    return render_template(
+        'pages/settings.html', username=username, api_token=api_token, dbid=dbid
+    )
 
 
