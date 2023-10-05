@@ -1,1 +1,3 @@
-$text
+{# {"input_keys": [{"name": "text", "type": "string"}], "output_keys": [{"name": "text_embedding", "type": "vector", "size": 768}]} #}
+
+{{text}}

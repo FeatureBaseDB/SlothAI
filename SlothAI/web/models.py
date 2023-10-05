@@ -341,7 +341,7 @@ class Pipeline(ndb.Model):
             return True
         return False
 
-
+# this needs to go to Laminoid
 class Box(ndb.Model):
     box_id = ndb.StringProperty()
     ip_address = ndb.StringProperty()

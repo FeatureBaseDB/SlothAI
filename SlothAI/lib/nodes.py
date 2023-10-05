@@ -30,7 +30,7 @@ init_nodes = [
         'box_type': 't4',
         'model': 'instructor-xl',
         'input_keys': [{'name': "text", 'type': "string"}],
-        'output_keys': [{'name': "embedding", 'type': "vector", 'size': 768}],
+        'output_keys': [{'name': "embedding", 'type': "table", 'size': 768}],
         'template': 'text_embedding',
         'extras': ['box_type', 'model', 'template']
     },

@@ -14,7 +14,8 @@ from flask_login import current_user
 
 from SlothAI.lib.tasks import list_tasks
 
-from SlothAI.web.models import Pipeline, Node
+from SlothAI.web.models import Pipeline, Node, Template
+
 from SlothAI.lib.nodes import initilize_nodes
 
 site = Blueprint('site', __name__)
@@ -129,10 +130,24 @@ def node_detail(node_id):
 @flask_login.login_required
 def templates():
 	username = current_user.name
-	templates = Template.get(uid=current_user.uid)
-	
+	templates = Template.fetch(uid=current_user.uid)
+
 	return render_template(
 		'pages/templates.html', templates=templates
+	)
+
+
+@site.route('/templates/<template_id>', methods=['GET'])
+@flask_login.login_required
+def template_detail(template_id):
+	# get the user and their tables
+	username = current_user.name
+	api_token = current_user.api_token
+	dbid = current_user.dbid
+	template = Template.get(uid=current_user.uid,template_id=template_id)
+
+	return render_template(
+		'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template
 	)
 
 
