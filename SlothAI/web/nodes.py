@@ -52,15 +52,16 @@ def node_update(node_id):
             if 'node' in json_data and isinstance(json_data['node'], dict):
                 node_data = json_data['node']
 
+
                 # Call the update function with the data from 'node' dictionary
                 updated_node = Node.update(
                     node_id=node_id,
-                    name=node_data.get('name', node.name),
-                    extras=node_data.get('extras', node.extras),
-                    input_keys=node_data.get('input_keys', node.input_keys),
-                    output_keys=node_data.get('output_keys', node.output_keys),
-                    method=node_data.get('method', node.method),
-                    template_id=node_data.get('template_id', node.template_id)
+                    name=node_data.get('name', node.get('name')),
+                    extras=node_data.get('extras', node.get('extras')),
+                    input_keys=node_data.get('input_keys', node.get('input_keys')),
+                    output_keys=node_data.get('output_keys', node.get('output_keys')),
+                    method=node_data.get('method', node.get('method')),
+                    template_id=node_data.get('template_id', node.get('template_id'))
                 )
 
                 if updated_node:
@@ -75,10 +76,11 @@ def node_update(node_id):
         return jsonify({"error": "Not found", "message": "The requested node was not found."}), 404
 
 
+@node.route('/nodes', methods=['POST'])
 @node.route('/nodes/create', methods=['POST'])
 @flask_login.login_required
 def node_create():
-    user_id = current_user.uid
+    uid = current_user.uid
 
     if request.is_json:
         json_data = request.get_json()
@@ -87,13 +89,13 @@ def node_create():
             node_data = json_data['node']
 
             created_node = Node.create(
-                name=json_data.get('name'),
-                uid=user_id,
-                extras=json_data.get('extras'),
-                input_keys=json_data.get('input_keys'),
-                output_keys=json_data.get('output_keys'),
-                method=json_data.get('method'),
-                template_id=json_data.get('template_id')
+                name=node_data.get('name'),
+                uid=uid,
+                extras=node_data.get('extras'),
+                input_keys=node_data.get('input_keys'),
+                output_keys=node_data.get('output_keys'),
+                method=node_data.get('method'),
+                template_id=node_data.get('template_id')
             )
 
             if created_node:
@@ -113,7 +115,7 @@ def node_delete(node_id):
     node = Node.get(uid=current_user.uid, node_id=node_id)
     if node:
         # delete table
-        Node.delete(node.get('node_id'))
+        Node.delete(node_id=node.get('node_id'))
         flash(f"Deleted node `{node.get('name')}`.")
         return jsonify({"response": "success", "message": "Node deleted successfully!"}), 200
     else:
