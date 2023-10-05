@@ -77,6 +77,7 @@
                         <th>Template</th>
                         <th>Inputs</th>
                         <th>Outputs</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,6 +94,9 @@
 
                         <td>
 
+                        </td>
+                        <td>
+                            <button class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -114,7 +118,26 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-
+    // Attach a click event handler to the delete buttons
+    $(".delete-button").on("click", function () {
+        var node_id = $(this).data("node-id"); // Adjust this based on your data structure
+        var $this = $(this);
+        var rowCount = $("tbody tr").length;
+        $this.addClass("flash");
+        $.ajax({
+            url: '/nodes/' + node_id,
+            type: 'DELETE',
+            success: function (response) {
+                $this.closest("tr").remove();
+                if (rowCount === 1) {
+                    window.location.reload();
+                }
+            },
+            error: function (error) {
+                window.location.reload();
+            }
+        });
+    });
 });
 </script>
 

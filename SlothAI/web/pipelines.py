@@ -13,6 +13,17 @@ pipeline = Blueprint('pipeline', __name__)
 # client connection
 client = ndb.Client()
 
+
+# API HANDLERS
+@pipeline.route('/pipelines/list', methods=['GET'])
+@flask_login.login_required
+def pipelines_list():
+    # get the user and their tables
+    username = current_user.name
+    pipelines = Pipeline.fetch(uid=current_user.uid)
+
+    return jsonify(pipelines)
+
 @pipeline.route('/pipeline', methods=['POST'])
 @flask_login.login_required
 def pipeline_add():

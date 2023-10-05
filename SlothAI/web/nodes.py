@@ -5,7 +5,7 @@ from flask import Blueprint, flash, jsonify, request
 import flask_login
 from flask_login import current_user
 
-from SlothAI.web.models import Node
+from SlothAI.web.models import Node, Pipeline
 
 node = Blueprint('node', __name__)
 
@@ -114,9 +114,19 @@ def node_create():
 def node_delete(node_id):
     node = Node.get(uid=current_user.uid, node_id=node_id)
     if node:
-        # delete table
+        # Fetch all pipelines
+        pipelines = Pipeline.fetch(uid=current_user.uid)
+
+        # Check if the node is in any pipeline
+        is_in_pipeline = any(node_id in pipeline.get('node_ids', []) for pipeline in pipelines)
+        print(is_in_pipeline)
+        if is_in_pipeline:
+            return jsonify({"error": "Node is in a pipeline", "message": "This node cannot be deleted until it's removed from the pipeline."}), 400
+
+        # If the node is not in any pipeline, proceed with deletion
         Node.delete(node_id=node.get('node_id'))
         flash(f"Deleted node `{node.get('name')}`.")
         return jsonify({"response": "success", "message": "Node deleted successfully!"}), 200
     else:
         return jsonify({"error": f"Unable to delete node with id {node_id}"}), 501
+
