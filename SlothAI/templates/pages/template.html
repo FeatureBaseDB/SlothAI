@@ -126,14 +126,12 @@ $(document).ready(function() {
             console.log(data);
             // Send a POST request to update the template name
             $.ajax({
-                url: '/templates/{{template.template_id}}', // Replace templateId with the actual template ID
+                url: '/templates/{{template.template_id}}',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(data),
                 success: function(response) {
-                    // Handle success response here
-                    console.log('Template name updated:', response);
-                    originalTemplateName = newName; // Update the original template name
+                    originalTemplateName = newName;
                     $('#renameButton').hide();
                 },
                 error: function(error) {
@@ -152,7 +150,7 @@ $(document).ready(function() {
         if (newTemplateText !== originalTemplateText) {
             var data = {
                 "template": {
-                    "name": newTemplateText,
+                    "name": $("#templateName").val(),
                     "text": newTemplateText
                 }
             };
