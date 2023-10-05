@@ -49,11 +49,10 @@ def pipeline_view(pipe_id):
 	# get the user and their tables
 	username = current_user.name
 	token = current_user.api_token
-
 	hostname = request.host
 
-	pipelines = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
-	if not pipelines:
+	pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+	if not pipeline:
 		return redirect(url_for('site.pipelines'))
 
 	# (rest of your code remains unchanged...)
@@ -62,26 +61,25 @@ def pipeline_view(pipe_id):
 	mermaid_string += "B -->|Response| G[JSON]\n"
 	mermaid_string += "G -->|job_id: int| H[User]\n"
 	mermaid_string += "B -->|JSON| J[schemer]\n"
-	mermaid_string += "J -->|schema: auto| F{FeatureBase\n%s}\n" % pipelines.get("name")
+	mermaid_string += "J -->|schema: auto| F{FeatureBase\n%s}\n" % pipeline.get("name")
 
 	# check if models are present
-	if pipelines and pipelines.get('models'):
+	if pipeline and pipeline.get('node_ids'):
 		previous_model = 'B'  # initially, Ingest POST
 
 		output = "|text: string|"
-		for idx, model in enumerate(pipelines['models']):
-			current_model = chr(67 + idx)  # 67 is ASCII for 'C'
-			model_name = model['name']
-			model_kind = model['kind']
+		for i, n in enumerate(pipeline['node_ids']):
+			node = Node.get(uid=current_user.uid, name=n)
 
-			mermaid_string += f"{previous_model} -->{output}{current_model}[{model_kind}\n{model_name}]\n"
+			current_model = chr(67 + i)  # 67 is ASCII for 'C'
+			mermaid_string += f"{previous_model} -->{output}{current_model}[{node.get('method')}\n{node.get('name')}]\n"
 
 			# define the specific output based on model 'kind'
-			if model['kind'] == 'keyterms':
+			if node.get('method') == 'keyterm':
 				output = "|keyterms: stringset|"
-			elif model['kind'] == 'embedding':
+			elif node.get('method') == 'embedding':
 				output = "|embedding: vector|"
-			elif model['kind'] == 'form_question':
+			elif node.get('method') == 'form_question':
 				output = "|question: string|"
 			else:
 				output = "|text: string|"  # default case
@@ -91,7 +89,7 @@ def pipeline_view(pipe_id):
 		# After the loop ends, link the last model to the FeatureBase
 		mermaid_string += f"{current_model} -->{output}F\n"
 
-	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, table=_table, mermaid_string=mermaid_string)
+	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, mermaid_string=mermaid_string)
 
 
 @site.route('/nodes', methods=['GET'])

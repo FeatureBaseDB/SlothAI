@@ -66,7 +66,7 @@ def pipeline_delete(pipe_id):
 	pipe = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
 	if pipe:
 		# delete table
-		Pipeline.delete_by_pipe_id(pipe.get('tid'))
+		Pipeline.delete_by_pipe_id(pipe.get('pipe_id'))
 		flash(f"Deleted pipeline `{pipe.get('name')}`.")
 		return jsonify({"response": "success", "message": "Table deleted successfully!"}), 200
 	else:

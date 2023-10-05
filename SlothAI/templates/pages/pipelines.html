@@ -214,7 +214,7 @@ $(document).ready(function () {
         $this.addClass("flash");
         // Send an AJAX request to delete the pipeline with the DELETE method
         $.ajax({
-            url: '/pipelines/' + pipelineId,
+            url: '/pipeline/' + pipelineId,
             type: 'DELETE',
             success: function (response) {
                 $this.closest("tr").remove();
