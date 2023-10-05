@@ -93,8 +93,8 @@
 
 <code>curl -X POST \
 -H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."], "attributes": [["frontdoor", "sound", "person"]]}' \
-"http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/ingest?token={{token}}"
+-d '{"data": {"text":["There was a knock at the door, then silence."], "attributes": [["frontdoor", "sound", "person"]]}}' \
+"http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/data?token={{token}}"
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
 <p class="card-text"><strong>Graph Layout</strong></p>

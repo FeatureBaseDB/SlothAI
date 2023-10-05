@@ -5,7 +5,7 @@ from flask import Blueprint, flash, jsonify, request
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.tasks import create_task, get_task_schema, box_required
+from SlothAI.lib.tasks import create_task, get_task_schema
 from SlothAI.web.models import Pipeline, Node
 
 pipeline = Blueprint('pipeline', __name__)
@@ -83,11 +83,10 @@ def pipeline_delete(pipe_id):
 	else:
 		return jsonify({"error": f"Unable to delete pipeline with id {pipe_id}"}), 501
 
-
 @pipeline.route('/pipeline/<pipeline_id>/task', methods=['POST'])
 @flask_login.login_required
 def ingest_post(pipeline_id):
-	pipeline = Pipeline.get_by_uid_pid(current_user.uid, pipeline_id)
+	pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipeline_id)
 
 	if pipeline:
 		try:

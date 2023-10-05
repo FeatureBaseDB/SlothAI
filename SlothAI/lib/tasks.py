@@ -4,6 +4,11 @@ import random
 from SlothAI.lib.schemar import Schemar
 from datetime import datetime, timedelta
 
+from ping3 import ping
+from SlothAI.lib.util import check_webserver_connection
+
+from typing import List
+
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
@@ -13,6 +18,110 @@ from SlothAI.lib.util import random_string, handle_quotes
 from SlothAI.lib.schemar import string_to_datetime, datetime_to_string, FBTypes
 
 from flask import current_app as app
+
+class Task:
+	def __init__(self, id: str, user_id: str, pipe_id: str, nodes_to_visit: List[str], document: dict):
+		self.id = id
+		self.user_id = user_id
+		self.pipe_id = pipe_id
+		self.nodes_to_visit = nodes_to_visit
+		self.document = document
+		self._created_at = datetime.utcnow() #.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+	@property
+	def created_at(self):
+		return self._created_at
+
+	def to_dict(self) -> dict:
+		"""
+		Convert a Task object to a dictionary.
+		"""
+		return {
+			"id": self.id,
+			"user_id": self.user_id,
+			"pipe_id": self.pipe_id,
+			"nodes_to_visit": self.nodes_to_visit,
+			"document": self.document
+		}
+
+	@classmethod
+	def from_dict(cls, task_dict: dict) -> 'Task':
+		"""
+		Create a Task object from a dictionary.
+		"""
+		return cls(
+			id=task_dict["id"],
+			user_id=task_dict["user_id"],
+			pipe_id=task_dict["pipe_id"],
+			nodes_to_visit=task_dict["nodes_to_visit"],
+			document=task_dict["document"]
+		)
+
+	def to_json(self) -> str:
+		"""
+		Convert a Task object to a JSON string.
+		"""
+		task_dict = self.to_dict()
+		return json.dumps(task_dict, indent=4)
+
+	@classmethod
+	def from_json(cls, json_str: str) -> 'Task':
+		"""
+		Create a Task object from a JSON string.
+		"""
+		task_dict = json.loads(json_str)
+		return cls.from_dict(task_dict)
+
+	def queue(self):
+		project_id = app.config['PROJECT_ID']
+		client = tasks_v2.CloudTasksClient()
+		queue = client.queue_path(project_id, "us-east1", app.config['SLOTH_QUEUE'])
+		encoding = self.to_json().encode()
+
+		if app.config['DEV'] == "True":
+			task = {
+				"http_request": {
+					"url": f"{app.config['NGROK_URL']}/tasks/process/{app.config['CRON_KEY']}/{self.user_id}",
+					"headers": {"Content-type": "application/json"},
+					"http_method": tasks_v2.HttpMethod.POST
+				}
+			}
+			task["http_request"]["body"] = encoding
+		else:
+			task = {
+				"app_engine_http_request": {
+					"http_method": tasks_v2.HttpMethod.POST,
+					"app_engine_routing": {"version": os.environ['GAE_VERSION']},
+					"relative_uri": f"/tasks/process/{app.config['CRON_KEY']}/{self.user_id}",
+					"headers": {"Content-type": "application/json"}
+				}
+			}
+			task["app_engine_http_request"]["body"] = encoding
+
+
+		# Create a timestamp
+		timestamp = timestamp_pb2.Timestamp()
+
+		# Calculate the time 15 seconds from now
+		if self.document.get('run_in', None):
+			future_time = datetime.utcnow() + timedelta(seconds=int(self.document.get('run_in')))
+		else:
+			delay = random.randint(500, 3000)
+			future_time = datetime.utcnow() + timedelta(milliseconds=delay)
+
+		# Set the timestamp using the calculated future time
+		timestamp.FromDatetime(future_time)
+
+		task["schedule_time"] = timestamp
+
+		# Send the task to the Cloud Tasks queue
+		response = client.create_task(parent=queue, task=task)
+
+		# return the task ID
+		return response.name.split('/')[-1]
+
+	def next_node(self):
+		return self.nodes_to_visit[0]
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
@@ -79,7 +188,6 @@ def box_required(pipeline_models):
 		selected_box = None
 
 	return _box_required, selected_box
-
 
 def list_tasks(uid):
 	# Set your Google Cloud Project ID
@@ -195,7 +303,6 @@ def retry_task(document):
 	del document['error']
 	create_task(document)
 
-
 def process_data_dict_for_insert(data, column_type_map, table):
 	"""
 	Process data from a dictionary for insertion into a database table.
@@ -251,4 +358,54 @@ def process_data_dict_for_insert(data, column_type_map, table):
 		records.append(f"({record[:-1]})")
 
 	return columns, records
-	
+
+
+# probaby not the best place for this, so welcome to agile!
+def box_required_for_node(node):
+
+	box_required = False
+	selected_box = None
+
+	boxes = Box.get_boxes()
+	service = node.get('service', None)
+	model = node.get('extras').get('model', None)
+
+	if model and service == "t4":
+		active_t4s = []
+		halted_t4s = []
+		if boxes:
+			for box in boxes:
+				# if the box is START, PROVISIONING, STAGING, RUNNING
+				if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
+					# can we ping it?
+					response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
+
+					if response_time and check_webserver_connection(box.get('ip_address'), 9898):
+						print("pinging", box.get('ip_address'), response_time, box.get('status'))
+						# ping worked and the server responded
+						active_t4s.append(box)
+					else:
+						print("box is not running")
+						halted_t4s.append(box)
+				else:
+					# box wasn't RUNNING or at START
+					halted_t4s.append(box)
+
+		if active_t4s:
+			# If there are active boxes, select one at random
+			selected_box = random.choice(active_t4s)
+			box_required = False
+		else:
+			# pick a random startable box
+			alternate_box = random.choice(halted_t4s)
+
+			# start the box and set the new status
+			if box.get('status') != "START":
+				print("starting box ", box.get('box_id'))
+				box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
+				Box.start_box(alternate_box.get('box_id'), "START") # sets status to 'START'
+			
+			selected_box = None
+			box_required = True
+
+	return box_required, selected_box

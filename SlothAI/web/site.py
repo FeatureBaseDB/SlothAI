@@ -1,7 +1,3 @@
-import os
-import markdown
-import markdown.extensions.fenced_code
-
 from google.cloud import ndb
 
 from flask import Blueprint, render_template
@@ -13,9 +9,7 @@ import flask_login
 from flask_login import current_user
 
 from SlothAI.lib.tasks import list_tasks
-
 from SlothAI.web.models import Pipeline, Node, Template
-
 from SlothAI.lib.nodes import initilize_nodes
 
 site = Blueprint('site', __name__)
@@ -48,50 +42,52 @@ def pipelines():
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
 def pipeline_view(pipe_id):
-    # get the user and their tables
-    username = current_user.name
-    token = current_user.api_token
-    hostname = request.host
+	# get the user and their tables
+	username = current_user.name
+	token = current_user.api_token
+	hostname = request.host
 
-    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
-    if not pipeline:
-        return redirect(url_for('site.pipelines'))
+	pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+	if not pipeline:
+		return redirect(url_for('site.pipelines'))
 
-    # (rest of your code remains unchanged...)
-    mermaid_string = "graph TD\n"
-    mermaid_string += "A[Input Data] -->|JSON| B[Ingest POST]\n"
-    mermaid_string += "B -->|Response| G[JSON]\n"
-    mermaid_string += "G -->|job_id: int| H[User]\n"
-    mermaid_string += "B -->|JSON| J[schemer]\n"
-    mermaid_string += "J -->|schema: auto| F{FeatureBase\n%s}\n" % pipeline.get("name")
+	mermaid_string = "graph TD\n"
+	mermaid_string += "A -->|JSON| G[Response]\n"
+	mermaid_string += "G --> H[User]\n"
 
-    # check if models are present
-    if pipeline and pipeline.get('node_ids'):
-        previous_model = 'B'  # initially, Ingest POST
-
-        output = "|text: string|"
-        for i, n in enumerate(pipeline['node_ids']):
-            node = Node.get(uid=current_user.uid, name=n)
-
-            current_model = chr(67 + i)  # 67 is ASCII for 'C'
-            mermaid_string += f"{previous_model} -->{output}{current_model}[{node.get('method')}\n{node.get('name')}]\n"
-
-            # define the specific output based on model 'kind'
-            if node.get('method') == 'keyterm':
-                output = "|keyterms: stringset|"
-            elif node.get('method') == 'embedding':
-                output = "|embedding: vector|"
-            elif node.get('method') == 'form_question':
-                output = "|question: string|"
-            else:
-                output = "|text: string|"  # default case
-            previous_model = current_model
+	# check if nodes are present
+	if pipeline and pipeline.get('node_ids'):
+		previous_node = None
+		for i, n in enumerate(pipeline['node_ids']):
+			node = Node.get(uid=current_user.uid, name=n)
+			current_node = chr(65 + i)  # 65 is ASCII for 'A'
+			if previous_node:
+				mermaid_string += f"{previous_node} -->{output}{current_node}[{node.get('method')}\n{node.get('name')}]\n"
+			else:
+				# initilize mermaid string
+				if node.get('method') == 'data_source' and node.get('extras').get('model', None) == 'endpoint':
+					mermaid_string += f"{current_node}[POST /pipeline/{pipe_id}/task]\n"
 
 
-        # After the loop ends, link the last model to the FeatureBase
-        mermaid_string += f"{current_model} -->{output}F\n"
+			# define the specific output based on model 'kind'
+			if node.get('method') == 'keyterm':
+				output = "|keyterms: stringset|"
+			elif node.get('method') == 'embedding':
+				output = "|embedding: vector|"
+			elif node.get('method') == 'form_question':
+				output = "|question: string|"
+			elif node.get('method') == 'data_source':
+				output = "| JSON |"
+			elif node.get('method') == 'write':
+				output = "| SQL INSERT | "
+			else:
+				output = "|text: string|"  # default case
+			previous_node = current_node
 
-    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, mermaid_string=mermaid_string)
+		if node.get('method') == 'write':
+			mermaid_string += f"{current_node} -->{output}F[FeatureBase\n{pipeline.get('name')}]\n"
+
+	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, mermaid_string=mermaid_string)
 
 
 @site.route('/nodes', methods=['GET'])
