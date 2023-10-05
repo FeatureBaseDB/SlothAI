@@ -92,15 +92,13 @@ init_nodes = [
 
 def initilize_nodes(uid):
     current_nodes = Node.get(uid=uid)
-    print(current_nodes)
+
     if not current_nodes:
         for node in init_nodes:
             # check the template
             if node.get('template'):
                 template = Template.get(uid=uid, name=node.get('template'))
-                print("===========")
-                print(template)
-                print("===========")
+
                 if not template:
                     import os
                     file_name = "%s.txt" % node.get('template')
@@ -117,7 +115,6 @@ def initilize_nodes(uid):
                         uid=uid,
                         text=text 
                     )
-                    print(template)
 
                 template_id = template.get('template_id')
             else:
@@ -143,4 +140,3 @@ def initilize_nodes(uid):
                 method=node['node_method'].value,
                 template_id=template_id
             )
-            print(node)
