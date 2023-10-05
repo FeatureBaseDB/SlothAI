@@ -77,6 +77,21 @@ class Template(ndb.Model):
 
     @classmethod
     @ndb_context_manager
+    def update(cls, template_id, uid, name, text):
+        template = cls.query(cls.template_id == template_id, cls.uid == uid).get()
+        if not template:
+            print("didn't find template")
+            return None
+
+        template.name = name
+        template.text = text
+
+        template.put()
+
+        return template.to_dict()
+
+    @classmethod
+    @ndb_context_manager
     def fetch(cls, **kwargs):
         query_conditions = []
 

@@ -149,7 +149,7 @@ def templates():
     templates = Template.fetch(uid=current_user.uid)
 
     return render_template(
-        'pages/templates.html', templates=templates
+        'pages/templates.html', username=username, templates=templates
     )
 
 

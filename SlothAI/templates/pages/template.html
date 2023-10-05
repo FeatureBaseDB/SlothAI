@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        #templateText {
+          min-height: 200px;
+        }
+    </style>
 </head>
 <body>
 
@@ -58,21 +63,38 @@
 
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">
-    {% for message in get_flashed_messages() %}
-        <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
-    {% endfor %}
+    <div id="tempNotice" class="alert alert-info d-none" role="alert">
+        {% for message in get_flashed_messages() %}
+            {{ message }}<br>
+        {% endfor %}
+    </div>
     
     <h2 class="page_heading">Templates</h2>
 
-    <div class="card rounded-lg">
-        <div class="card-body">
-            <h4 class="card-title card-callout">Template {{ template.name }}</h4>
-			<p class="card-text">You are editing a template.</p>
-            
+    <form class="form-inline">
+        <div class="form-group">
+            <input type="text" class="form-control" id="templateName" value="{{ template.name }}">
         </div>
+
+        <button id="renameButton" class="btn btn-secondary">Rename</button>
+    </form>
+
+    <div class="form-group mt-3">
+        <label for="templateText">Editing {{ template.name }}</label>
+        <textarea class="form-control" id="templateText" rows="4">{{ template.text }}</textarea>
     </div>
+
+    <!-- Save Button -->
+    <button id="saveButton" class="btn btn-primary">Save</button>
+
+    <!-- Download Button -->
+    <a id="downloadButton" href="#" class="btn btn-success" download="template.txt">
+        <i class="fas fa-download"></i> Download
+    </a>
+    
     <p></p>
 </div>
+
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -82,10 +104,127 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
+    $('#renameButton').hide();
 
+    var originalTemplateName = $("#templateName").val();
+    var originalTemplateText = $("#templateText").val();
+    var templateNameChanged = false;
+
+    $("#renameButton").on("click", function() {
+        event.preventDefault();
+        var newName = $("#templateName").val();
+        
+        // Check if the template name has changed
+        if (newName !== originalTemplateName) {
+            // Create a JSON object with the new template name
+            var data = {
+                "template": {
+                    "name": newName,
+                    "text": originalTemplateText
+                }
+            };
+            console.log(data);
+            // Send a POST request to update the template name
+            $.ajax({
+                url: '/templates/{{template.template_id}}', // Replace templateId with the actual template ID
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    // Handle success response here
+                    console.log('Template name updated:', response);
+                    originalTemplateName = newName; // Update the original template name
+                    $('#renameButton').hide();
+                },
+                error: function(error) {
+                    // Handle error response here
+                    console.error('Error updating template name:', error);
+                }
+            });
+        }
+    });
+
+    // Save Button Click Event
+    $("#saveButton").on("click", function(event) {
+        event.preventDefault();
+        var newTemplateText = $("#templateText").val();
+
+        if (newTemplateText !== originalTemplateText) {
+            var data = {
+                "template": {
+                    "name": newTemplateText,
+                    "text": newTemplateText
+                }
+            };
+
+            $.ajax({
+                url: '/templates/{{template.template_id}}',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    showFlashMessages(["Template text has been saved."]);
+                    console.log('Template text saved:', response);
+                    originalTemplateText = newTemplateText;
+                },
+                error: function(error) {
+                    console.error('Error saving template text:', error);
+                }
+            });
+        }
+    });
+
+    $("#downloadButton").on("click", function() {
+        var templateText = $("#templateText").val();
+        var templateName = $("#templateName").val();
+        var blob = new Blob([templateText], { type: "text/plain" });
+        var url = window.URL.createObjectURL(blob);
+
+        $("#downloadButton").attr("href", url);
+        $("#downloadButton").attr("download", templateName + ".txt");
+    });
+
+    // Event listener for changes in the templateName field
+    $("#templateName").on("input", function() {
+        var currentTemplateName = $(this).val();
+        templateNameChanged = currentTemplateName !== originalTemplateName;
+
+        if (templateNameChanged) {
+            $("#renameButton").show();
+        } else {
+            $("#renameButton").hide();
+        }
+    });
+
+    // Event listener to prevent spaces in templateName
+    $("#templateName").on("keydown", function(e) {
+        if (e.keyCode === 32) {
+            e.preventDefault();
+        }
+    });
+
+    function showFlashMessages(messages) {
+        var tempNotice = $("#tempNotice");
+        tempNotice.empty();
+
+        if (messages && messages.length > 0) {
+            for (var i = 0; i < messages.length; i++) {
+                tempNotice.append(messages[i] + "<br>");
+            }
+
+            tempNotice.removeClass("d-none");
+
+            // Automatically hide the flash messages after 5 seconds (5000 milliseconds)
+            setTimeout(function() {
+                tempNotice.addClass("d-none");
+            }, 5000);
+        } else {
+            tempNotice.addClass("d-none");
+        }
+    }
 });
-</script>
 
 </script>
+
 </body>
 </html>

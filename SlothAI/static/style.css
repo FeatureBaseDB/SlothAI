@@ -1,6 +1,5 @@
 /* Base styles */
 html {
-  height: 100%;
   font-size: 15px;
 }
 
@@ -8,13 +7,23 @@ body {
   background: #fefefe;
   font-size: 18px;
   font-family: Roboto, sans-serif;
-  height: 99%;
-  margin: 0;
-  padding: 0;
   padding-left: 3px;
 }
 
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
 
+#templateText {
+    height: 60vh; /* Use vh units for the height */
+    resize: none;
+}
+
+#templateName {
+  margin-right: 5px;
+}
 
 /* Form and label styles */
 form,
@@ -72,7 +81,7 @@ div.login_form h2 {
   height: 100%;
   width: 250px;
   position: fixed;
-  top: 55px;
+  top: 57px;
   left: 0;
   padding-top: 20px;
 }

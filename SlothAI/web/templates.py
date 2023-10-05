@@ -41,7 +41,6 @@ def get_template(template_id):
 @template.route('/templates/<template_id>/update', methods=['POST'])
 @flask_login.login_required
 def template_update(template_id):
-    user_id = current_user.uid
     template = Template.get(uid=current_user.uid, template_id=template_id)
 
     if template:
@@ -52,11 +51,12 @@ def template_update(template_id):
             if 'template' in json_data and isinstance(json_data['template'], dict):
                 template_data = json_data['template']
 
-
                 # Call the update function with the data from 'template' dictionary
-                updated_template = template.update(
+                updated_template = Template.update(
                     template_id=template_id,
+                    uid=current_user.uid,
                     name=template_data.get('name', template.get('name')),
+                    text=template_data.get('text', template.get('text'))
                 )
 
                 if updated_template:
@@ -86,11 +86,7 @@ def template_create():
             created_template = Template.create(
                 name=template_data.get('name'),
                 uid=uid,
-                extras=template_data.get('extras'),
-                input_keys=template_data.get('input_keys'),
-                output_keys=template_data.get('output_keys'),
-                method=template_data.get('method'),
-                template_id=template_data.get('template_id')
+                text=template_data.get('text')
             )
 
             if created_template:
