@@ -85,19 +85,11 @@
                         <td>{{ node.method }}</td>
                         <td>{{ node.extras.model }}</td>
                         <td>
-                            {% for input_key in node.input_keys %}
-                                {% for key, value in input_key.items() %}
-                                    <span class="badge badge-dark">{{ key }}: {{ value }}</span>
-                                {% endfor %}
-                            {% endfor %}
+
                         </td>
 
                         <td>
-                            {% for output_key in node.output_keys %}
-                                {% for key, value in output_key.items() %}
-                                    <span class="badge badge-dark">{{ key }}: {{ value }}</span>
-                                {% endfor %}
-                            {% endfor %}
+
                         </td>
                     </tr>
                     {% endfor %}
