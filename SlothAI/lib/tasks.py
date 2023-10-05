@@ -20,13 +20,13 @@ from SlothAI.lib.schemar import string_to_datetime, datetime_to_string, FBTypes
 from flask import current_app as app
 
 class Task:
-	def __init__(self, id: str, user_id: str, pipe_id: str, nodes_to_visit: List[str], document: dict):
+	def __init__(self, id: str, user_id: str, pipe_id: str, nodes_to_visit: List[str], document: dict, created_at: datetime):
 		self.id = id
 		self.user_id = user_id
 		self.pipe_id = pipe_id
 		self.nodes_to_visit = nodes_to_visit
 		self.document = document
-		self._created_at = datetime.utcnow() #.strftime('%Y-%m-%dT%H:%M:%SZ')
+		self._created_at = created_at
 
 	@property
 	def created_at(self):
@@ -41,7 +41,8 @@ class Task:
 			"user_id": self.user_id,
 			"pipe_id": self.pipe_id,
 			"nodes_to_visit": self.nodes_to_visit,
-			"document": self.document
+			"document": self.document,
+			"created_at": self.created_at.strftime('%Y-%m-%dT%H:%M:%SZ')
 		}
 
 	@classmethod
@@ -54,7 +55,8 @@ class Task:
 			user_id=task_dict["user_id"],
 			pipe_id=task_dict["pipe_id"],
 			nodes_to_visit=task_dict["nodes_to_visit"],
-			document=task_dict["document"]
+			document=task_dict["document"],
+			created_at= datetime.strptime(task_dict["created_at"], '%Y-%m-%dT%H:%M:%SZ')
 		)
 
 	def to_json(self) -> str:
@@ -62,6 +64,7 @@ class Task:
 		Convert a Task object to a JSON string.
 		"""
 		task_dict = self.to_dict()
+		print(task_dict)
 		return json.dumps(task_dict, indent=4)
 
 	@classmethod
@@ -81,7 +84,7 @@ class Task:
 		if app.config['DEV'] == "True":
 			task = {
 				"http_request": {
-					"url": f"{app.config['NGROK_URL']}/tasks/process/{app.config['CRON_KEY']}/{self.user_id}",
+					"url": f"{app.config['NGROK_URL']}/tasks/process/{app.config['CRON_KEY']}",
 					"headers": {"Content-type": "application/json"},
 					"http_method": tasks_v2.HttpMethod.POST
 				}
@@ -92,7 +95,7 @@ class Task:
 				"app_engine_http_request": {
 					"http_method": tasks_v2.HttpMethod.POST,
 					"app_engine_routing": {"version": os.environ['GAE_VERSION']},
-					"relative_uri": f"/tasks/process/{app.config['CRON_KEY']}/{self.user_id}",
+					"relative_uri": f"/tasks/process/{app.config['CRON_KEY']}",
 					"headers": {"Content-type": "application/json"}
 				}
 			}
@@ -122,6 +125,14 @@ class Task:
 
 	def next_node(self):
 		return self.nodes_to_visit[0]
+	
+	def remove_node(self):
+		if len(self.nodes_to_visit) > 1:
+			self.nodes_to_visit = self.nodes_to_visit[1:]
+			return True
+		else:
+			self.nodes_to_visit = []
+			return False
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
@@ -367,10 +378,10 @@ def box_required_for_node(node):
 	selected_box = None
 
 	boxes = Box.get_boxes()
-	service = node.get('service', None)
+	box_type = node.get('extras').get('box_type', None)
 	model = node.get('extras').get('model', None)
 
-	if model and service == "t4":
+	if model and box_type == "t4":
 		active_t4s = []
 		halted_t4s = []
 		if boxes:

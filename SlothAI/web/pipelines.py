@@ -1,12 +1,16 @@
 from google.cloud import ndb
 
 from flask import Blueprint, flash, jsonify, request
+from flask import current_app as app
+
+from datetime import datetime
 
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.tasks import create_task, get_task_schema
+from SlothAI.lib.tasks import create_task, get_task_schema, Task
 from SlothAI.web.models import Pipeline, Node
+from SlothAI.lib.util import random_string
 
 pipeline = Blueprint('pipeline', __name__)
 
@@ -88,6 +92,15 @@ def pipeline_delete(pipe_id):
 def ingest_post(pipeline_id):
 	pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipeline_id)
 
+	task = Task(
+		id=random_string(),
+		user_id=current_user.uid,
+		pipe_id=pipeline.get('pipe_id'),
+		nodes_to_visit=pipeline.get('node_ids'),
+		document=dict(),
+		created_at=datetime.utcnow()
+	)
+
 	if pipeline:
 		try:
 			json_data = request.get_json()
@@ -98,7 +111,7 @@ def ingest_post(pipeline_id):
 			return jsonify({"response": "'text' field is required"}), 406 # todo get error code
 
 		# move to data
-		document = {"data": json_data}
+		task.document = {"data": json_data}
 		if 'text' in json_data: # TODO: make this configurable by the user
 			text_value = json_data['text']
 			if not isinstance(text_value, list):
@@ -107,25 +120,19 @@ def ingest_post(pipeline_id):
 		else:
 			return jsonify({"response": "need 'text' field..."})
 
-		# don't create a task if there is going to be an issue converting user
-		# data to a valid schema.
-		document = get_task_schema(document)
-		if document.get('error', None):
-			return jsonify({"error": document['error']}), 400
 
 		# this populates the model object in the document
 		# map table document to document (includes uid, etc.)
-		document.update(pipeline)
-		document['retries'] = 0
+		task.document['retries'] = 0
+		task.document['openai_token'] = app.config['OPENAI_TOKEN'] # should be a model thing not a app config thing
 
 		# write to the job queue
-		job_id = create_task(document)
-		document['job_id'] = job_id
+		job_id = task.queue()
+		task.document['job_id'] = job_id
 
 		# pop secure info
-		document.pop('openai_token')
-		document.pop('uid')
+		task.document.pop('openai_token')
 
-		return jsonify(document), 200
+		return jsonify(task.to_dict()), 200
 	else:
 		return jsonify({"response": f"pipeline with id {pipeline_id} not found"}), 404
