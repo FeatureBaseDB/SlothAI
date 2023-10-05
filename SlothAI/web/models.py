@@ -164,6 +164,31 @@ class Node(ndb.Model):
         return node.to_dict()
 
     @classmethod
+    @ndb.transactional()
+    def update(cls, node_id, name, extras, input_keys, output_keys, method, template_id):
+        node = cls.query(cls.node_id == node_id).get()
+        if not node:
+            return None
+
+        if template_id:
+            template = Template.query(Template.template_id == template_id).get()
+            if not template:
+                template_id = None
+        else:
+            template_id = None
+
+        node.name = name
+        node.input_keys = input_keys
+        node.output_keys = output_keys
+        node.extras = extras
+        node.method = method
+        node.template_id = template_id
+
+        node.put()
+
+        return node.to_dict()
+
+    @classmethod
     @ndb_context_manager
     def get(cls, **kwargs):
         query_conditions = []
