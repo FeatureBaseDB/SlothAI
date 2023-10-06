@@ -5,7 +5,8 @@ from flask import Blueprint, flash, jsonify, request
 import flask_login
 from flask_login import current_user
 
-from SlothAI.web.models import Template, Pipeline
+from SlothAI.lib.util import random_name
+from SlothAI.web.models import Template, Node
 
 template = Blueprint('template', __name__)
 
@@ -71,6 +72,12 @@ def template_update(template_id):
         return jsonify({"error": "Not found", "message": "The requested template was not found."}), 404
 
 
+@template.route('/templates/generate_name', methods=['GET'])
+@flask_login.login_required
+def generate_name():
+    return jsonify({"name": random_name(2)})
+
+
 @template.route('/templates', methods=['POST'])
 @template.route('/templates/create', methods=['POST'])
 @flask_login.login_required
@@ -90,6 +97,7 @@ def template_create():
             )
 
             if created_template:
+                flash("Template created.")
                 return jsonify(created_template), 201
             else:
                 return jsonify({"error": "Creation failed", "message": "Failed to create the template."}), 500
@@ -107,17 +115,16 @@ def template_delete(template_id):
     template = Template.get(uid=current_user.uid, template_id=template_id)
     if template:
         # fetch all nodes
-        nodes = Pipeline.fetch(uid=current_user.uid)
+        nodes = Node.fetch(uid=current_user.uid)
 
-        # Check if the node is in any pipeline
+        # Check if the node is in any node
         is_in_node = any(template_id in node.get('node_id', None) for node in nodes)
 
         if is_in_node:
             return jsonify({"error": "Template is in use in a node.", "message": "This template cannot be deleted until it's removed from the node."}), 400
 
-        # delete table
-        Template.delete(template_id=template.get('template_id'))
-        flash(f"Deleted template `{template.get('name')}`.")
+        # delete template
+        result = Template.delete(template_id=template.get('template_id'))
         return jsonify({"response": "success", "message": "Template deleted successfully!"}), 200
     else:
         return jsonify({"error": f"Unable to delete template with id {template_id}"}), 501

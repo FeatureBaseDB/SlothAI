@@ -144,22 +144,27 @@ def templates():
     username = current_user.name
     templates = Template.fetch(uid=current_user.uid)
 
+    if not templates:
+        return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
+
     return render_template(
         'pages/templates.html', username=username, templates=templates
     )
 
 
+@site.route('/templates/new')
 @site.route('/templates/<template_id>', methods=['GET'])
 @flask_login.login_required
-def template_detail(template_id):
+def template_detail(template_id="new"):
     # get the user and their tables
     username = current_user.name
     api_token = current_user.api_token
     dbid = current_user.dbid
     template = Template.get(uid=current_user.uid,template_id=template_id)
+    hostname = request.host
 
     return render_template(
-        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template
+        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, hostname=hostname
     )
 
 

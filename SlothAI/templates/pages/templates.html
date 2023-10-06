@@ -7,6 +7,7 @@
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -53,70 +54,72 @@
 
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">
-    {% for message in get_flashed_messages() %}
-        <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
-    {% endfor %}
-    
     <h2 class="page_heading">Templates</h2>
 
-    <div class="card rounded-lg">
-        <div class="card-body">
-            <h4 class="card-title card-callout">Current Templates</h4>
-            <p class="card-text">The following templates are available for use in your nodes.</p>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Inputs</th>
-                        <th>Outputs</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for template in templates %}
-                    <tr>
-                        <td><a href="/templates/{{ template.template_id }}">{{ template.name }}</a></td>
-                        <td>Inputs</td>
-                        <td>Outputs</td>
-                        <td>
-                            <button class="delete-button btn btn-danger" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="rounded-lg border p-3">
+        <h4 class="mb-3">Your Templates</h4>
+        <p>The following templates are available for use in your nodes. Templates may not be deleted if they are being used by a node.</p>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Inputs</th>
+                    <th>Outputs</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for template in templates %}
+                <tr>
+                    <td><a href="/templates/{{ template.template_id }}">{{ template.name }}</a></td>
+                    <td>Inputs</td>
+                    <td>Outputs</td>
+                    <td>
+                        <button class="delete-button btn btn-danger" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     <p></p>
-    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
-        Add Template
-    </button>
+    <a href="/templates/new" class="btn btn-success">
+        <i class="fas fa-plus"></i> Add Template
+    </a>
 </div>
+
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
 
 <script type="text/javascript">
 $(document).ready(function() {
+    toastr.options = {
+      "positionClass": "toast-bottom-right",
+    }
+
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
         var template_id = $(this).data("template-id"); // Adjust this based on your data structure
         var $this = $(this);
         var rowCount = $("tbody tr").length;
+        console.log(rowCount);
         $this.addClass("flash");
         $.ajax({
             url: '/templates/' + template_id,
             type: 'DELETE',
             success: function (response) {
                 $this.closest("tr").remove();
+                toastr.success('Template deleted.');
                 if (rowCount === 1) {
-                    window.location.reload();
+                    window.location.href = "/templates/new"
                 }
             },
             error: function (error) {
+                toastr.error(error);
                 window.location.reload();
             }
         });

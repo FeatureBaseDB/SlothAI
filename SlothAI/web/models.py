@@ -73,7 +73,7 @@ class Template(ndb.Model):
             template.put()
             return template.to_dict()
         else:
-            return template.to_dict()
+            return existing_template.to_dict()
 
     @classmethod
     @ndb_context_manager
@@ -140,8 +140,8 @@ class Template(ndb.Model):
     def delete(cls, **kwargs):
         query_conditions = []
 
-        if 'node_id' in kwargs:
-            query_conditions.append(cls.node_id == kwargs['node_id'])
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
         if 'name' in kwargs:
             query_conditions.append(cls.name == kwargs['name'])
         if 'uid' in kwargs:
@@ -149,12 +149,10 @@ class Template(ndb.Model):
 
         if query_conditions:
             query = ndb.AND(*query_conditions)
-            entities = cls.query(query).get()
-        else:
-            entities = None
+            entity = cls.query(query).get()
 
-        if entities:
-            entities.key.delete()
+        if entity:
+            entity.key.delete()
             return True
         else:
             return False
