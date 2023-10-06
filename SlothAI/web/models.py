@@ -135,7 +135,31 @@ class Template(ndb.Model):
         else:
             return None
 
+    @classmethod
+    @ndb_context_manager
+    def delete(cls, **kwargs):
+        query_conditions = []
 
+        if 'node_id' in kwargs:
+            query_conditions.append(cls.node_id == kwargs['node_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).get()
+        else:
+            entities = None
+
+        if entities:
+            entities.key.delete()
+            return True
+        else:
+            return False
+
+            
 class Node(ndb.Model):
     node_id = ndb.StringProperty()
     name = ndb.StringProperty()

@@ -5,7 +5,7 @@ from flask import Blueprint, flash, jsonify, request
 import flask_login
 from flask_login import current_user
 
-from SlothAI.web.models import Template
+from SlothAI.web.models import Template, Pipeline
 
 template = Blueprint('template', __name__)
 
@@ -99,15 +99,25 @@ def template_create():
         return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
 
 
+
 @template.route('/templates/<template_id>', methods=['DELETE'])
 @template.route('/templates/<template_id>/delete', methods=['DELETE'])
 @flask_login.login_required
 def template_delete(template_id):
     template = Template.get(uid=current_user.uid, template_id=template_id)
     if template:
+        # fetch all nodes
+        nodes = Pipeline.fetch(uid=current_user.uid)
+
+        # Check if the node is in any pipeline
+        is_in_node = any(template_id in node.get('node_id', None) for node in nodes)
+
+        if is_in_node:
+            return jsonify({"error": "Template is in use in a node.", "message": "This template cannot be deleted until it's removed from the node."}), 400
+
         # delete table
         Template.delete(template_id=template.get('template_id'))
         flash(f"Deleted template `{template.get('name')}`.")
-        return jsonify({"response": "success", "message": "template deleted successfully!"}), 200
+        return jsonify({"response": "success", "message": "Template deleted successfully!"}), 200
     else:
         return jsonify({"error": f"Unable to delete template with id {template_id}"}), 501
