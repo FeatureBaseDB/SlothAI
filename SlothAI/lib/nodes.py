@@ -8,101 +8,121 @@ from flask import current_app
 
 class NodeType(enum.Enum):
     EMBEDDING = "embedding"
-    KEYTERM = "keyterm"
-    QUESTION = "question"
-    ANSWER = "answer"
+    KEYTERMS = "keyterms"
     READ = "read"
     WRITE = "write"
-    DATA_SOURCE = "data_source"
-
-
+    DATA_SOURCE = "datasource"
+    # QUESTION = "question"
+    # ANSWER = "answer"
 
 init_nodes = [
     {
-        'node_method': NodeType.DATA_SOURCE,
-        'model': 'endpoint',
+        'type': NodeType.DATA_SOURCE,
         'input_keys': [{'name': "data", 'type': "object"}],
         'output_keys': [{'name': "data", 'type': "object"}],
-        'extras': ['model']
+        'model': 'endpoint',
+        'extras': {}
     },
     {
-        'node_method': NodeType.EMBEDDING,
-        'box_type': 't4',
-        'model': 'instructor-large',
+        'type': NodeType.EMBEDDING,
         'input_keys': [{'name': "data.text", 'type': "string"}],
         'output_keys': [{'name': "data.embedding", 'type': "vector", 'size': 768}],
-        'template': 'text_embedding',
-        'extras': ['box_type', 'model', 'template']
+        'model': 'instructor-large',
+        'extras': {
+            'box_type': 't4',
+            'template': 'text_embedding',
+        }
     },
     {
-        'node_method': NodeType.WRITE,
+        'type': NodeType.EMBEDDING,
+        'input_keys': [{'name': "text", 'type': "string"}],
+        'output_keys': [{'name': "embedding", 'type': "vector", 'size': 768}],
+        'model': 'instructor-xl',
+        'extras': {
+            'box_type': 't4',
+            'template': 'text_embedding',
+        }
+    },
+    {
+        'type': NodeType.EMBEDDING,
+        'input_keys': [{'name': "text", 'type': "string"}],
+        'output_keys': [{'name': "embedding", 'type': "vector", 'size': 1536}],
+        'model': 'text-embedding-ada-002',
+        'extras': {
+            'box_type': 'service',
+            'template': 'text_embedding',
+            'openai_token': True
+        }    
+    },
+    {
+        'type': NodeType.KEYTERMS,
+        'input_keys': [{'name': "text", 'type': "string"}],
+        'output_keys': [{'name': "keyterms", 'type': "stringset"}],
+        'model': 'sloth-extract',
+        'extras': {
+            'box_type': 't4',
+        },
+    },
+    {
+        'type': NodeType.KEYTERMS,
+        'input_keys': [{'name': "text", 'type': "string"}],
+        'output_keys': [{'name': "keyterms", 'type': "stringset"}],
+        'model': 'gpt-4',
+        'extras': {
+            'box_type': 'service',
+            'template': 'form_keyterms',
+            'openai_token': True,
+        },
+    },
+    {
+        'type': NodeType.KEYTERMS,
+        'input_keys': [{'name': "text", 'type': "string"}],
+        'output_keys': [{'name': "keyterms", 'type': "stringset"}],
+        'model': 'gpt-3.5-turbo',
+        'extras': {
+            'box_type': 'service',
+            'template': 'form_keyterms',
+            'openai_token': True,
+        },  
+    },
+    {
+        'type': NodeType.WRITE,
         'model': 'featurebase',
         'input_keys': [{'name': "data", 'type': "object"}],
         'output_keys': [],
-        'extras': ['model']
+        'extras': {
+            'database_id': True,
+            'x-api-token': True,
+        }, 
     },
     {
-        'node_method': NodeType.EMBEDDING,
-        'box_type': 't4',
-        'model': 'instructor-xl',
-        'input_keys': [{'name': "text", 'type': "string"}],
-        'output_keys': [{'name': "embedding", 'type': "vector", 'size': 768}],
-        'template': 'text_embedding',
-        'extras': ['box_type', 'model', 'template']
+        'type': NodeType.READ,
+        'input_keys': [{'name': 'sql', 'type': 'string'}],
+        'output_keys': [],
+        'model': 'featurebase',
+        'extras': {
+            'database_id': True,
+            'x-api-token': True,
+        }, 
     },
-    {
-        'node_method': NodeType.EMBEDDING,
-        'box_type': 'service',
-        'model': 'text-embedding-ada-002',
-        'input_keys': [{'name': "text", 'type': "string"}],
-        'output_keys': [{'name': "embedding", 'type': "vector", 'size': 1536}],
-        'template': 'text_embedding',
-        'extras': ['box_type', 'model', 'template']
-    },
-    {
-        'node_method': NodeType.KEYTERM,
-        'box_type': 't4',
-        'model': 'sloth-extract',
-        'input_keys': [{'name': "text", 'type': "string"}],
-        'output_keys': [{'name': "keyterms", 'type': "stringset"}],
-        'extras': ['model', 'box_type']
-    },
-    {
-        'node_method': NodeType.KEYTERM,
-        'box_type': 'service',
-        'model': 'gpt-4',
-        'input_keys': [{'name': "text", 'type': "string"}],
-        'output_keys': [{'name': "keyterms", 'type': "stringset"}],
-        'template': 'form_keyterms',
-        'extras': ['box_type', 'model', 'openai_token', 'template']
-    },
-    {
-        'node_method': NodeType.KEYTERM,
-        'box_type': 'service',
-        'model': 'gpt-3.5-turbo',
-        'input_keys': [{'name': "text", 'type': "string"}],
-        'output_keys': [{'name': "keyterms", 'type': "stringset"}],
-        'template': 'form_keyterms',
-        'extras': ['box_type', 'model', 'openai_token', 'template']
-    },
-    {
-        'node_method': NodeType.QUESTION,
-        'box_type': 'service',
-        'model': 'gpt-3.5-turbo',
-        'input_keys': [{'name': "text", 'type': "string"}],
-        'output_keys': [{'name': "keyterms", 'type': "stringset"}],
-        'template': 'form_question',
-        'extras': ['box_type', 'model', 'openai_token', 'template']
-    },
-    {
-        'node_method': NodeType.ANSWER,
-        'box_type': 'service',
-        'model': 'gpt-3.5-turbo',
-        'input_keys': [{'name': "text", 'type': "string"}],
-        'output_keys': [{'name': "keyterms", 'type': "stringset"}],
-        'template': 'form_answer',
-        'extras': ['box_type', 'model', 'openai_token', 'template']
-    }
+    # {
+    #     'type': NodeType.QUESTION,
+    #     'box_type': 'service',
+    #     'model': 'gpt-3.5-turbo',
+    #     'input_keys': [{'name': "text", 'type': "string"}],
+    #     'output_keys': [{'name': "keyterms", 'type': "stringset"}],
+    #     'template': 'form_question',
+    #     'extras': ['box_type', 'model', 'openai_token', 'template']
+    # },
+    # {
+    #     'type': NodeType.ANSWER,
+    #     'box_type': 'service',
+    #     'model': 'gpt-3.5-turbo',
+    #     'input_keys': [{'name': "text", 'type': "string"}],
+    #     'output_keys': [{'name': "keyterms", 'type': "stringset"}],
+    #     'template': 'form_answer',
+    #     'extras': ['box_type', 'model', 'openai_token', 'template']
+    # },
 ]
 
 
@@ -112,12 +132,13 @@ def initilize_nodes(uid):
     if not current_nodes:
         for node in init_nodes:
             # check the template
-            if node.get('template'):
-                template = Template.get(uid=uid, name=node.get('template'))
+            template_name = node.get('extras').get('template')
+            if template_name:
+                template = Template.get(uid=uid, name=template_name)
 
                 if not template:
                     import os
-                    file_name = "%s.txt" % node.get('template')
+                    file_name = "%s.txt" % template_name
                     file_path = os.path.join(current_app.root_path, 'templates', 'prompts', file_name)
                     try:
                         with open(file_path, 'r') as file:
@@ -127,32 +148,20 @@ def initilize_nodes(uid):
                         text = ""
 
                     template = Template.create(
-                        name=node.get('template'),
+                        name=template_name,
                         uid=uid,
                         text=text 
                     )
 
-                template_id = template.get('template_id')
-            else:
-                template_id = None
+                node.get('extras')['template_id'] = template.get('template_id')
+                node.get('extras').pop('template', None)
 
-            # Generate a random name with 2 characters
-            name = random_name(2)
-
-            # Create a new node and add it to the database
-            extras = {}
-            for extra_name in node['extras']:
-                if extra_name in node:
-                    extras[extra_name] = node[extra_name]
-                else:
-                    extras[extra_name] = None
-
-            node = Node.create(
-                name=name,
+            Node.create(
                 uid=uid,
-                extras=extras,
+                name=random_name(2),
+                type=node['type'].value,
+                extras=node.get('extras'),
                 input_keys=node['input_keys'],
                 output_keys=node['output_keys'],
-                method=node['node_method'].value,
-                template_id=template_id
+                model = node['model']
             )

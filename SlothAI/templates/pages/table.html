@@ -71,7 +71,7 @@
     {% for model in table.models %}
         {% if "embedding" in model.kind %}
             <span class="badge badge-primary">{{ model.kind }} with {{ model.name }}</span>
-        {% elif "keyterm" in model.kind %}
+        {% elif "keyterms" in model.kind %}
             <span class="badge badge-warning">{{ model.kind }} with {{ model.name }}</span>
         {% elif "question" in model.kind %}
             <span class="badge badge-success">{{ model.kind }} with {{ model.name }}</span>

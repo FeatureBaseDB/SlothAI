@@ -71,7 +71,7 @@
     {% for node in nodes %}
         {% if "embedding" in node.method %}
             <span class="badge badge-primary">{{ node.method }} with {{ node.name }}</span>
-        {% elif "keyterm" in node.method %}
+        {% elif "keyterms" in node.method %}
             <span class="badge badge-warning">{{ node.method }} with {{ node.name }}</span>
         {% elif "question" in node.method %}
             <span class="badge badge-success">{{ node.method }} with {{ node.name }}</span>

@@ -65,7 +65,7 @@ def pipeline_view(pipe_id):
 				mermaid_string += f"{previous_node} -->{output}{current_node}[{node.get('method')}\n{node.get('name')}]\n"
 			else:
 				# initilize mermaid string
-				if node.get('method') == 'data_source' and node.get('extras').get('model', None) == 'endpoint':
+				if node.get('method') == 'datasource' and node.get('extras').get('model', None) == 'endpoint':
 					mermaid_string += f"{current_node}[POST /pipeline/{pipe_id}/task]\n"
 
 
@@ -76,7 +76,7 @@ def pipeline_view(pipe_id):
 				output = "|embedding: vector|"
 			elif node.get('method') == 'form_question':
 				output = "|question: string|"
-			elif node.get('method') == 'data_source':
+			elif node.get('method') == 'datasource':
 				output = "| JSON |"
 			elif node.get('method') == 'write':
 				output = "| SQL INSERT | "

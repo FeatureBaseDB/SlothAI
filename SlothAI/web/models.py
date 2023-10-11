@@ -1,6 +1,7 @@
 import datetime
 
 from google.cloud import ndb
+from typing import Dict
 
 import flask_login
 
@@ -166,35 +167,24 @@ class Node(ndb.Model):
     output_keys = ndb.JsonProperty()
     extras = ndb.JsonProperty()  # auth, flavor, service, method, template, sql, etc.
     created = ndb.DateTimeProperty()
-    method = ndb.StringProperty()
-    template_id = ndb.StringProperty()
+    type = ndb.StringProperty()
+    model = ndb.StringProperty()
     
     @classmethod
     @ndb_context_manager
-    def create(cls, name, uid, extras, input_keys, output_keys, method, template_id):
-        current_utc_time = datetime.datetime.utcnow()
+    def create(cls, name: str, uid: str, extras: Dict[str, any], input_keys: Dict[str, any], output_keys: Dict[str, any], type: str, model: str) -> Dict[str, any]:
         node = cls.query(cls.name == name, cls.uid == uid).get()
-
         if not node:
-            if template_id:
-                # ensure we have the template
-                template = Template.query(Template.template_id == template_id).get()
-                if not template:
-                    template_id = None
-            else:
-                template_id = None
-
-            node_id = random_string(13)
             node = cls(
-                node_id=node_id,
+                node_id=random_string(13),
                 name=name,
                 uid=uid,
                 input_keys=input_keys,
                 output_keys=output_keys,
                 extras=extras,
-                created=current_utc_time,
-                method=method,
-                template_id=template_id
+                created=datetime.datetime.utcnow(),
+                type=type,
+                model=model,
             )
             node.put()
 
@@ -202,7 +192,7 @@ class Node(ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def update(cls, node_id, name, extras, input_keys, output_keys, method, template_id):
+    def update(cls, node_id, name, extras, input_keys, output_keys, method, template_id, model):
         node = cls.query(cls.node_id == node_id).get()
         if not node:
             return None
@@ -220,6 +210,7 @@ class Node(ndb.Model):
         node.extras = extras
         node.method = method
         node.template_id = template_id
+        node.model = model
 
         node.put()
 
@@ -530,7 +521,7 @@ class User(flask_login.UserMixin, ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def get_by_uid(cls, uid):
+    def get_by_uid(cls, uid) -> dict:
         result = cls.query(cls.uid == uid).get()
         return result.to_dict() if result else None
 

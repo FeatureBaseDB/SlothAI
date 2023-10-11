@@ -75,9 +75,9 @@
                 {% for node in nodes %}
                 <tr>
                     <td><a href="/nodes/{{ node.node_id }}">{{ node.name }}</a></td>
-                    <td>{{ node.method }}</td>
-                    <td>{{ node.extras.model }}</td>
-                    <td><a href="/templates/{{ node.template_id }}">{{ node.get('template_name') }}</a></td>
+                    <td>{{ node.get('type') }}</td>
+                    <td>{{ node.model }}</td>
+                    <td><a href="/templates/{{ node.extras.template_id }}">{{ node.get('extras').get('template_id') }}</a></td>
 
                     <td></td>
                     <td></td>
