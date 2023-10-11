@@ -1,214 +1,133 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FeatureBase AI - Pipelines</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+{% extends "pages/page_base.html" %}
 
-<!-- Fixed Header -->
-<nav class="navbar navbar-expand-lg fixed-top" style="opacity: 90%;">
-    <img src="/static/fb.png" style="height: 1.5rem; width: auto; margin-right: 10px;"> 
-    <h2 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">FeatureBase AI</h2>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ml-auto">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    {{username}}
-                </a>
-                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                    <a class="dropdown-item" href="/logout">Logout</a>
-                </div>
-            </li>
-        </ul>
-    </div>
-</nav>
+{% block title %}
+<title>Pipelines | FeatureBase AI</title>
+<meta property='og:title' content='Pipelines | FeatureBase AI'/>
+{% endblock %}
 
-<!-- Left Sidebar Navigation -->
-<div class="sidebar">
-    <a href="/pipelines" class="highlighted-link">
-        <i class="fas fa-code-branch"></i> Pipelines
-    </a>
-    <a href="/nodes">
-        <i class="fas fa-coffee"></i> Nodes
-    </a>
-    <a href="/templates">
-        <i class="fas fa-pen"></i> Templates
-    </a>
-    <a href="/tasks">
-        <i class="fas fa-tasks"></i> Tasks
-    </a>
-    <a href="/settings">
-        <i class="fas fa-cog"></i> Settings
-    </a>
-</div>
-
+{% block content %}
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">
-    {% for message in get_flashed_messages() %}
-        <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
-    {% endfor %}
-
     <h2 class="page_heading">Pipelines</h2>
-
 
     {% if pipelines %}
     <div class="card rounded-lg">
-        <div class="card-body">
-            <h4 class="card-title card-callout">Current Pipelines</h4>
-            <p class="card-body">Pipelines route data from AI nodes to and from the database. Your database is located over to <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> where you can query results of ingestion with SQL.</p>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Nodes</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for pipeline in pipelines %}
-                    <tr>
-                        <td><a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a></td>
-                        <td>
-                            {% for node in pipeline.node_ids %}
-                            <span class="badge badge-warning">{{ node }}</span>
-                            {% endfor %}
-                        </td>
-                        <td>
-                            <span class="badge badge-dark">write to database</span>
-                        </td>
-                        <td>
-                            <button class="delete-button btn btn-danger" data-pipeline-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i> Delete</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            
-        </div>
+        <h2 class="page_heading">Current Pipelines</h2>
+        <p>Pipelines route data from endpoints to nodes. Nodes may transform the data, write to the database, or read from the database. Once data has been processed by a pipeline, it can be queried in your <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> account with SQL.</p>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Nodes</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pipeline in pipelines %}
+                <tr>
+                    <td><a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a></td>
+                    <td>
+                        {% for node in pipeline.node_ids %}
+                        <span class="badge badge-warning">{{ node }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <button class="delete-button btn btn-danger" data-pipeline-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i> Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
+            Add Pipeline
+        </button>
     </div>
-    <p></p>
+    {% else %}
+
+    <h2 class="page_heading">Task: Create a new pipeline</h2>
+    <p>Click on the "Add Pipeline" button to create a new pipeline. Pipelines without nodes insert directly into FeatureBase.</p>
+
     <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
         Add Pipeline
     </button>
-
-
-    {% else %}
-
-        <div class="card rounded-lg">
-            <div class="card-body">
-                <h4 class="card-title card-callout">Task: Create a new pipeline.</h4>
-                <p class="card-text">
-                    Click on the "Add Pipeline" button to create a new pipeline. Pipelines without nodes insert directly into FeatureBase.
-                </p>
-
-                <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
-                    Add Pipeline
-                </button>
-                <p class="card-text"></p>
-                <p class="card-text">
-                    The endpoint for sending the text and token for authentication will be shown once the pipeline for the pipeline is created.
-                </p>
-                <p class="card-text">
-                    Using the endpoint will look like this:
-                </p>
-                <div class="code-block">curl -X POST \
+    <p></p>
+    <p>The endpoint for sending the text and token for authentication will be shown once the pipeline for the pipeline is created.</p>
+    <p>Using the endpoint will look like this:</p>
+    <div class="code-block">curl -X POST \
 -H "Content-Type: application/json" \
 -d '{"text":"There was a sudden knock at the door, then silence."}' \
 https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
-                <p class="card-text"></p>
-                <p class="card-text">Once the job is complete, a sample response will look like this:</p>
-                <div class="code-block">{
-"_id": "FladzA",
-"keyterms": ['door', 'silence', 'sudden', 'knock'],
-"text": "There was a sudden knock at the door, then silence.",
-"embedding": [0.05333335, 0.020197952, 0.012141972, -0.041954238, -0.055371083, ...]
-}</div>
-            </div>
-        </div>
+    <p></p>
+    <p>Once the job is complete, a sample response will look like this:</p>
+    <div class="code-block">{
+    "_id": "FladzA",
+    "keyterms": ['door', 'silence', 'sudden', 'knock'],
+    "text": "There was a sudden knock at the door, then silence.",
+    "embedding": [0.05333335, 0.020197952, 0.012141972, -0.041954238, -0.055371083, ...]
+    }</div>
 
     {% endif %}
 
 
-<div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="nodeFormModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title card-callout" id="nodeFormModalLabel">Create Pipeline</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- New node selection section -->
-                <div class="form-group">
-                    <label for="pipelineName">Pipeline Name</label>
-                    <input type="text" class="form-control" id="pipelineName" placeholder="Enter pipeline name">
+    <div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="nodeFormModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title card-callout" id="nodeFormModalLabel">Create Pipeline</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
+                <div class="modal-body">
+                    <!-- New node selection section -->
+                    <div class="form-group">
+                        <label for="pipelineName">Pipeline Name</label>
+                        <input type="text" class="form-control" id="pipelineName" placeholder="Enter pipeline name">
+                    </div>
 
-                <!-- Node list section -->
-                <div class="form-group">
-                    <p id="ListMessage">Pipeline will write directly to FeatureBase.</p>
-                    <ul id="nodeList"></ul>
+                    <!-- Node list section -->
+                    <div class="form-group">
+                        <p id="ListMessage">Pipeline will write directly to FeatureBase.</p>
+                        <ul id="nodeList"></ul>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="selectedNode">Add Node</label>
+                        <select class="form-control" id="selectedNode">
+                            <optgroup id="nodePulldown" label="Available Nodes">
+                                <option data-node_name="none">None</option>
+                                {% for node in nodes %}
+                                    <option data-node_name="{{ node.name }}" data-node_method="{{ node.method }}">{{ node.name }} ({{ node.method }})</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                    <button id="addNodeToList" class="btn btn-primary">Add to Pipeline</button>
+
+                    <div class="form-group"></div>
+                    <div class="form-group" id="openaiTokenField">
+                        <label for="openaiToken">OpenAI Token</label>
+                        <input type="text" class="form-control" id="openaiToken" name="openaiToken">
+                    </div>
+
                 </div>
-
-                <div class="form-group">
-                    <label for="selectedNode">Add Node</label>
-                    <select class="form-control" id="selectedNode">
-                        <optgroup id="nodePulldown" label="Available Nodes">
-                            <option data-node_name="none">None</option>
-                            {% for node in nodes %}
-                                <option data-node_name="{{ node.name }}" data-node_method="{{ node.method }}">{{ node.name }} ({{ node.method }})</option>
-                            {% endfor %}
-                        </optgroup>
-                    </select>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-dark" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-dark">Create</button>
                 </div>
-                <button id="addNodeToList" class="btn btn-primary">Add to Pipeline</button>
-
-                <div class="form-group"></div>
-                <div class="form-group" id="openaiTokenField">
-                    <label for="openaiToken">OpenAI Token</label>
-                    <input type="text" class="form-control" id="openaiToken" name="openaiToken">
-                </div>
-
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-dark" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-dark">Create</button>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-</div>
-
-
-<!-- Bootstrap JS, Popper.js, and jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
-<script src="{{ url_for('static', filename='trianglify.bundle.js') }}"></script>
+{% block javascript %}
 <script type="text/javascript">
 $(document).ready(function () {
-    // Show the notice
-    $('#tempNotice').removeClass('d-none');
-
-    // After 5 seconds, hide the notice
-    setTimeout(function () {
-        $('#tempNotice').addClass('d-none');
-    }, 5000); // 5000 milliseconds = 5 seconds
-
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
-        var pipelineId = $(this).data("pipeline-id"); // Adjust this based on your data structure
+        var pipelineId = $(this).data("pipeline-id");
         var $this = $(this);
         var rowCount = $(".pipeline tbody tr").length;
         $this.addClass("flash");
@@ -228,140 +147,137 @@ $(document).ready(function () {
         });
     });
 
-const selectedNodeDropdown = $('#selectedNode');
-const addNodeButton = $('#addNodeToList');
-const nodeList = $('#nodeList');
-const ListMessage = $('#ListMessage');
-const openaiTokenField = $('#openaiToken'); // Added this line to select the OpenAI Token field
-const nodePulldown = $('#nodePulldown');
-const selectedNodes = []; // Initialize an array to store selected nodes
+    const selectedNodeDropdown = $('#selectedNode');
+    const addNodeButton = $('#addNodeToList');
+    const nodeList = $('#nodeList');
+    const ListMessage = $('#ListMessage');
+    const openaiTokenField = $('#openaiToken'); // Added this line to select the OpenAI Token field
+    const nodePulldown = $('#nodePulldown');
+    const selectedNodes = []; // Initialize an array to store selected nodes
 
-addNodeButton.click(function () {
-    const selectedNodeOption = selectedNodeDropdown.find(':selected');
-    const selectedNode = selectedNodeOption.val();
-    const selectedNodeMethod = selectedNodeOption.data('node_method');
-    
-    // Check if the selectedNode is not empty and is not already in the list
-    if (selectedNode !== "None" && selectedNode && !selectedNodes.includes(selectedNode)) {
-        // Add the selectedNode to the list of selected nodes and the associated mid to the mids array
-        selectedNodes.push(selectedNode);
+    addNodeButton.click(function () {
+        const selectedNodeOption = selectedNodeDropdown.find(':selected');
+        const selectedNode = selectedNodeOption.val();
+        const selectedNodeMethod = selectedNodeOption.data('node_method');
+        
+        // Check if the selectedNode is not empty and is not already in the list
+        if (selectedNode !== "None" && selectedNode && !selectedNodes.includes(selectedNode)) {
+            // Add the selectedNode to the list of selected nodes and the associated mid to the mids array
+            selectedNodes.push(selectedNode);
 
-        // Create a Bootstrap-styled badge for the node
-        const badge = $('<span></span>', {
-            class: 'badge badge-danger clickable-badge',
-            text: 'x',
-            click: function () {
-                const indexToRemove = selectedNodes.indexOf(selectedNode);
-                if (indexToRemove !== -1) {
-                    selectedNodes.splice(indexToRemove, 1);
-                }
-                listItem.remove();
-                if (nodeList.children().length === 0) {
-                    ListMessage.text('Pipeline will write directly to FeatureBase.');
-                }
-
-                // Add options back to the dropdown based on their node_method
-                nodePulldown.find('option').each(function () {
-                    const option = $(this);
-                    const optionNodeMethod = option.data('node_method');
-                    if (optionNodeMethod === selectedNodeMethod) {
-                        option.show();
+            // Create a Bootstrap-styled badge for the node
+            const badge = $('<span></span>', {
+                class: 'badge badge-danger clickable-badge',
+                text: 'x',
+                click: function () {
+                    const indexToRemove = selectedNodes.indexOf(selectedNode);
+                    if (indexToRemove !== -1) {
+                        selectedNodes.splice(indexToRemove, 1);
                     }
-                });
+                    listItem.remove();
+                    if (nodeList.children().length === 0) {
+                        ListMessage.text('Pipeline will write directly to FeatureBase.');
+                    }
 
-                selectedNodeDropdown.val("None");
-                toggleOpenAITokenField();
-            },
-            css: {
-                cursor: 'pointer' // Change cursor to pointer on hover
+                    // Add options back to the dropdown based on their node_method
+                    nodePulldown.find('option').each(function () {
+                        const option = $(this);
+                        const optionNodeMethod = option.data('node_method');
+                        if (optionNodeMethod === selectedNodeMethod) {
+                            option.show();
+                        }
+                    });
+
+                    selectedNodeDropdown.val("None");
+                    toggleOpenAITokenField();
+                },
+                css: {
+                    cursor: 'pointer' // Change cursor to pointer on hover
+                }
+            });
+
+            selectedNodeDropdown.val("None");
+
+            // Create a list item containing the node name, a space, and the badge
+            if (selectedNodeMethod === "embedding" ) {
+                var badgeType = "badge-primary";
+            } else if (selectedNodeMethod == "keyterm" ) {
+                var badgeType = "badge-warning";
+            } else {
+                var badgeType = "badge-success";
             }
-        });
+            const listItem = $('<li></li>').html("<span class='badge "+badgeType+"'>"+ selectedNode + "</span> ").append(badge);
 
-        selectedNodeDropdown.val("None");
+            nodeList.append(listItem);
 
-        // Create a list item containing the node name, a space, and the badge
-        if (selectedNodeMethod === "embedding" ) {
-            var badgeType = "badge-primary";
-        } else if (selectedNodeMethod == "keyterm" ) {
-            var badgeType = "badge-warning";
-        } else {
-            var badgeType = "badge-success";
+            ListMessage.text('Pipeline execution order:');
+
+            // hide the selected node from the pull-down list
+            selectedNodeOption.css('display', 'none');
+
+            nodePulldown.find(`option[data-node_method='${selectedNodeMethod}']`).hide();
+
+            // After adding the node, re-check and toggle the OpenAI Token field visibility
+            toggleOpenAITokenField();
         }
-        const listItem = $('<li></li>').html("<span class='badge "+badgeType+"'>"+ selectedNode + "</span> ").append(badge);
-
-        nodeList.append(listItem);
-
-        ListMessage.text('Pipeline execution order:');
-
-        // hide the selected node from the pull-down list
-        selectedNodeOption.css('display', 'none');
-
-        nodePulldown.find(`option[data-node_method='${selectedNodeMethod}']`).hide();
-
-        // After adding the node, re-check and toggle the OpenAI Token field visibility
-        toggleOpenAITokenField();
-    }
-});
+    });
 
 
-var formFields = [
-    { name: 'pipelineName', id: 'pipelineName' },
-    { name: 'nodes', id: 'nodes' }
-];
+    var formFields = [
+        { name: 'pipelineName', id: 'pipelineName' },
+        { name: 'nodes', id: 'nodes' }
+    ];
 
-// Function to toggle the visibility of the OpenAI Token field
-function toggleOpenAITokenField() {
-    // Check if any of the selected nodes contain "gpt" or "ada"
-    const isGptOrAdaSelected = selectedNodes.some(node => node.includes('gpt') || node.includes('ada'));
-    
-    // Select the entire group (including label and input)
-    const openaiTokenFieldGroup = $('#openaiTokenField');
+    // Function to toggle the visibility of the OpenAI Token field
+    function toggleOpenAITokenField() {
+        // Check if any of the selected nodes contain "gpt" or "ada"
+        const isGptOrAdaSelected = selectedNodes.some(node => node.includes('gpt') || node.includes('ada'));
+        
+        // Select the entire group (including label and input)
+        const openaiTokenFieldGroup = $('#openaiTokenField');
 
-    // Use jQuery to toggle visibility based on the 'isGptOrAdaSelected' variable
-    if (isGptOrAdaSelected) {
-        openaiTokenFieldGroup.show(); // Show the OpenAI Token field without animation
-    } else {
-        openaiTokenFieldGroup.hide(); // Hide the OpenAI Token field without animation
-    }
-}
-
-
-toggleOpenAITokenField(); // Initial state
-
-$("#nodeFormModal").on("click", ".btn-dark", function () {
-    var formData = {};
-
-    // Populate formData object from formFields array
-    for (var i = 0; i < formFields.length; i++) {
-        var field = formFields[i];
-        formData[field.name] = $("#" + field.id).val();
+        // Use jQuery to toggle visibility based on the 'isGptOrAdaSelected' variable
+        if (isGptOrAdaSelected) {
+            openaiTokenFieldGroup.show(); // Show the OpenAI Token field without animation
+        } else {
+            openaiTokenFieldGroup.hide(); // Hide the OpenAI Token field without animation
+        }
     }
 
-    formData.nodes = selectedNodes
 
-    // Move this to a notice in the form
-    if (!/^[a-z-_]+$/.test(formData.pipelineName)) {
-        alert("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
-    } else {
-        $.ajax({
-            type: "POST",
-            url: "/pipeline",
-            data: JSON.stringify(formData), // Send data as JSON
-            contentType: "application/json; charset=utf-8",
-            dataType: "json",
-            success: function (response) {
-                window.location.href = "/pipelines/" + response.tid;
-            },
-            error: function (error) {
-                console.error("Error submitting form:", error);
-            }
-        });
-    }
-});
+    toggleOpenAITokenField(); // Initial state
 
+    $("#nodeFormModal").on("click", ".btn-dark", function () {
+        var formData = {};
+
+        // Populate formData object from formFields array
+        for (var i = 0; i < formFields.length; i++) {
+            var field = formFields[i];
+            formData[field.name] = $("#" + field.id).val();
+        }
+
+        formData.nodes = selectedNodes
+
+        // Move this to a notice in the form
+        if (!/^[a-z-_]+$/.test(formData.pipelineName)) {
+            alert("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
+        } else {
+            $.ajax({
+                type: "POST",
+                url: "/pipeline",
+                data: JSON.stringify(formData), // Send data as JSON
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    window.location.href = "/pipelines/" + response.tid;
+                },
+                error: function (error) {
+                    console.error("Error submitting form:", error);
+                }
+            });
+        }
+    });
 
 });
 </script>
-
-</body>
-</html>
+{% endblock %}

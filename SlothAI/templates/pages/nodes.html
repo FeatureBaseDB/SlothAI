@@ -1,57 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nodes | FeatureBase AI</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+{% extends "pages/page_base.html" %}
 
-<!-- Fixed Header -->
-<nav class="navbar navbar-expand-lg fixed-top" style="opacity: 90%;">
-    <img src="/static/fb.png" style="height: 1.5rem; width: auto; margin-right: 10px;"> 
-    <h2 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">FeatureBase AI</h2>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ml-auto">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    {{username}}
-                </a>
-                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                    <a class="dropdown-item" href="/logout">Logout</a>
-                </div>
-            </li>
-        </ul>
-    </div>
-</nav>
+{% block title %}
+<title>Nodes | FeatureBase AI</title>
+<meta property='og:title' content='Templates | FeatureBase AI'/>
+{% endblock %}
 
-<!-- Left Sidebar Navigation -->
-<div class="sidebar">
-    <a href="/pipelines">
-        <i class="fas fa-code-branch"></i> Pipelines
-    </a>
-    <a href="/nodes" class="highlighted-link">
-        <i class="fas fa-coffee"></i> Nodes
-    </a>
-    <a href="/templates">
-        <i class="fas fa-pen"></i> Templates
-    </a>
-    <a href="/tasks">
-        <i class="fas fa-tasks"></i> Tasks
-    </a>
-    <a href="/settings">
-        <i class="fas fa-cog"></i> Settings
-    </a>
-</div>
-
+{% block content %}
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">    
     <h2 class="page_heading">Nodes</h2>
@@ -84,6 +38,9 @@
 
                     <td>
                         <button class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="spinner-border text-danger" role="status" style="display: none;">
+                            <span class="sr-only"></span>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -91,19 +48,59 @@
         </table>
     </div>
     <p></p>
-    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
-        Add Node
+    <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal">
+        <i class="fas fa-plus"></i> Add Node
     </button>
 </div>
 
+<div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Add Node</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Add your node form fields here -->
+                    <div class="form-group">
+                        <label for="nodeName">Node Name:</label>
+                        <input type="text" class="form-control" id="nodeName">
+                    </div>
+                    <div class="form-group">
+                        <label for="nodeProcessor">Node Processor:</label>
+                        <select class="form-control" id="nodeProcessor">
+                            <option value="template">Bare (template only)</option>
+                            <option value="template">Callback to URI</option>
+                            <option value="embedding">URI to Text</option>
+                            <option value="embedding">Text to Strings</option>
+                            <option value="to_dict">Strings to Stringsets</option>
+                            <option value="embedding">Strings to Strings</option>
+                            <option value="embedding">Strings to Embedding</option>
+                            <option value="embedding">Embedding to SQL (Read)</option>
+                            <option value="embedding">Dictionary to SQL (Read)</option>
+                            <option value="embedding">Dictionary to Table (Write)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="nodeTemplate">Node Template:</label>
+                        <select class="form-control" id="nodeTemplate">
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="addNodeButton">Add Node</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Bootstrap JS, Popper.js, and jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
 
+{% endblock %}
 
+{% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
     // Attach a click event handler to the delete buttons
@@ -111,23 +108,66 @@ $(document).ready(function() {
         var node_id = $(this).data("node-id"); // Adjust this based on your data structure
         var $this = $(this);
         var rowCount = $("tbody tr").length;
-        $this.addClass("flash");
+
+        // Find the spinner element related to the clicked button
+        var spinner = $this.siblings(".spinner-border");
+        
+        $this.hide();
+        spinner.show();
+
         $.ajax({
             url: '/nodes/' + node_id,
             type: 'DELETE',
             success: function (response) {
+                toastr.success('Node deleted.');
                 $this.closest("tr").remove();
                 if (rowCount === 1) {
                     window.location.reload();
                 }
             },
             error: function (error) {
-                window.location.reload();
-            }
+                toastr.error(error.responseJSON.message);
+            },
+            complete: function () {
+                $this.show();
+                spinner.hide();
+            }.bind(this) // Maintain the reference to the button
         });
+    });
+
+    $("#addNodeButton").on("click", function() {
+        // Generate a random name here
+        var randomName = "{{name_random}}";
+        $('#nodeName').val(randomName);
+        console.log(randomName);
+    });
+    
+    // Fetch template options from your server
+    $.ajax({
+        url: '/templates/list',
+        type: 'GET',
+        success: function(response) {
+            // Update the template dropdown options
+            var templateSelect = $('#nodeTemplate');
+            templateSelect.empty(); // Clear existing options
+
+            templateSelect.append($('<option>', {
+                    value: 'none',
+                    text: "None"
+            }));
+
+            response.forEach(function(template) {
+                templateSelect.append($('<option>', {
+                    value: template.id,
+                    text: template.name
+                }));
+            });
+        },
+        error: function(error) {
+            console.error('Error fetching templates:', error);
+        }
     });
 });
 </script>
 
-</body>
-</html>
+{% endblock %}

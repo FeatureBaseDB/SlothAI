@@ -18,7 +18,7 @@ def templates_list():
     username = current_user.name
     api_token = current_user.api_token
     dbid = current_user.dbid
-    templates = template.fetch(uid=current_user.uid)
+    templates = Template.fetch(uid=current_user.uid)
 
     return jsonify(templates)
 
@@ -78,6 +78,21 @@ def generate_name():
     return jsonify({"name": random_name(2)})
 
 
+@template.route('/templates/generate_template', methods=['POST'])
+@flask_login.login_required
+def generate_template():
+    from SlothAI.lib.util import gpt_dict_completion
+
+    if request.is_json:
+        document = request.get_json()
+        print(document)
+    else:
+        return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
+    
+    print("calling ai")
+    return gpt_dict_completion(document=document, template="generate_template")
+
+
 @template.route('/templates', methods=['POST'])
 @template.route('/templates/create', methods=['POST'])
 @flask_login.login_required
@@ -117,11 +132,11 @@ def template_delete(template_id):
         # fetch all nodes
         nodes = Node.fetch(uid=current_user.uid)
 
-        # Check if the node is in any node
-        is_in_node = any(template_id in node.get('node_id', None) for node in nodes)
+        # Check if the template is used in any node
+        is_in_node = any(node.get('template_id') == template_id for node in nodes if 'template_id' in node)
 
         if is_in_node:
-            return jsonify({"error": "Template is in use in a node.", "message": "This template cannot be deleted until it's removed from the node."}), 400
+            return jsonify({"error": "Template is in use in a node.", "message": "This template cannot be deleted until it's removed from the nodes using it."}), 409
 
         # delete template
         result = Template.delete(template_id=template.get('template_id'))

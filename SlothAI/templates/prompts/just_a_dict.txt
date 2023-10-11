@@ -1,0 +1,6 @@
+1. Follow the instructions in 2. 
+2. $instructions:
+$text
+3. Output a python dictionary with the proper and mentioned keys in the dictionary
+# synthesized python dictionary starts with 
+# python_dict = 

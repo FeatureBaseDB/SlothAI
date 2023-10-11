@@ -1,11 +1,7 @@
 /* Base styles */
-html {
-  font-size: 15px;
-}
-
 body {
   background: #fefefe;
-  font-size: 18px;
+  font-size: 15px;
   font-family: Roboto, sans-serif;
   padding-left: 3px;
 }
@@ -14,15 +10,6 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-}
-
-#templateText {
-    height: 60vh; /* Use vh units for the height */
-    resize: none;
-}
-
-#templateName {
-  margin-right: 5px;
 }
 
 /* Form and label styles */
@@ -34,10 +21,6 @@ label {
 
 :focus {
   outline: 0;
-}
-
-#userDropdown {
-  color: white !important;
 }
 
 /* Button styles */
@@ -68,6 +51,10 @@ div.login_form h2 {
   font-weight: 700;
 }
 
+.highlighted-link {
+  background-color: #393758;
+}
+
 .text-muted {
   margin-bottom: 14px;
 }
@@ -77,37 +64,67 @@ div.login_form h2 {
   background-color: #131138;
 }
 
+.navbar {
+  height: 56px !important;
+}
+
+/* Sidebar styles */
 .sidebar {
+  background-color: #131138;
   height: 100%;
-  width: 250px;
+  width: 15%;
+  max-width: 192px;
   position: fixed;
-  top: 57px;
+  top: 56px;
   left: 0;
-  padding-top: 20px;
+  padding-top: 16px;
+  transition: width 0.3s; /* Add a transition for smooth width changes */
 }
 
 .sidebar a {
   padding: 10px 15px;
   text-decoration: none;
-  font-size: 18px;
+  font-size: 15px;
   color: #fff;
   display: block;
-}
-
-.highlighted-link {
-  background-color: #393758;
-}
-
-.sidebar a:hover {
-  background-color: #25346B;
-  color: #FFF;
+  white-space: nowrap; /* Prevent text from wrapping */
+  overflow: hidden; /* Hide overflowing text */
+  text-overflow: ellipsis; /* Add ellipsis (...) for truncated text */
 }
 
 /* Content styles */
 .content {
-  margin-left: 260px;
   padding-left: 20px;
-  width: 70%;
+  width: 85%;
+  transition: margin-left 0.3s;
+  margin-left: 15%;
+}
+
+/* Media query to hide text and adjust icon size under 800px */
+@media (max-width: 800px) {
+  .sidebar {
+    width: 60px; /* Adjust the width to show only icons */
+  }
+  
+  .sidebar a {
+    padding: 10px;
+    text-align: center; /* Center align the icon */
+  }
+  
+  /* Optionally hide the icon labels completely */
+  .sidebar a span {
+    display: none;
+  }
+
+  .content {
+    margin-left: 10%;
+  }
+}
+
+@media (min-width: 1461px) {
+  .content {
+    margin-left: 220px; /* Set the maximum margin-left for wider screens */
+  }
 }
 
 .page_heading {
@@ -167,15 +184,17 @@ span.command-copy {
   /* Add any other styling you desire for the callout here */
 }
 
-/* Responsive alignment for small screens */
-@media (max-width: 576px) {
-  .modal-body {
-    padding: 15px; /* Add padding for small screens */
-  }
+#templateText {
+    height: 60vh; /* Use vh units for the height */
+    resize: none;
+}
 
-  .form-check-label {
-    display: block; /* Stack radio button labels on small screens */
-  }
+#templateName {
+  margin-right: 5px;
+}
+
+#userDropdown {
+  color: white !important;
 }
 
 

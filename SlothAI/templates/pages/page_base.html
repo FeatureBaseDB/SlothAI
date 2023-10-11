@@ -11,7 +11,7 @@
     <meta property='og:title' content='FeatureBaseAI' />
     {% endblock %}
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -19,8 +19,8 @@
     {% block style %}
     {% endblock %}
 </head>
-<body>
 
+<body>
 <!-- Fixed Header -->
 <nav class="navbar navbar-expand-lg fixed-top" style="opacity: 90%;">
     <img src="/static/fb.png" style="height: 1.5rem; width: auto; margin-right: 10px;"> 
@@ -31,7 +31,8 @@
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <!-- Remove data-toggle and aria-expanded attributes -->
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button">
                     {{username}}
                 </a>
                 <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
@@ -40,23 +41,52 @@
             </li>
         </ul>
     </div>
+
 </nav>
 
 <!-- Left Sidebar Navigation -->
 <div class="sidebar">
-    <a href="/pipelines">
-        <i class="fas fa-code-branch"></i> Pipelines
+    <a href="/pipelines" {% if 'pipeline' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-code-branch"></i> <span>Pipelines</span>
     </a>
-    <a href="/nodes">
-        <i class="fas fa-coffee"></i> Nodes
+    <a href="/nodes" {% if 'node' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-coffee"></i> <span>Nodes</span>
     </a>
-    <a href="/templates">
-        <i class="fas fa-pen"></i> Templates
+    <a href="/templates" {% if 'template' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-pen"></i> <span>Templates</span>
     </a>
-    <a href="/tasks">
-        <i class="fas fa-tasks"></i> Tasks
+    <a href="/tasks" {% if 'task' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-tasks"></i> <span>Tasks</span>
     </a>
-    <a href="/settings">
-        <i class="fas fa-cog"></i> Settings
+    <a href="/settings" {% if 'setting' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-cog"></i> <span>Settings</span>
     </a>
 </div>
+
+
+{% block content %}
+{% endblock %}
+
+<!-- Bootstrap JS, Popper.js, and jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+
+
+<script type="text/javascript">
+$(document).ready(function() {
+    toastr.options = {
+      "positionClass": "toast-bottom-right",
+    }
+    {% for message in get_flashed_messages() %}
+    toastr.info(message);
+    {% endfor %}
+});
+</script>
+
+{% block javascript %}
+{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+{# Use this template to drive an embedding node #}
+
+{# Define the input and output fields: #}
+input_fields = [{'name': "texts", 'type': "stringset"}]
+output_fields = [{'name': "text_embedding", 'type': vector}]
+
+{# Define the 'extras' for vector size and model: #}
+extras = [{'vector_size': 768}, {'model': 'instructor_large'}]  
+
+{# Process the inputted array of strings: #}
+{{process(task.document.texts)}}
+
+{# Output is handled by next node in the pipeline... #} 

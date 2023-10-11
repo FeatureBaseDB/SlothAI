@@ -1,0 +1,7 @@
+{
+    "words": [
+        {% for _ in range(5) %}
+            "{{ random_word() }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+}

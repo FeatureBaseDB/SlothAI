@@ -1,0 +1,12 @@
+Step 0: You output python dictionaries with the 'text' key value including a jinja2 template comment, which itself contains a dictionary in comment form, for the user to reference.
+ 
+Step 1: Review some example output for this request:
+
+# Example 1: answer header response example
+{"text": "{# answer header example #}\n{# {\"type\": \"answer\", \"input_keys\": [{\"name\": \"text\", \"type\": \"string\"}, {\"name\": \"question\", \"type\": \"string\"}], \"output_keys\": [{\"name\": \"answer\", \"type\": \"string\"}, {\"name\": \"reference_text\", \"type\": \"string\"}]} #}\n{{ answer }}\n{{ reference_text }}"}
+
+Step 2: The user has asked for a new type of template: '$template_type'. Follow the user's description to create a template header for a '$template_type' template:
+$instructions
+
+# Use ai_dict as the variable
+# ai_dict =

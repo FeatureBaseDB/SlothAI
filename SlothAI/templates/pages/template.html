@@ -1,74 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{template.name}} | Templates | FeatureBase AI</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
+{% extends "pages/page_base.html" %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        #templateText {
-          min-height: 200px;
-        }
-    </style>
-</head>
-<body>
+{% block title %}
+<title>{{template.name}} | Templates | FeatureBase AI</title>
+<meta property='og:title' content='{{template.name}} | Templates | FeatureBase AI'/>
+{% endblock %}
 
-<!-- Fixed Header -->
-<nav class="navbar navbar-expand-lg fixed-top" style="opacity: 90%;">
-    <img src="/static/fb.png" style="height: 1.5rem; width: auto; margin-right: 10px;"> 
-    <h2 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">FeatureBase AI</h2>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ml-auto">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    {{username}}
-                </a>
-                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                    <a class="dropdown-item" href="/logout">Logout</a>
-                </div>
-            </li>
-        </ul>
-    </div>
-</nav>
-
-<!-- Left Sidebar Navigation -->
-<div class="sidebar">
-    <!-- Include your sidebar links here -->
-</div>
-
-<!-- Left Sidebar Navigation -->
-<div class="sidebar">
-    <a href="/pipelines">
-        <i class="fas fa-code-branch"></i> Pipelines
-    </a>
-    <a href="/nodes">
-        <i class="fas fa-coffee"></i> Nodes
-    </a>
-    <a href="/templates" class="highlighted-link">
-        <i class="fas fa-pen"></i> Templates
-    </a>
-    <a href="/tasks">
-        <i class="fas fa-tasks"></i> Tasks
-    </a>
-    <a href="/settings">
-        <i class="fas fa-cog"></i> Settings
-    </a>
-</div>
-
+{% block content %}
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">    
-    <h2 class="page_heading">{% if template %}Editing Template{% else %}New Template{% endif %}</h2>
+    <h2 class="page_heading">{% if template %}Edit Template{% else %}New Template{% endif %}</h2>
     <div class="instructions">
-        <p>You are creating a new template. Use upload and download to manage your template versions.</p>
-        <p>Every template needs valid headers defined. Use the generate headers function to generate the proper headers for this template.</p>
+        <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. Use upload and download to manage your template versions. Use choose template to choose a template example.</p>
     </div>
     <form class="form-inline">
         <div class="form-group">
@@ -82,14 +24,14 @@
         <textarea class="form-control" id="templateText" rows="4">{% if template %}{{ template.text }}{% endif %}</textarea>
     </div>
 
+    <!-- Cancel Button -->
+    <a href="/templates" class="btn btn-danger">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>
+
     <!-- Save Button -->
     <a id="saveButton" href class="btn btn-primary">
         <i class="fas fa-save"></i> Save
-    </a>
-
-    <!-- Cancel Butts -->
-    <a href="/templates" class="btn btn-danger">
-        <i class="fas fa-arrow-left"></i> Back
     </a>
 
     <!-- Download Button -->
@@ -103,47 +45,32 @@
         <i class="fas fa-upload"></i> Upload
     </button>
 
-    <!-- Headers Button -->
-    <button id="generateHeadersButton" class="btn btn-warning" data-toggle="modal" data-target="#generateHeadersModal">
-        <i class="fas fa-cogs"></i> Generate Headers
-    </button>
-</div>
-
-<!-- Generate Headers Modal -->
-<div class="modal fade" id="generateHeadersModal" tabindex="-1" role="dialog" aria-labelledby="generateHeadersModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="generateHeadersModalLabel">Generate Headers</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="headerType">Select Header Type:</label>
-                    <select class="form-control" id="headerType">
-                        <option value="embeddings">Embeddings</option>
-                        <option value="keyterms">Keyterms</option>
-                        <option value="question">Question</option>
-                        <option value="answer">Answer</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-dismiss="modal">Add Headers</button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
+    <div class="dropdown d-inline">
+        <button class="btn btn-warning dropdown-toggle" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-cogs"></i> Choose Template
+        </button>
+        <div class="dropdown-menu" aria-labelledby="generateTemplateDropdown">
+            <!-- Text and Keyterms -->
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_keyterms">Text to Keyterms</a>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_and_keyterms_to_question">Text and Keyterms to Question</a>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_summary">Text to Summary</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_vector">Text to Vector</a>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_keyterms_to_vector">Text and Keyterms to Vector</a>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="vector_to_texts">Vector to Texts (Similarity Query)</a>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="texts_and_keyterms_to_answer">Texts and Keyterms to Answer</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_stringset">Text to Stringset</a>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_stringset">Text to Sentiment</a>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_sql">Text to SQL (Query)</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="random_word">Random Word (Utility)</a>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Bootstrap JS, Popper.js, and jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
-
+{% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
     {% if template %}$('#renameButton').hide();{% endif %}
@@ -160,13 +87,6 @@ $(document).ready(function() {
     var originalTemplateText = $("#templateText").val();
     var templateNameChanged = false;
 
-    $("#generateButton").on("click", function(event) {
-        event.preventDefault();
-        $.get('/templates/generate_name', function(newName) {
-            $("#templateName").val(newName.name);
-        });
-    });
-
     $("#renameButton").on("click", function() {
         event.preventDefault();
         var newName = $("#templateName").val();
@@ -180,7 +100,7 @@ $(document).ready(function() {
                     "text": originalTemplateText
                 }
             };
-            console.log(data);
+
             // Send a POST request to update the template name
             $.ajax({
                 url: '/templates{% if template %}/{{template.template_id}}{% endif %}',
@@ -199,6 +119,9 @@ $(document).ready(function() {
         }
     });
 
+    var toastrWarningCount = 0;
+    var maxToastrWarnings = Math.floor(Math.random() * (10 - 3 + 1)) + 3;
+        
     // Save Button Click Event
     $("#saveButton").on("click", function(event) {
         event.preventDefault();
@@ -218,14 +141,43 @@ $(document).ready(function() {
                 data: JSON.stringify(data),
                 success: function(response) {
                     window.location.href = "/templates/"+response.template_id;
+                    toastr.info("Template saved.")
                 },
                 error: function(error) {
                     console.error('Error saving template text:', error);
                 }
             });
         } else {
-            toastr.warning("Edit the template before saving it.");
+            toastrWarningCount++;
+            if (toastrWarningCount < maxToastrWarnings) {
+                toastr.warning("Edit the template before saving it.");
+            } else {
+                toastr.warning("Ok, I get it.");
+            }
         }
+    });
+
+    $(document).on("keydown", function (event) {
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault(); // Prevent the default browser save action
+            $("#saveButton").click(); // Simulate a click on the "Save" button
+        }
+    });
+
+    // Attach a click event handler to the "Generate Name" button
+    $("#generateButton").on("click", function() {
+        event.preventDefault();
+        $.ajax({
+            url: '/templates/generate_name',
+            type: 'GET',
+            success: function(response) {
+                // Update the template name field with the generated name
+                $("#templateName").val(response.name);
+            },
+            error: function(error) {
+                console.error('Error generating the name:', error);
+            }
+        });
     });
 
     $("#downloadButton").on("click", function() {
@@ -271,14 +223,30 @@ $(document).ready(function() {
             reader.onload = function(event) {
                 const fileContent = event.target.result;
                 $('#templateText').text(fileContent);
-                toastr.info('Loaded file.')
+                toastr.info('Loaded file.');
             };
             reader.readAsText(file);
         }
     });
+    
+    // Handle the template selection from the dropdown
+    $(".dropdown-item").on("click", function() {
+        var templateName = $(this).data("template-name");
+        // Properly encode the template name
+        var encodedTemplateName = encodeURIComponent(templateName);
+        // Load the template from /static/templates/
+        $.ajax({
+            url: '/static/templates/' + encodedTemplateName + '.txt',
+            type: 'GET',
+            success: function(response) {
+                $("#templateText").val(response);
+                toastr.info('Template loaded.');
+            },
+            error: function(error) {
+                toastr.error('Error loading template: ' + error.responseText);
+            }
+        });
+    });
 });
-
 </script>
-
-</body>
-</html>
+{% endblock %}

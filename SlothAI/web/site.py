@@ -9,6 +9,7 @@ import flask_login
 from flask_login import current_user
 
 from SlothAI.lib.tasks import list_tasks
+from SlothAI.lib.util import random_name
 from SlothAI.web.models import Pipeline, Node, Template
 from SlothAI.lib.nodes import initilize_nodes
 
@@ -95,6 +96,7 @@ def pipeline_view(pipe_id):
 def nodes():
     # get the user and their tables
     username = current_user.name
+
     api_token = current_user.api_token
     dbid = current_user.dbid
     nodes = Node.fetch(uid=current_user.uid)
@@ -108,6 +110,8 @@ def nodes():
     # Create a dictionary to look up template names by template_id
     template_lookup = {template['template_id']: template['name'] for template in templates}
 
+    name_random = random_name(3)
+
     # update the template names
     _nodes = []
     for node in nodes:
@@ -120,7 +124,7 @@ def nodes():
         _nodes.append(node)
 
     return render_template(
-        'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes
+        'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes, name_random=name_random
     )
 
 
@@ -170,7 +174,7 @@ def template_detail(template_id="new"):
 
 @site.route('/tasks')
 @flask_login.login_required
-def get_all_tasks():
+def tasks():
     tasks = list_tasks(current_user.uid)
     username = current_user.name
     return render_template(
