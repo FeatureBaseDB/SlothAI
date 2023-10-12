@@ -51,6 +51,13 @@ div.login_form h2 {
   font-weight: 700;
 }
 
+.badge {
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; /* Adjust the maximum width as needed */
+}
+
 .highlighted-link {
   background-color: #393758;
 }

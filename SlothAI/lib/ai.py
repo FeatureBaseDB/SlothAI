@@ -95,7 +95,7 @@ def gpt_dict_completion(prompt, model):
 
 # analyze the query object
 @model
-def query_analyze(ai_model, document):
+def analyze_query(ai_model, document):
 	# load openai key then drop it from the document
 	openai.api_key = app.config['OPENAI_TOKEN']
 
@@ -140,8 +140,8 @@ def query_rewrite(ai_model, document):
 	document['explain'] = ai_dict.get('explain')
 	return document
 
-@model 
-def instructor(ai_model, document):
+@model
+def embedding(node, document):
 	ip_address = document.get('ip_address') # TODO: move this into the model
 
 	password = app.config['SLOTH_TOKEN']

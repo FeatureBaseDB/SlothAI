@@ -9,10 +9,12 @@ input_fields = [{'name': "texts", 'type': "stringset"}]
 output_fields = [{'name': "text_embedding", 'type': "vector"}]
 
 {# 1. Define the 'extras' for embedding vector size and model flavor #}
-{# 2. For OpenAI ada-002-similarity embeddings, see the `Text to Ada Vector` template #}
-extras = [{'vector_size': 768}, {'model': 'instructor_large'}]  
+{# 2. For Instructor embedding use, see the `Text to Vector` template #}
+{# 3. Do not set the openai_token field in this template. It will be removed if you do so. #}
+{# 4. Setting True for the openai_token will cause the create node modal to prompt you for the token. #}
+extras = [{'vector_size': 1536}, {'model': 'text-embedding-ada-002'}, {'openai_token': False}]  
 
-{# Process the inputted array of strings: #}
+{# Convert the inputted array of strings to vectors: #}
 {{process(task.document.texts)}}
 
 {# Output is handled by next node in the pipeline... #}

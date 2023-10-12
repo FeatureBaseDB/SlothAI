@@ -1,3 +1,6 @@
+import re
+import ast
+
 from google.cloud import ndb
 
 from flask import Blueprint, flash, jsonify, request
@@ -19,7 +22,6 @@ def templates_list():
     api_token = current_user.api_token
     dbid = current_user.dbid
     templates = Template.fetch(uid=current_user.uid)
-
     return jsonify(templates)
 
 
@@ -52,13 +54,59 @@ def template_update(template_id):
             if 'template' in json_data and isinstance(json_data['template'], dict):
                 template_data = json_data['template']
 
+                # Initialize empty lists for input_fields and output_fields
+                input_fields = []
+                output_fields = []
+                extras = []
+
+                # Regular expressions to match lines defining input and output fields and extras
+                input_fields_regex = re.compile(r"\s*input_fields\s*=\s*(\[.*\])")
+                output_fields_regex = re.compile(r"\s*output_fields\s*=\s*(\[.*\])")
+                extras_regex = re.compile(r"\s*extras\s*=\s*(\[.*\])")
+
+                # Search for input_fields, output_fields, and extras lines and extract data
+                for line in template_data.get('text').split('\n'):
+                    input_match = input_fields_regex.search(line)
+                    output_match = output_fields_regex.search(line)
+                    extras_match = extras_regex.search(line)
+
+                    if input_match:
+                        # Extract the input_fields list as a string and then safely evaluate it as Python code
+                        input_fields_str = input_match.group(1)
+                        input_fields = ast.literal_eval(input_fields_str)
+                    elif output_match:
+                        # Extract the output_fields list as a string and then safely evaluate it as Python code
+                        output_fields_str = output_match.group(1)
+                        output_fields = ast.literal_eval(output_fields_str)
+                    elif extras_match:
+                        # Extract the extras dictionary as a string and then safely evaluate it as Python code
+                        extras_str = extras_match.group(1)
+                        extras = ast.literal_eval(extras_str)
+
+
                 # Call the update function with the data from 'template' dictionary
                 updated_template = Template.update(
                     template_id=template_id,
                     uid=current_user.uid,
                     name=template_data.get('name', template.get('name')),
-                    text=template_data.get('text', template.get('text'))
+                    text=template_data.get('text', template.get('text')),
+                    input_fields=input_fields,
+                    output_fields=output_fields,
+                    extras=extras
                 )
+
+                # find the nodes using this and update the extras
+                nodes = Node.fetch(template_id=template_id)
+
+                for node in nodes:
+                    updated_node = Node.update(
+                        node_id=node.get('node_id'),
+                        name=node.get('name'),
+                        extras=extras,
+                        processor=node.get('processor'),
+                        template_id=node.get('template_id')
+                    )
+                    print(updated_node)
 
                 if updated_template:
                     return jsonify(updated_template)
@@ -78,21 +126,6 @@ def generate_name():
     return jsonify({"name": random_name(2)})
 
 
-@template.route('/templates/generate_template', methods=['POST'])
-@flask_login.login_required
-def generate_template():
-    from SlothAI.lib.util import gpt_dict_completion
-
-    if request.is_json:
-        document = request.get_json()
-        print(document)
-    else:
-        return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
-    
-    print("calling ai")
-    return gpt_dict_completion(document=document, template="generate_template")
-
-
 @template.route('/templates', methods=['POST'])
 @template.route('/templates/create', methods=['POST'])
 @flask_login.login_required
@@ -105,10 +138,45 @@ def template_create():
         if 'template' in json_data and isinstance(json_data['template'], dict):
             template_data = json_data['template']
 
+            # Initialize empty lists for input_fields and output_fields
+            input_fields = []
+            output_fields = []
+            extras = []
+
+            # Regular expressions to match lines defining input and output fields with flexible spacing
+            input_fields_regex = re.compile(r"\s*input_fields\s*=\s*(\[.*\])")
+            output_fields_regex = re.compile(r"\s*output_fields\s*=\s*(\[.*\])")
+            extras_regex = re.compile(r"\s*extras\s*=\s*(\[.*\])")
+
+            # Search for input_fields and output_fields lines and extract data
+            for line in template_data.get('text').split('\n'):
+                input_match = input_fields_regex.search(line)
+                output_match = output_fields_regex.search(line)
+                extras_match = extras_regex.search(line)
+
+                try:
+                    if input_match:
+                        # Extract the input_fields list as a string and then safely evaluate it as Python code
+                        input_fields_str = input_match.group(1)
+                        input_fields = ast.literal_eval(input_fields_str)
+                    elif output_match:
+                        # Extract the output_fields list as a string and then safely evaluate it as Python code
+                        output_fields_str = output_match.group(1)
+                        output_fields = ast.literal_eval(output_fields_str)
+                    elif extras_match:
+                        # Extract the extras dictionary as a string and then safely evaluate it as Python code
+                        extras_str = extras_match.group(1)
+                        print(extras_str)
+                        extras = ast.literal_eval(extras_str)
+                except Exception as ex:
+                    return jsonify({"error": f"Invalid syntax {ex}", "message": "Syntax error on input, output or extras. Check your syntax."}), 400
             created_template = Template.create(
                 name=template_data.get('name'),
                 uid=uid,
-                text=template_data.get('text')
+                text=template_data.get('text'),
+                input_fields=input_fields,
+                output_fields=output_fields,
+                extras=extras
             )
 
             if created_template:

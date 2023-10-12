@@ -1,11 +1,11 @@
 from google.cloud import ndb
 
-from flask import Blueprint, flash, jsonify, request
+from flask import Blueprint, jsonify, request
 
 import flask_login
 from flask_login import current_user
 
-from SlothAI.web.models import Node, Pipeline
+from SlothAI.web.models import Node, Pipeline, Template
 
 node = Blueprint('node', __name__)
 
@@ -48,19 +48,21 @@ def node_update(node_id):
         if request.is_json:
             json_data = request.get_json()
 
+            template = Template.get(template_id=json_data.get())
+        
             # Check if 'node' key exists in json_data and use it to update the node
             if 'node' in json_data and isinstance(json_data['node'], dict):
                 node_data = json_data['node']
 
+                template = Template.get(template_id=node_data.get('template_id'))
+                print(template)
 
                 # Call the update function with the data from 'node' dictionary
                 updated_node = Node.update(
                     node_id=node_id,
                     name=node_data.get('name', node.get('name')),
                     extras=node_data.get('extras', node.get('extras')),
-                    input_keys=node_data.get('input_keys', node.get('input_keys')),
-                    output_keys=node_data.get('output_keys', node.get('output_keys')),
-                    method=node_data.get('method', node.get('method')),
+                    processor=node_data.get('processor', node.get('processor')),
                     template_id=node_data.get('template_id', node.get('template_id'))
                 )
 
@@ -76,6 +78,27 @@ def node_update(node_id):
         return jsonify({"error": "Not found", "message": "The requested node was not found."}), 404
 
 
+@node.route('/nodes/validate/openai', methods=['POST'])
+@flask_login.login_required
+def validate_openai():
+    uid = current_user.uid
+
+    if request.is_json:
+        json_data = request.get_json()
+
+    if json_data.get('openai_token', None):
+        import openai
+        openai.api_key = json_data.get('openai_token')
+        try:
+            result = openai.Model.list()
+        except:
+            return jsonify({'error': "Invalid Token.", "message": "That token did not validate."}), 400
+    else:
+        return jsonify({"error": "Invalid JSON", "message": "'openai_token' key with data is required in the request JSON."}), 400
+    
+    return jsonify({"result": "Token validated. Adding new node..."}), 200
+
+
 @node.route('/nodes', methods=['POST'])
 @node.route('/nodes/create', methods=['POST'])
 @flask_login.login_required
@@ -87,14 +110,14 @@ def node_create():
        
         if 'node' in json_data and isinstance(json_data['node'], dict):
             node_data = json_data['node']
+            print(node_data)
+            template = Template.get(template_id=node_data.get('template_id'))
 
             created_node = Node.create(
                 name=node_data.get('name'),
                 uid=uid,
-                extras=node_data.get('extras'),
-                input_keys=node_data.get('input_keys'),
-                output_keys=node_data.get('output_keys'),
-                method=node_data.get('method'),
+                extras=template.get('extras', []),
+                processor=node_data.get('processor'),
                 template_id=node_data.get('template_id')
             )
 
@@ -125,7 +148,6 @@ def node_delete(node_id):
 
         # If the node is not in any pipeline, proceed with deletion
         Node.delete(node_id=node.get('node_id'))
-        flash(f"Deleted node `{node.get('name')}`.")
         return jsonify({"response": "success", "message": "Node deleted successfully!"}), 200
     else:
         return jsonify({"error": f"Unable to delete node with id {node_id}"}), 501

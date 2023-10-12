@@ -53,11 +53,14 @@ class Template(ndb.Model):
     name = ndb.StringProperty()
     uid = ndb.StringProperty()
     text = ndb.StringProperty()
+    input_fields = ndb.JsonProperty()
+    output_fields = ndb.JsonProperty()
+    extras = ndb.JsonProperty()
     created = ndb.DateTimeProperty()
 
     @classmethod
     @ndb_context_manager
-    def create(cls, name, uid, text):
+    def create(cls, name, uid, text, input_fields=[], output_fields=[], extras=[]):
         current_utc_time = datetime.datetime.utcnow()
         existing_template = cls.query(cls.name == name, cls.uid == uid).get()
 
@@ -68,6 +71,9 @@ class Template(ndb.Model):
                 name=name,
                 uid=uid,
                 text=text,
+                input_fields=input_fields,
+                output_fields=output_fields,
+                extras=extras,
                 created=current_utc_time,
             )
             template.put()
@@ -77,7 +83,7 @@ class Template(ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def update(cls, template_id, uid, name, text):
+    def update(cls, template_id, uid, name, text, input_fields=[], output_fields=[], extras=[]):
         template = cls.query(cls.template_id == template_id, cls.uid == uid).get()
         if not template:
             print("didn't find template")
@@ -85,6 +91,9 @@ class Template(ndb.Model):
 
         template.name = name
         template.text = text
+        template.input_fields = input_fields
+        template.output_fields = output_fields
+        template.extras = extras
 
         template.put()
 
@@ -157,21 +166,19 @@ class Template(ndb.Model):
         else:
             return False
 
-            
+
 class Node(ndb.Model):
     node_id = ndb.StringProperty()
     name = ndb.StringProperty()
     uid = ndb.StringProperty()
-    input_keys = ndb.JsonProperty()
-    output_keys = ndb.JsonProperty()
-    extras = ndb.JsonProperty()  # auth, flavor, service, method, template, sql, etc.
     created = ndb.DateTimeProperty()
-    method = ndb.StringProperty()
+    processor = ndb.StringProperty()
     template_id = ndb.StringProperty()
+    extras = ndb.JsonProperty() # holds model flavor, tokens, etc.
     
     @classmethod
     @ndb_context_manager
-    def create(cls, name, uid, extras, input_keys, output_keys, method, template_id):
+    def create(cls, name, uid, extras, processor, template_id):
         current_utc_time = datetime.datetime.utcnow()
         node = cls.query(cls.name == name, cls.uid == uid).get()
 
@@ -189,11 +196,9 @@ class Node(ndb.Model):
                 node_id=node_id,
                 name=name,
                 uid=uid,
-                input_keys=input_keys,
-                output_keys=output_keys,
                 extras=extras,
                 created=current_utc_time,
-                method=method,
+                processor=processor,
                 template_id=template_id
             )
             node.put()
@@ -202,7 +207,7 @@ class Node(ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def update(cls, node_id, name, extras, input_keys, output_keys, method, template_id):
+    def update(cls, node_id, name, extras, processor, template_id):
         node = cls.query(cls.node_id == node_id).get()
         if not node:
             return None
@@ -215,10 +220,8 @@ class Node(ndb.Model):
             template_id = None
 
         node.name = name
-        node.input_keys = input_keys
-        node.output_keys = output_keys
         node.extras = extras
-        node.method = method
+        node.processor = processor
         node.template_id = template_id
 
         node.put()
@@ -257,6 +260,8 @@ class Node(ndb.Model):
             query_conditions.append(cls.name == kwargs['name'])
         if 'uid' in kwargs:
             query_conditions.append(cls.uid == kwargs['uid'])
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
 
         if query_conditions:
             query = ndb.AND(*query_conditions)

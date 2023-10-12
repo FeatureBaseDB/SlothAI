@@ -1,7 +1,23 @@
+{# Use this template to drive a random word generator! #}
+
+{# NOTE: You may remove any template commented lines, such as this one. #}
+
+{# No input_fields are used in this template: #}
+input_fields = []
+
+{# Hints for the output_fields expected from the node processor using this template: #}
+output_fields = [{'name': "words", 'type': "stringset"}]
+
+{# Define the 'extras' for number of keyterms desired  #}
+extras = [{'num_words': 5, 'model': 'random_word'}]
+
+{# Create a dictoionary that contains the 'words' stringset: #}
 {
-    "words": [
-        {% for _ in range(5) %}
+    "words": [[
+        {% for _ in range(task.document.extras[0]['num_words']) %}
             "{{ random_word() }}"{% if not loop.last %},{% endif %}
         {% endfor %}
-    ]
+    ]]
 }
+
+{# Output is added to the task document and handled by next node in the pipeline... #}

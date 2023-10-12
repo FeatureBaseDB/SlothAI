@@ -1,1 +1,27 @@
-text_to_keyterms.txt
+{# Use this template to drive an OpenAI keyerm processor! #}
+
+{# NOTE: You may remove any template commented lines, such as this one. #}
+
+{# Define the input_fields used in this template: #}
+input_fields = [{'name': "text", 'type': "string"}]
+
+{# Hints for the output_fields expected from the node processor using this template: #}
+output_fields = [{'name': "keyterms", 'type': "stringset"}]
+
+{# Define the 'extras' for number of keyterms desired  #}
+extras = [{'num_keyterms': 5, 'openai_token': "valid", 'model': 'gpt-3.5-turbo'}]
+
+{# Process the inputted array of strings: #}
+# complete dict task
+1. The user has provided the following from an input_field named 'text':
+"""
+{{process(task.document.text)}}
+"""
+2. Quickly build a list of {{task.document.extras[0]['num_keyterms']}} for the user and return them in a JSON dictionary:
+# required fields: '{{task.document.output_fields[0]['name']}}'
+
+{# ai_dict = forces the LLM to finish the line, forming a dictionary #}
+ai_dict = 
+
+{# The keys and values from the dictionary are added to the Document and passed to the next node in the pipeline. #}
+

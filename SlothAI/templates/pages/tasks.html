@@ -8,10 +8,6 @@
 {% block content %}
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">
-    {% for message in get_flashed_messages() %}
-        <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
-    {% endfor %}
-
     <h2 class="page_heading">Active Tasks</h2>
 
     {% if tasks %}

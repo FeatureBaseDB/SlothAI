@@ -11,16 +11,15 @@
     <h2 class="page_heading">Pipelines</h2>
 
     {% if pipelines %}
-    <div class="card rounded-lg">
-        <h2 class="page_heading">Current Pipelines</h2>
+    <div class="rounded-lg border p-3">
+        <h4 class="mb-3">Your Pipelines</h2>
         <p>Pipelines route data from endpoints to nodes. Nodes may transform the data, write to the database, or read from the database. Once data has been processed by a pipeline, it can be queried in your <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> account with SQL.</p>
         <table class="table table-striped">
             <thead>
                 <tr>
                     <th>Name</th>
                     <th>Nodes</th>
-                    <th></th>
-                    <th></th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -33,16 +32,17 @@
                         {% endfor %}
                     </td>
                     <td>
-                        <button class="delete-button btn btn-danger" data-pipeline-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i> Delete</button>
+                        <button class="delete-button btn btn-danger" data-pipeline-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
-            Add Pipeline
-        </button>
     </div>
+    <p></p>
+    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
+        Add Pipeline
+    </button>
     {% else %}
 
     <h2 class="page_heading">Task: Create a new pipeline</h2>

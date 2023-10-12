@@ -33,10 +33,6 @@ def pipelines():
     pipelines = Pipeline.fetch(uid=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
     
-    if not nodes:
-        initilize_nodes(current_user.uid)
-        nodes = Node.fetch(uid=current_user.uid)
-    
     return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=nodes)
 
 
@@ -101,44 +97,24 @@ def nodes():
     dbid = current_user.dbid
     nodes = Node.fetch(uid=current_user.uid)
 
-    if not nodes:
-        initilize_nodes(current_user.uid)
-        nodes = Node.fetch(uid=current_user.uid)
-
     templates = Template.fetch(uid=current_user.uid)
 
-    # Create a dictionary to look up template names by template_id
     template_lookup = {template['template_id']: template['name'] for template in templates}
 
-    name_random = random_name(3)
+    name_random = random_name(2).split('-')[1]
 
     # update the template names
     _nodes = []
     for node in nodes:
         if node.get('template_id'):
-            template_id = node['template_id']
-            template_name = template_lookup.get(template_id, "")
-            node['template_name'] = template_name
+            template = Template.get(template_id=node.get('template_id'))
+            node['template'] = template
         else:
-            node['template_name'] = ""
+            node['template'] = {}
         _nodes.append(node)
 
     return render_template(
         'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes, name_random=name_random
-    )
-
-
-@site.route('/nodes/<node_id>', methods=['GET'])
-@flask_login.login_required
-def node_detail(node_id):
-    # get the user and their tables
-    username = current_user.name
-    api_token = current_user.api_token
-    dbid = current_user.dbid
-    node = Node.get(uid=current_user.uid,node_id=node_id)
-
-    return render_template(
-        'pages/node.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, node=node
     )
 
 
@@ -147,7 +123,7 @@ def node_detail(node_id):
 def templates():
     username = current_user.name
     templates = Template.fetch(uid=current_user.uid)
-
+    print(templates)
     if not templates:
         return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
 
@@ -167,8 +143,10 @@ def template_detail(template_id="new"):
     template = Template.get(uid=current_user.uid,template_id=template_id)
     hostname = request.host
 
+    name_random = random_name(2)
+
     return render_template(
-        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, hostname=hostname
+        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, hostname=hostname, name_random=name_random
     )
 
 

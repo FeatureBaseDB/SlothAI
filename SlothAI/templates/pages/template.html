@@ -14,7 +14,7 @@
     </div>
     <form class="form-inline">
         <div class="form-group">
-            <input type="text" class="form-control" id="templateName" value="{% if template %}{{ template.name }}{% else %}your-template{% endif %}">
+            <input type="text" class="form-control" id="templateName" value="{% if template %}{{ template.name }}{% else %}{{name_random}}{% endif %}">
         </div>
 
         <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
@@ -51,11 +51,14 @@
         </button>
         <div class="dropdown-menu" aria-labelledby="generateTemplateDropdown">
             <!-- Text and Keyterms -->
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="uri_callback">URI Callback</a>
+            <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_keyterms">Text to Keyterms</a>
             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_and_keyterms_to_question">Text and Keyterms to Question</a>
             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_summary">Text to Summary</a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_vector">Text to Vector</a>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_ada_vector">Text to Ada Similarity Vector</a>
             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_keyterms_to_vector">Text and Keyterms to Vector</a>
             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="vector_to_texts">Vector to Texts (Similarity Query)</a>
             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="texts_and_keyterms_to_answer">Texts and Keyterms to Answer</a>
@@ -109,6 +112,7 @@ $(document).ready(function() {
                 data: JSON.stringify(data),
                 success: function(response) {
                     originalTemplateName = newName;
+                    toastr.info("Template renamed.");
                     $('#renameButton').hide();
                 },
                 error: function(error) {
@@ -144,7 +148,8 @@ $(document).ready(function() {
                     toastr.info("Template saved.")
                 },
                 error: function(error) {
-                    console.error('Error saving template text:', error);
+                    toastr.error(error.responseJSON.message);
+                    console.log(error.responseJSON.error);
                 }
             });
         } else {

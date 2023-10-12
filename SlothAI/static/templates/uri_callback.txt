@@ -1,0 +1,14 @@
+{# Use this template to callback a URI #}
+
+{# NOTE: You may remove any template commented lines, such as this one. #}
+
+{# Callback is a passthrough, so no input_fields need to be defined. #}
+input_fields = []
+
+{# Callback is a passthrough, so no output_fields need to be defined. #}
+output_fields = []
+
+{# Define the callback URI and any tokens or extra parameters  #}
+extras = [{'URI': "https://kordless.ngrok.dev/callback?token={{task.document.extras[1]['token']}}", 'token': "XXX"]
+
+{# ALL task.document keys and values are sent with a json document by POST to the callback URI. #}
