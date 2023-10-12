@@ -51,6 +51,10 @@ div.login_form h2 {
   font-weight: 700;
 }
 
+.selected-node {
+  margin-bottom: 10px;
+}
+
 .badge {
   margin-top: 4px;
   overflow: hidden;
