@@ -49,7 +49,7 @@ def template_update(template_id):
     if template:
         if request.is_json:
             json_data = request.get_json()
-
+            print(json_data)
             # Check if 'template' key exists in json_data and use it to update the template
             if 'template' in json_data and isinstance(json_data['template'], dict):
                 template_data = json_data['template']
@@ -95,7 +95,7 @@ def template_update(template_id):
                     extras=extras,
                     processor=template_data.get('processor', template.get('processor'))
                 )
-
+                print(updated_template.get('processor'))
                 # find the nodes using this and update the extras
                 nodes = Node.fetch(template_id=template_id)
 
@@ -107,7 +107,6 @@ def template_update(template_id):
                         processor=node.get('processor'),
                         template_id=node.get('template_id')
                     )
-                    print(updated_node)
 
                 if updated_template:
                     return jsonify(updated_template)
@@ -159,17 +158,14 @@ def template_create():
                     if input_match:
                         # Extract the input_fields list as a string and then safely evaluate it as Python code
                         input_fields_str = input_match.group(1)
-                        print(input_fields_str)
                         input_fields = ast.literal_eval(input_fields_str)
                     elif output_match:
                         # Extract the output_fields list as a string and then safely evaluate it as Python code
                         output_fields_str = output_match.group(1)
-                        print(output_fields_str)
                         output_fields = ast.literal_eval(output_fields_str)
                     elif extras_match:
                         # Extract the extras dictionary as a string and then safely evaluate it as Python code
                         extras_str = extras_match.group(1)
-                        print(extras_str)
                         extras = ast.literal_eval(extras_str)
                 except Exception as ex:
                     return jsonify({"error": f"Invalid syntax {ex}", "message": "Syntax error on input, output or extras. Check your syntax."}), 400

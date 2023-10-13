@@ -24,6 +24,8 @@
                     <th>Action</th>
                 </tr>
             </thead>
+            {# the hacky reload thing requires no tbody be present, so it can reload #}
+            {% if templates %}
             <tbody id="templateTable">
                 {% for template in templates %}
                 <tr>
@@ -66,6 +68,7 @@
                 </tr>
                 {% endfor %}
             </tbody>
+            {% endif %}
         </table>
     </div>
     <p></p>
@@ -78,11 +81,24 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
+    function checkAndReloadIfEmpty() {
+        var tbodyElement = $("tbody");
+        if (tbodyElement.length === 0) {
+            return;
+        }
+        var rowCount = tbodyElement.find("tr").length;
+        if (rowCount === 0) {
+            window.location.href = "/templates/new";
+        }
+    }
+    
+    checkAndReloadIfEmpty();
+    setInterval(checkAndReloadIfEmpty, 2000);
+
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
         var template_id = $(this).data("template-id");
         var spinner = $(this).siblings(".spinner-border");
-        var rowCount = $("tbody tr").length;
 
         spinner.show();
         $(this).hide();
@@ -93,9 +109,6 @@ $(document).ready(function() {
             success: function (response) {
                 $(this).closest("tr").remove();
                 toastr.success('Template deleted.');
-                if (rowCount === 1) {
-                    window.location.href = "/templates/new";
-                }
             }.bind(this), // Maintain the reference to the button
             error: function (error) {
                 toastr.error(error.responseJSON.message);

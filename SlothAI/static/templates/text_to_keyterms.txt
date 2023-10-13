@@ -9,7 +9,7 @@ input_fields = [{'name': "text", 'type': "string"},{'name': "keyterms", 'type': 
 output_fields = [{'name': "keyterms", 'type': "stringset"}]
 
 {# Define the 'extras' for number of keyterms desired  #}
-extras = [{'num_keyterms': 5, 'openai_token': "valid", 'model': 'gpt-3.5-turbo'}]
+extras = [{'num_keyterms': None, 'openai_token': "generate", 'model': 'gpt-3.5-turbo'}]
 
 {# Process the inputted array of strings: #}
 # complete dict task

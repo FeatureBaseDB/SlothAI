@@ -196,6 +196,10 @@ span.command-copy {
   /* Add any other styling you desire for the callout here */
 }
 
+#dynamicFieldsContainer input {
+    margin-bottom: 10px;
+}
+
 #templateText {
     height: 60vh; /* Use vh units for the height */
     resize: none;
