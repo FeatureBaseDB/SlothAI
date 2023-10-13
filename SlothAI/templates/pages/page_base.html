@@ -16,6 +16,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
     {% block style %}
     {% endblock %}
 </head>
@@ -28,19 +29,20 @@
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ml-auto">
-            <li class="nav-item dropdown">
-                <!-- Remove data-toggle and aria-expanded attributes -->
-                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button">
+<div class="collapse navbar-collapse" id="navbarNav">
+    <ul class="navbar-nav ml-auto">
+        <li class="nav-item dropdown">
+            <div class="dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href id="userDropdown" role="button">
                     {{username}}
                 </a>
                 <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
                     <a class="dropdown-item" href="/logout">Logout</a>
                 </div>
-            </li>
-        </ul>
-    </div>
+            </div>
+        </li>
+    </ul>
+</div>
 
 </nav>
 
@@ -63,6 +65,54 @@
     </a>
 </div>
 
+{% macro generate_regular_badge(field_name, field_type) %}
+    {% set badge_class = {
+        'stringset': 'badge-primary',
+        'vector': 'badge-secondary',
+        'string': 'badge-success',
+        'integer': 'badge-warning',
+        'boolean': 'badge-danger',
+        'decimal': 'badge-outline',
+        'date': 'badge-info',
+        'timestamp': 'badge-info',
+        'list': 'badge-light'
+    } %}
+
+    {# Determine which badge class to use based on the field type #}
+    {% set badge_to_use = badge_class[field_type] if field_type in badge_class else badge_class['default'] %}
+    
+    <span class="badge {{ badge_to_use }}">
+        {{ field_name }}: {{ field_type }}
+    </span>
+{% endmacro %}
+
+{% macro generate_extra_badge(extra_name, extra_value) %}
+    {# Determine which badge class to use based on the extra name (key) #}
+    {% set extra_badge_class = {
+        'vector_size': 'badge-success',
+        'model': 'badge-warning',
+        'URI': 'badge-primary',
+        'SQL': 'badge-secondary',
+        'table': 'badge-info',
+        'openai_token': 'badge-danger',
+        'token': 'badge-danger',
+        'default': 'badge-info'
+    } %}
+    
+    {% set badge_to_use = extra_badge_class[extra_name] if extra_name in extra_badge_class else extra_badge_class['default'] %}
+    
+    {# Check if extra_value is present and adjust the badge text accordingly #}
+    {% if extra_value is defined %}
+        {% set badge_text = extra_name ~ ': ' ~ extra_value %}
+    {% else %}
+        {% set badge_text = extra_name %}
+    {% endif %}
+ 
+    <span class="badge {{ badge_to_use }}">
+        {{ badge_text }}
+    </span>
+{% endmacro %}
+
 
 {% block content %}
 {% endblock %}
@@ -73,9 +123,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
 
-
 <script type="text/javascript">
 $(document).ready(function() {
+    // no clue what's wrong with the dropdown. blame the AI.
+    $(document).ready(function() {
+        $('.dropdown-toggle').dropdown();
+    });
+
     toastr.options = {
       "positionClass": "toast-bottom-right",
     }

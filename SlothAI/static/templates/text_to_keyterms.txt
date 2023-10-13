@@ -1,9 +1,9 @@
-{# Use this template to drive an OpenAI keyerm processor! #}
+{# Use this template to drive an OpenAI keyterm processor! #}
 
 {# NOTE: You may remove any template commented lines, such as this one. #}
 
 {# Define the input_fields used in this template: #}
-input_fields = [{'name': "text", 'type': "string"}]
+input_fields = [{'name': "text", 'type': "string"},{'name': "keyterms", 'type': "stringset"}]
 
 {# Hints for the output_fields expected from the node processor using this template: #}
 output_fields = [{'name': "keyterms", 'type': "stringset"}]

@@ -56,11 +56,12 @@ class Template(ndb.Model):
     input_fields = ndb.JsonProperty()
     output_fields = ndb.JsonProperty()
     extras = ndb.JsonProperty()
+    processor = ndb.StringProperty()
     created = ndb.DateTimeProperty()
 
     @classmethod
     @ndb_context_manager
-    def create(cls, name, uid, text, input_fields=[], output_fields=[], extras=[]):
+    def create(cls, name, uid, text, input_fields=[], output_fields=[], extras=[], processor="template"):
         current_utc_time = datetime.datetime.utcnow()
         existing_template = cls.query(cls.name == name, cls.uid == uid).get()
 
@@ -74,6 +75,7 @@ class Template(ndb.Model):
                 input_fields=input_fields,
                 output_fields=output_fields,
                 extras=extras,
+                processor=processor,
                 created=current_utc_time,
             )
             template.put()
@@ -83,7 +85,7 @@ class Template(ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def update(cls, template_id, uid, name, text, input_fields=[], output_fields=[], extras=[]):
+    def update(cls, template_id, uid, name, text, input_fields=[], output_fields=[], extras=[], processor="template"):
         template = cls.query(cls.template_id == template_id, cls.uid == uid).get()
         if not template:
             print("didn't find template")
@@ -94,6 +96,7 @@ class Template(ndb.Model):
         template.input_fields = input_fields
         template.output_fields = output_fields
         template.extras = extras
+        template.processor = processor
 
         template.put()
 
@@ -104,6 +107,8 @@ class Template(ndb.Model):
     def fetch(cls, **kwargs):
         query_conditions = []
 
+        if 'processor' in kwargs and 'uid' in kwargs:
+            query_conditions.append(cls.processor == kwargs['processor'], cls.uid == kwargs['uid'])
         if 'template_id' in kwargs:
             query_conditions.append(cls.template_id == kwargs['template_id'])
         if 'name' in kwargs:
@@ -127,7 +132,8 @@ class Template(ndb.Model):
     @ndb_context_manager
     def get(cls, **kwargs):
         query_conditions = []
-
+        if 'processor' in kwargs and 'uid' in kwargs:
+            query_conditions.append(cls.processor == kwargs['processor'], cls.uid == kwargs['uid'])
         if 'template_id' in kwargs:
             query_conditions.append(cls.template_id == kwargs['template_id'])
         if 'name' in kwargs:

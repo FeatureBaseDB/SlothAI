@@ -13,7 +13,7 @@
     {% if pipelines %}
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Pipelines</h4>
-        <p>Pipelines route data from endpoints to nodes. Nodes may transform the data, write to the database, or read from the database. Once data has been processed by a pipeline, it can be queried in your <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> account with SQL.</p>
+        <p>Pipelines route data from endpoints to nodes. Nodes may transform the data, or write to and read from the database. Once data has been processsed by the pipeline's nodes, it can be queried in your <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> account with SQL.</p>
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -61,7 +61,7 @@
     -d '{"text":"There was a sudden knock at the door, then silence."}' \
     https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
         <p></p>
-        <p>Once the job is complete, a sample response will look like this:</p>
+        <p>When the document task sent, a response will look like this:</p>
         <div class="code-block">{
     "data": {
         "attributes": [
@@ -113,7 +113,7 @@
             <optgroup id="nodePulldown" label="Available Nodes">
                 <option data-node_name="none">None</option>
                 {% for node in nodes %}
-                    <option data-node_name="{{ node.name }}" data-node_extras="{{ node.extras }}" data-node_processor="{{ node.processor }}">{{ node.name }}</option>
+                    <option data-node_name="{{ node.name }}" data-node_extras="{{ node.extras }}" data-node_processor="{{ node.processor }}">{{ node.name }} ({{ node.processor }})</option>
                 {% endfor %}
             </optgroup>
         </select>

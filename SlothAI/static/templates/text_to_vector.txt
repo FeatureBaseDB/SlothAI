@@ -1,4 +1,4 @@
-{# Use this template to drive an OpenAI embedding node processor! #}
+{# Use this template to drive a Insructor XL embedding node processor! #}
 
 {# NOTE: You may remove any template commented lines, such as this one. #}
 
@@ -8,11 +8,11 @@ input_fields = [{'name': "texts", 'type': "stringset"}]
 {# Hints for the output_fields expected from the node processor using this template: #}
 output_fields = [{'name': "text_embedding", 'type': "vector"}]
 
-{# 1. Define the 'extras' for embedding vector size and model flavor #}
-{# 2. For OpenAI ada-002-similarity embeddings, see the `Text to Ada Vector` template #}
+{# 1. Define the 'extras' for embedding vector size and model flavor - use instructor_xl for lower perplexity #}
+{# 2. For OpenAI ada-002-similarity embeddings, see the `Convert text to an OpenAI ada-similarity vector` template #}
 extras = [{'vector_size': 768}, {'model': 'instructor_large'}]  
 
 {# Process the inputted array of strings: #}
-{{process(task.document.texts)}}
+{{task.document.texts}}
 
 {# Output is handled by next node in the pipeline... #}

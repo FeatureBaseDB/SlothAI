@@ -46,30 +46,21 @@
     </button>
 
     <div class="dropdown d-inline">
+    <div class="dropdown d-inline">
         <button class="btn btn-warning dropdown-toggle" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-cogs"></i> Choose Template
         </button>
         <div class="dropdown-menu" aria-labelledby="generateTemplateDropdown">
-            <!-- Text and Keyterms -->
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="uri_callback">URI Callback</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_keyterms">Text to Keyterms</a>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_and_keyterms_to_question">Text and Keyterms to Question</a>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_summary">Text to Summary</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_vector">Text to Vector</a>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_ada_vector">Text to Ada Similarity Vector</a>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_keyterms_to_vector">Text and Keyterms to Vector</a>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="vector_to_texts">Vector to Texts (Similarity Query)</a>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="texts_and_keyterms_to_answer">Texts and Keyterms to Answer</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_stringset">Text to Stringset</a>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_stringset">Text to Sentiment</a>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="text_to_sql">Text to SQL (Query)</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generateHeadersModal" data-template-name="random_word">Random Word (Utility)</a>
+            {% for item in template_examples %}
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generativeTemplateModal" data-template-name="{{ item.template_name }}" data-processor-type="{{ item.processor_type }}">{{ item.name }}</a>
+                {% if not loop.last and item.processor_type != template_examples[loop.index].processor_type %}
+                    <div class="dropdown-divider"></div>
+                {% endif %}
+            {% endfor %}
         </div>
     </div>
+
+
 </div>
 {% endblock %}
 
@@ -89,7 +80,8 @@ $(document).ready(function() {
     var originalTemplateName = $("#templateName").val();
     var originalTemplateText = $("#templateText").val();
     var templateNameChanged = false;
-
+    var selectedProcessorType = "template";
+    
     $("#renameButton").on("click", function() {
         event.preventDefault();
         var newName = $("#templateName").val();
@@ -126,18 +118,20 @@ $(document).ready(function() {
     var toastrWarningCount = 0;
     var maxToastrWarnings = Math.floor(Math.random() * (10 - 3 + 1)) + 3;
         
-    // Save Button Click Event
     $("#saveButton").on("click", function(event) {
         event.preventDefault();
+        var selectedTemplate = $("#generateTemplateDropdown .dropdown-item.active");
         var newTemplateText = $("#templateText").val();
 
         if (newTemplateText !== originalTemplateText) {
             var data = {
                 "template": {
                     "name": $("#templateName").val(),
-                    "text": newTemplateText
+                    "text": newTemplateText,
+                    "processor": selectedProcessorType
                 }
             };
+            console.log(data)
             $.ajax({
                 url: 'http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/templates/{% if template %}{{template.template_id}}{% else %}create{% endif %}',
                 type: 'POST',
@@ -145,13 +139,14 @@ $(document).ready(function() {
                 data: JSON.stringify(data),
                 success: function(response) {
                     window.location.href = "/templates/"+response.template_id;
-                    toastr.info("Template saved.")
+                    toastr.info("Template saved.");
                 },
                 error: function(error) {
                     toastr.error(error.responseJSON.message);
                     console.log(error.responseJSON.error);
                 }
             });
+
         } else {
             toastrWarningCount++;
             if (toastrWarningCount < maxToastrWarnings) {
@@ -160,7 +155,9 @@ $(document).ready(function() {
                 toastr.warning("Ok, I get it.");
             }
         }
+    
     });
+
 
     $(document).on("keydown", function (event) {
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
@@ -236,6 +233,8 @@ $(document).ready(function() {
     
     // Handle the template selection from the dropdown
     $(".dropdown-item").on("click", function() {
+        selectedProcessorType = $(this).data("processor-type"); // Set the global variable
+        console.log(selectedProcessorType);
         var templateName = $(this).data("template-name");
         // Properly encode the template name
         var encodedTemplateName = encodeURIComponent(templateName);
@@ -251,7 +250,7 @@ $(document).ready(function() {
                 toastr.error('Error loading template: ' + error.responseText);
             }
         });
-    });
+});
 });
 </script>
 {% endblock %}

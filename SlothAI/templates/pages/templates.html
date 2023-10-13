@@ -5,36 +5,6 @@
 <meta property='og:title' content='Templates | FeatureBase AI'/>
 {% endblock %}
 
-{% macro generate_regular_badge(field_name, field_type) %}
-    {% set badge_class = {
-        'stringset': 'badge-primary',
-        'vector': 'badge-secondary',
-        'default': 'badge-info'
-    } %}
-    
-    {# Determine which badge class to use based on the field type #}
-    {% set badge_to_use = badge_class[field_type] if field_type in badge_class else badge_class['default'] %}
-    
-    <span class="badge {{ badge_to_use }}">
-        {{ field_name }}: {{ field_type }}
-    </span>
-{% endmacro %}
-
-{% macro generate_extra_badge(extra_name, extra_type) %}
-    {% set extra_badge_class = {
-        'vector_size': 'badge-success',
-        'model': 'badge-warning',
-        'default': 'badge-info'
-    } %}
-    
-    {# Determine which badge class to use based on the extra name (key) #}
-    {% set badge_to_use = extra_badge_class[extra_name] if extra_name in extra_badge_class else extra_badge_class['default'] %}
-    
-    <span class="badge {{ badge_to_use }}">
-        {{ extra_name }}: {{ extra_type }}
-    </span>
-{% endmacro %}
-
 {% block content %}
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">
@@ -46,37 +16,47 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Name</th>
+                    <th>Template</th>
+                    <th>Processor</th>
                     <th>Inputs</th>
-                    <th>Output Hints</th>
+                    <th>Outputs</th>
                     <th>Extras</th>
                     <th>Action</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="templateTable">
                 {% for template in templates %}
                 <tr>
                     <td><a href="/templates/{{ template.template_id }}">{{ template.name }}</a></td>
+                    <td><button class="btn btn-secondary" disabled>{{ template.processor }}</button></td>
                     <td>
                         {% for input_field in template.input_fields %}
-                            {{ generate_regular_badge(input_field.name, input_field.type) }}
+                            <span>
+                                {{ generate_regular_badge(input_field.name, input_field.type) }}
+                            </span>
+                            <br>
                         {% endfor %}
                     </td>
                     <td>
                         {% for output_field in template.output_fields %}
-                            {{ generate_regular_badge(output_field.name, output_field.type) }}
+                            <span>
+                                {{ generate_regular_badge(output_field.name, output_field.type) }}
+                            </span>
+                            <br>
                         {% endfor %}
                     </td>
                     <td>
                         {% if template.extras %}
-                        {% for extra in template.extras %}
-                            {% for key, value in extra.items() %}
-                                {{ generate_extra_badge(key, value) }}
+                            {% for extra in template.extras %}
+                                {% for key, value in extra.items() %}
+                                    <span>
+                                        {{ generate_extra_badge(key) }}
+                                    </span>
+                                    <br>
+                                {% endfor %}
                             {% endfor %}
-                        {% endfor %}
                         {% endif %}
                     </td>
-
                     <td>
                         <button class="delete-button btn btn-danger" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
                         <div class="spinner-border text-danger" role="status" style="display: none;">
@@ -126,6 +106,25 @@ $(document).ready(function() {
             }.bind(this) // Maintain the reference to the button
         });
     });
+    // JavaScript to change button colors
+    const buttons = document.querySelectorAll("#templateTable button");
+
+    buttons.forEach(button => {
+        const name = button.innerText;
+        const color = getColorFromName(name);
+        button.style.backgroundColor = color;
+        button.style.borderColor = color;
+    });
+
+    // Function to generate a color based on the name
+    function getColorFromName(name) {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 3) - hash);
+        }
+        const color = `hsl(${hash % 360}, 70%, 50%)`; // Generate an HSL color
+        return color;
+    }
 });
 </script>
 {% endblock %}

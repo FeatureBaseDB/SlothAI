@@ -5,36 +5,6 @@
 <meta property='og:title' content='Templates | FeatureBase AI'/>
 {% endblock %}
 
-{% macro generate_regular_badge(field_name, field_type) %}
-    {% set badge_class = {
-        'stringset': 'badge-primary',
-        'vector': 'badge-secondary',
-        'default': 'badge-info'
-    } %}
-    
-    {# Determine which badge class to use based on the field type #}
-    {% set badge_to_use = badge_class[field_type] if field_type in badge_class else badge_class['default'] %}
-    
-    <span class="badge {{ badge_to_use }}">
-        {{ field_name }}: {{ field_type }}
-    </span>
-{% endmacro %}
-
-{% macro generate_extra_badge(extra_name, extra_type) %}
-    {% set extra_badge_class = {
-        'vector_size': 'badge-success',
-        'model': 'badge-warning',
-        'default': 'badge-info'
-    } %}
-    
-    {# Determine which badge class to use based on the extra name (key) #}
-    {% set badge_to_use = extra_badge_class[extra_name] if extra_name in extra_badge_class else extra_badge_class['default'] %}
- 
-    <span class="badge {{ badge_to_use }}">
-        {{ extra_name }}: {{ extra_type }}
-    </span>
-{% endmacro %}
-
 {% block content %}
 <div class="content container mt-5 pt-5">
     {% if nodes %}
@@ -47,30 +17,22 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Name</th>
+                    <th>Node</th>
                     <th>Processor</th>
                     <th>Template</th>
-                    <th>Extras</th>
-                    <th>Inputs</th>
+                    <th>Inputs Keys</th>
                     <th>Output Hints</th>
-                    <th></th>
+                    <th>Extras</th>
+                    <th>Action</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="nodeTable">
                 {% for node in nodes %}
                 <tr>
-                    <td><span class="badge badge-secondary">{{ node.name }}</span></td>
-                    <td>{{ node.processor }}</td>
+                    <td><button class="btn btn-primary" disabled>{{ node.name }}</button></td>
+                    <td><button class="btn btn-secondary" disabled>{{ node.processor }}</button></td>
+
                     <td><a href="/templates/{{ node.template_id }}">{{ node.get('template').get('name') }}</a></td>
-                    <td>
-                        {% if node.extras %}
-                        {% for extra in node.extras %}
-                            {% for key, value in extra.items() %}
-                                {{ generate_extra_badge(key, value) }}
-                            {% endfor %}
-                        {% endfor %}
-                        {% endif %}
-                    </td>
                     <td>
                         {% for input_fields in node.template.input_fields %}
                             {{ generate_regular_badge(input_fields.name, input_fields.type) }}
@@ -81,7 +43,16 @@
                             {{ generate_regular_badge(output_field.name, output_field.type) }}
                         {% endfor %}
                     </td>
+                    <td>
+                        {% if node.extras %}
+                        {% for extra in node.extras %}
+                            {% for key, value in extra.items() %}
+                                {{ generate_extra_badge(key) }}
+                            {% endfor %}
+                        {% endfor %}
+                        {% endif %}
                     </td>
+
                     <td>
                         <button class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></button>
                         <div class="spinner-border text-danger" role="status" style="display: none;">
@@ -98,15 +69,27 @@
         <i class="fas fa-plus"></i> Add Node
     </button>
     {% else %}
-    <!-- No Nodes Available -->
-    <h2 class="page_heading">Node</h2>
-    <div class="rounded-lg border p-3">
-        <h4 class="mb-3">Create a New Node</h4>
-        <p>You have no nodes defined. Click the "Add Node" button below to create your first node.</p>
-        <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal">
-            <i class="fas fa-plus"></i> Add Node
-        </button>
-    </div>
+        {% if templates_exist %}
+        <!-- No Nodes Available -->
+        <h2 class="page_heading">Node</h2>
+        <div class="rounded-lg border p-3">
+            <h4 class="mb-3">Create a New Node</h4>
+            <p>You have no nodes defined. Click the "Add Node" button below to create your first node. </p>
+            <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal">
+                <i class="fas fa-plus"></i> Add Node
+            </button>
+        </div>
+        {% else %}
+            <!-- No Nodes Available -->
+        <h2 class="page_heading">Node</h2>
+        <div class="rounded-lg border p-3">
+            <h4 class="mb-3">Cannot Create a New Node</h4>
+            <p>You have no templates defined. Click the "Add Template" button below to create your first template. </p>
+            <button type="button" id="addTemplateButton" class="btn btn-success" data-toggle="modal">
+                <i class="fas fa-plus"></i> Add Template
+            </button>
+        </div>
+        {% endif %}
     {% endif %}
 </div>
 
@@ -129,17 +112,9 @@
                     <div class="form-group">
                         <label for="nodeProcessor">Node Processor:</label>
                         <select class="form-control" id="nodeProcessor">
-                            <option value="bare">Bare (template only)</option>
-                            <option value="callback">URI Callback (POSTs to URI)</option>
-                            <option value="uri_to_text">URI to Text (File to Full Text)</option>
-                            <option value="uri_to_stringset">URI to Stringset (Image File to Lables)</option>
-                            <option value="text_to_strings">Text to Strings (Chunks to String Array)</option>
-                            <option value="strings_to_stringset">String(s) to Stringset</option>
-                            <option value="stringset_to_strings">Stringset to Strings </option>
-                            <option value="strings_to_embeddings">Strings to Embedding Vectors</option>
-                            <option value="embedding_to_sql">Embedding to SQL Query (Read Records)</option>
-                            <option value="dict_to_sql">Dictionary to SQL Query (Read Records)</option>
-                            <option value="dict_to_table">Dictionary to Table (Write Records)</option>
+                        {% for processor in processors %}
+                        <option value="{{ processor['value'] }}">{{ processor['label'] }}</option>
+                        {% endfor %}
                         </select>
                     </div>
                     <div class="form-group" style="display: none;" id="nodeTemplateContainer">
@@ -199,6 +174,32 @@ $(document).ready(function() {
         });
     });
 
+    // JavaScript to change button colors
+    const buttons = document.querySelectorAll("#nodeTable button");
+
+    buttons.forEach(button => {
+        const name = button.innerText;
+        const color = getColorFromName(name);
+        button.style.backgroundColor = color;
+        button.style.borderColor = color;
+    });
+
+    // Function to generate a color based on the name
+    function getColorFromName(name) {
+        // You can use any algorithm or library to generate colors from the name
+        // Here's a simple example using a hash function
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const color = `hsl(${hash % 360}, 70%, 60%)`; // Generate an HSL color
+        return color;
+    }
+
+    $("#addTemplateButton").on("click", function() {
+        window.location.href = "/templates/new";
+    });
+
     $("#addNodeButton").on("click", function() {
         $.ajax({
             url: '/templates/list',
@@ -211,23 +212,35 @@ $(document).ready(function() {
                     text: "None"
                 }));
     
-                response.forEach(function(template) {
+                response.forEach(function (template) {
                     var optionText = template.name;
-                    if (Array.isArray(template.input_fields) && template.input_fields.length > 0) {
-                        optionText += " (" + template.input_fields[0].type + " to " + template.output_fields[0].type + ")";
-                    } else {
-                        if (Array.isArray(template.output_fields) && template.output_fields.length > 0) {
-                            optionText += " (to " + template.output_fields[0].type + ")";
-                        } else {
-                            optionText += " (passthrough)"
-                        }
+
+                    // Check if the processor is available, and append it with a hyphen if it exists
+                    if (template.processor) {
+                        optionText += " ➔ " + template.processor;
                     }
-    
+
+                    if (Array.isArray(template.input_fields) && template.input_fields.length > 0) {
+                        var inputFieldNames = template.input_fields.map(function (inputField) {
+                            return inputField.name;
+                        });
+                        optionText += " (" + inputFieldNames.join(', ') + ")";
+                    }
+
+                    if (Array.isArray(template.output_fields) && template.output_fields.length > 0) {
+                        optionText += " ➔ " + template.output_fields.map(function (outputField) {
+                            return outputField.name;
+                        }).join(', ');
+                    } else if (!Array.isArray(template.input_fields) || template.input_fields.length === 0) {
+                        optionText += " ➔ passthrough";
+                    }
+
                     templateSelect.append($('<option>', {
                         value: template.template_id,
                         text: optionText
                     }));
                 });
+
                 $("#nodeTemplateSpinner").hide();
                 $("#nodeTemplateContainer").show();
                 
@@ -239,7 +252,7 @@ $(document).ready(function() {
                         $.ajax({
                             url: '/templates/' + selectedTemplateId + '/detail',
                             type: 'GET',
-                            success: function(response) {
+                            success: function (response) {
                                 if (response.extras && Array.isArray(response.extras)) {
                                     for (var i = 0; i < response.extras.length; i++) {
                                         if (response.extras[i].openai_token) {
@@ -250,13 +263,19 @@ $(document).ready(function() {
                                         }
                                     }
                                 }
+                                
+                                if (response.processor) {
+                                    // Set the selected processor in the dropdown
+                                    $("#nodeProcessor").val(response.processor);
+                                }
                             },
-                            error: function(error) {
+                            error: function (error) {
                                 toastr.error('Error fetching template detail:', error);
                             }
                         });
                     }
                 });
+
             },
             error: function(error) {
                 toastr.error('Error fetching templates:', error);

@@ -99,10 +99,28 @@ def nodes():
     nodes = Node.fetch(uid=current_user.uid)
 
     templates = Template.fetch(uid=current_user.uid)
+    
+    templates_exist = True
+    if not templates:
+        templates_exist = False
 
     template_lookup = {template['template_id']: template['name'] for template in templates}
 
     name_random = random_name(2).split('-')[1]
+
+    processors = [
+        {"value": "jinja2", "label": "Jinja2 Processor"},
+        {"value": "callback", "label": "Callback Processor"},
+        {"value": "read_file", "label": "Read Processor (File)"},
+        {"value": "read_uri", "label": "Read Processor (URI)"},
+        {"value": "read_featurebase", "label": "Read Processor (FeatureBase)"},
+        {"value": "write_featurebase", "label": "Write Processor (FeatureBase)"},
+        {"value": "aidict", "label": "Generative Completion Processor"},
+        {"value": "aichat", "label": "Generative Chat Processor"},
+        {"value": "embedding", "label": "Embedding Vectors Processor"},
+        {"value": "aivision", "label": "Vision Processor"},
+        {"value": "aiaudio", "label": "Audio Processor"}
+    ]
 
     # update the template names
     _nodes = []
@@ -115,7 +133,7 @@ def nodes():
         _nodes.append(node)
 
     return render_template(
-        'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes, name_random=name_random
+        'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes, name_random=name_random, templates_exist=templates_exist, processors=processors
     )
 
 
@@ -124,7 +142,7 @@ def nodes():
 def templates():
     username = current_user.name
     templates = Template.fetch(uid=current_user.uid)
-    print(templates)
+    
     if not templates:
         return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
 
@@ -146,8 +164,30 @@ def template_detail(template_id="new"):
 
     name_random = random_name(2)
 
+    # template examples
+    template_examples = [
+        {"name": "Callback a URL with data", "template_name": "callback", "processor_type": "callback"},
+        {"name": "Read PDF and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
+        {"name": "Read image and convert objects to labels", "template_name": "image_to_labels", "processor_type": "read_file"},
+        {"name": "Read from a URI and convert to text", "template_name": "uri_to_text", "processor_type": "read_uri"},
+        {"name": "Generate a random word", "template_name": "random_word", "processor_type": "jinja2"},
+        {"name": "Extract keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
+        {"name": "Create a question from text and keyterms", "template_name": "text_and_keyterms_to_question", "processor_type": "aidict"},
+        {"name": "Generate a summary from text", "template_name": "text_to_summary", "processor_type": "aidict"},
+        {"name": "Convert text to stringset", "template_name": "text_to_stringset", "processor_type": "aidict"},
+        {"name": "Analyze text sentiment", "template_name": "text_to_sentiment", "processor_type": "aidict"},
+        {"name": "Generate answers from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aidict"},
+        {"name": "Converse and answer questions from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aichat"},
+        {"name": "Convert text to vector", "template_name": "text_to_vector", "processor_type": "embedding"},
+        {"name": "Convert text to an OpenAI ada-similarity vector", "template_name": "text_to_ada_vector", "processor_type": "embedding"},
+        {"name": "Convert text and keyterms to vector", "template_name": "text_keyterms_to_vector", "processor_type": "embedding"},
+        {"name": "Find similar texts using a vector", "template_name": "vector_to_texts", "processor_type": "read_featurebase"},
+        {"name": "Query table for records", "template_name": "query_table", "processor_type": "read_featurebase"},
+        {"name": "Write to table", "template_name": "write_table", "processor_type": "write_featurebase"},
+    ]
+
     return render_template(
-        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, hostname=hostname, name_random=name_random
+        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, hostname=hostname, name_random=name_random,  template_examples=template_examples
     )
 
 

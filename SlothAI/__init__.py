@@ -1,6 +1,6 @@
 import flask_login
 
-from flask import Flask, render_template, make_response
+from flask import Flask, render_template, make_response, request
 
 from google.cloud import ndb
 
@@ -89,12 +89,13 @@ def create_app(conf='dev'):
         pass
     @app.errorhandler(404)
     def f404_notfound(e):
-        response = make_response(
-            render_template(
-                'pages/404_notfound.html'
-            )
-        )
-        return response, 404
+        # Check if the request URL contains "/static/templates/"
+        if "/static/templates/" in request.path:
+            return "Not found.", 404
+        else:
+            # Render the 404 HTML page for other URLs
+            response = make_response(render_template('pages/404_notfound.html'))
+            return response, 404
 
     return app
     # flask --app SlothAI run --port 8080 --debug

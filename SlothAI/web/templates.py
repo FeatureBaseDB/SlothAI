@@ -92,7 +92,8 @@ def template_update(template_id):
                     text=template_data.get('text', template.get('text')),
                     input_fields=input_fields,
                     output_fields=output_fields,
-                    extras=extras
+                    extras=extras,
+                    processor=template_data.get('processor', template.get('processor'))
                 )
 
                 # find the nodes using this and update the extras
@@ -158,10 +159,12 @@ def template_create():
                     if input_match:
                         # Extract the input_fields list as a string and then safely evaluate it as Python code
                         input_fields_str = input_match.group(1)
+                        print(input_fields_str)
                         input_fields = ast.literal_eval(input_fields_str)
                     elif output_match:
                         # Extract the output_fields list as a string and then safely evaluate it as Python code
                         output_fields_str = output_match.group(1)
+                        print(output_fields_str)
                         output_fields = ast.literal_eval(output_fields_str)
                     elif extras_match:
                         # Extract the extras dictionary as a string and then safely evaluate it as Python code
@@ -170,13 +173,15 @@ def template_create():
                         extras = ast.literal_eval(extras_str)
                 except Exception as ex:
                     return jsonify({"error": f"Invalid syntax {ex}", "message": "Syntax error on input, output or extras. Check your syntax."}), 400
+            
             created_template = Template.create(
                 name=template_data.get('name'),
                 uid=uid,
                 text=template_data.get('text'),
                 input_fields=input_fields,
                 output_fields=output_fields,
-                extras=extras
+                extras=extras,
+                processor=template_data.get('processor')
             )
 
             if created_template:
