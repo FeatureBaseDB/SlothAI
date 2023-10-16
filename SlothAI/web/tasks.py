@@ -78,8 +78,6 @@ def process_tasks(cron_key):
 		task.queue()
 	
 	return f"successfully completed node {node.get('name')}", 200
-	
-
 
 def featurebase(task, user):
 	# at this point we should have data for every text element for every model.

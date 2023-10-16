@@ -571,3 +571,25 @@ class User(flask_login.UserMixin, ndb.Model):
         result = cls.query(cls.api_token == api_token).get()
         return result.to_dict() if result else None
 
+class Log(flask_login.UserMixin, ndb.Model):
+    id = ndb.StringProperty()
+    user_id = ndb.StringProperty()
+    pipe_id = ndb.StringProperty()
+    node_id = ndb.StringProperty()
+    message = ndb.JsonProperty()
+    created = ndb.DateTimeProperty()
+
+    @classmethod
+    @ndb_context_manager
+    def create(cls, user_id, pipe_id, node_id, message):
+        id = random_string(size=17)
+        log = cls(
+            id=id,
+            user_id=user_id,
+            pipe_id=pipe_id,
+            created=datetime.datetime.utcnow(),
+            node_id=node_id,
+            message=message
+        )
+        log.put()
+        return cls.query(cls.id == id).get().to_dict()
