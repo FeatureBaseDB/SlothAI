@@ -571,33 +571,57 @@ class User(flask_login.UserMixin, ndb.Model):
         result = cls.query(cls.api_token == api_token).get()
         return result.to_dict() if result else None
 
+
 class Log(flask_login.UserMixin, ndb.Model):
-    id = ndb.StringProperty()
+    log_id = ndb.StringProperty()
     user_id = ndb.StringProperty()
-    pipe_id = ndb.StringProperty()
-    node_id = ndb.StringProperty()
-    message = ndb.JsonProperty()
+    line = ndb.JsonProperty()
     created = ndb.DateTimeProperty()
 
     @classmethod
     @ndb_context_manager
-    def create(cls, user_id, pipe_id, node_id, message):
+    def create(cls, user_id, line):
         id = random_string(size=17)
         log = cls(
-            id=id,
+            log_id=id,
             user_id=user_id,
-            pipe_id=pipe_id,
             created=datetime.datetime.utcnow(),
-            node_id=node_id,
-            message=message
+            line=line
         )
         log.put()
-        return cls.query(cls.id == id).get().to_dict()
-    
+        return log.to_dict()
+
     @classmethod
     @ndb_context_manager
-    def delete_older_than(cls, threshold):
+    def delete_older_than(cls, threshold_hours=1):
+        threshold = datetime.datetime.utcnow() - timedelta(hours=threshold_hours)
+
         entities = cls.query(cls.created < threshold).fetch()
         if entities:
             for entity in entities:
                 entity.key.delete()
+
+    @classmethod
+    @ndb_context_manager
+    def fetch(cls, **kwargs):
+        query_conditions = []
+
+        if 'log_id' in kwargs:
+            query_conditions.append(cls.log_id == kwargs['log_id'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.user_id == kwargs['uid'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).fetch()
+        else:
+            entities = None
+
+        logs = []
+        for entity in entities:
+            _entity = entity.to_dict()
+            _entity['line'] = entity.line.decode('utf-8')
+            logs.append(_entity)
+
+        return logs
+

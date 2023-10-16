@@ -149,7 +149,7 @@ def node_delete(node_id):
     if node:
         # Fetch all pipelines
         pipelines = Pipeline.fetch(uid=current_user.uid)
-
+        print(pipelines)
         # Check if the node is in any pipeline
         is_in_pipeline = any(node_id in pipeline.get('node_ids', []) for pipeline in pipelines)
 

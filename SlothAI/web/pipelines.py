@@ -37,6 +37,7 @@ def pipeline_add():
 	# Make sure request is valid JSON
 	if request.is_json:
 		json_data = request.get_json()
+		print(json_data)
 
 		# Make sure request JSON contains name and node_ids keys
 		name = json_data.get('pipelineName', None)

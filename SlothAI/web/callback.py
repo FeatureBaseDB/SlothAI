@@ -1,56 +1,40 @@
 import json
-from flask import Blueprint
-from flask import request
-from flask import current_app as app
-from SlothAI.web.models import User, Pipeline, Node, Log
+from flask import Blueprint, request, jsonify
+import flask_login
+from SlothAI.web.models import User, Log  # Assuming you have the necessary imports
 
 callback = Blueprint('callback', __name__)
 
 @callback.route('/<user_name>/callback', methods=['POST'])
+@flask_login.login_required
 def handle_callback(user_name):
-
-    user_api_token = request.args.get('token')
-    if not user_api_token:
-        return "must supply token query string / parameter", 400
-
-	# Parse the task payload sent in the request.
-    payload = request.get_data(as_text=True)
-    try:
-        payload = json.loads(payload)
-    except Exception as ex:
-        return "unable to unmarshal data as json\n", 400
-
-    pipe_id = payload.get('pipe_id', None)
-    node_id = payload.get('node_id', None)
-    message = payload.get('message', None)
-
-    if not pipe_id or not node_id or not message:
-        return "data payload must be json which includes user_id, pipe_id, node_id, and message\n", 400
-
-    # could trust the client for these, check for now.
     user = User.get_by_name(name=user_name)
+
     if not user:
-        print(f"ERROR: user not found\n")
-        return f"ERROR: user not found\n", 400
-    
-    if user_api_token != user.get('api_token'):
-        print(f"ERROR: Invalid user api token\n")
-        return f"ERROR: Invalid user api token\n", 400
-    
-    pipeline = Pipeline.get(uid=user.get('uid'), pipe_id=pipe_id)
-    if not pipeline:
-        print(f"ERROR: pipeline not found\n")
-        return f"ERROR: pipeline not found\n", 400
+        error_message = "User not found"
+        app.logger.error(f"ERROR: {error_message}")
+        error_response = {'error': 'UserNotFound', 'message': error_message}
+        return jsonify(error_response), 400
 
-    node = Node.get(user_id=user.get('uid'), node_id=node_id)
-    if not node:
-        print(f"ERROR: node not found\n")
-        return f"ERROR: node not found\n", 400
+    try:
+        # Parse the JSON payload sent in the request
+        payload = json.loads(request.data)
+    except json.JSONDecodeError as ex:
+        error_message = "Unable to unmarshal data as JSON"
+        app.logger.error(f"ERROR: {error_message}")
+        error_response = {'error': 'InvalidJSON', 'message': error_message}
+        return jsonify(error_response), 400
 
-    # could do some checking here that node is a callback node
+    # Create a log entry with the entire JSON document as 'line'
+    log = Log.create(user_id=user.get('uid'), line=json.dumps(payload))
 
-    log = Log.create(user_id=user.get('uid'), pipe_id=pipe_id, node_id=node_id, message=message)
     if log:
-        return f"successfully logged message\n", 200
+        success_message = "Successfully logged message"
+        app.logger.info(success_message)
+        success_response = {'message': success_message}
+        return jsonify(success_response), 200
 
-    return "did not successfully write log\n", 500
+    error_message = "Failed to write log"
+    app.logger.error(f"ERROR: {error_message}")
+    error_response = {'error': 'LogWriteError', 'message': error_message}
+    return jsonify(error_response), 500

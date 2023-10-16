@@ -10,7 +10,6 @@
 <div class="content container mt-5 pt-5">
     <h2 class="page_heading">Logs</h2>
 
-    {% if tasks %}
     <table class="table table-striped">
         <thead>
             <tr>
@@ -22,7 +21,7 @@
             {% for log in logs %}
                 <tr>
                     <td>{{ log.timestamp }}</td>
-                    <td>{{ log.log }}</td>
+                    <td>{{ log.line }}</td>
                 </tr>
             {% endfor %}
         </tbody>
@@ -31,7 +30,6 @@
         <i class="fas fa-sync-alt"></i> Reload
     </button>
 </div>
-
 {% endblock %}
 
 {% block javascript %}
