@@ -595,7 +595,6 @@ class Log(flask_login.UserMixin, ndb.Model):
     @ndb_context_manager
     def delete_older_than(cls, threshold_hours=1):
         threshold = datetime.datetime.utcnow() - timedelta(hours=threshold_hours)
-
         entities = cls.query(cls.created < threshold).fetch()
         if entities:
             for entity in entities:
