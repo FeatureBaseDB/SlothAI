@@ -10,7 +10,7 @@
 <div class="content container mt-5 pt-5">    
     <h2 class="page_heading">{% if template %}Edit Template{% else %}New Template{% endif %}</h2>
     <div class="instructions">
-        <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. Use upload and download to manage your template versions. Use choose template to choose a template example.</p>
+        <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. Use upload and download to manage your template versions.</p>
     </div>
     <form class="form-inline">
         <div class="form-group">
@@ -68,6 +68,13 @@
 <script type="text/javascript">
 $(document).ready(function() {
     {% if template %}$('#renameButton').hide();{% endif %}
+
+    {% if not has_templates %}
+    $.get('/static/templates/get_started_callback.txt', function(response) {
+        $("#templateText").val(response);
+        toastr.info('Loaded getting started template.');
+    });
+    {% endif %}
 
     toastr.options = {
       "positionClass": "toast-bottom-right",
@@ -136,7 +143,6 @@ $(document).ready(function() {
                     "processor": selectedProcessorType
                 }
             };
-            console.log(data)
             $.ajax({
                 url: 'http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/templates/{% if template %}{{template.template_id}}{% else %}create{% endif %}',
                 type: 'POST',
@@ -162,7 +168,6 @@ $(document).ready(function() {
         }
     
     });
-
 
     $(document).on("keydown", function (event) {
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
@@ -239,11 +244,10 @@ $(document).ready(function() {
     // Handle the template selection from the dropdown
     $(".dropdown-item").on("click", function() {
         selectedProcessorType = $(this).data("processor-type"); // Set the global variable
-        console.log(selectedProcessorType);
+
         var templateName = $(this).data("template-name");
-        // Properly encode the template name
         var encodedTemplateName = encodeURIComponent(templateName);
-        // Load the template from /static/templates/
+
         $.ajax({
             url: '/static/templates/' + encodedTemplateName + '.txt',
             type: 'GET',
@@ -255,7 +259,7 @@ $(document).ready(function() {
                 toastr.error('Error loading template: ' + error.responseText);
             }
         });
-});
+    });
 });
 </script>
 {% endblock %}

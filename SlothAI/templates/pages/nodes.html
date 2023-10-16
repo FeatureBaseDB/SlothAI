@@ -13,15 +13,15 @@
 
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Nodes</h4>
-        <p>The following nodes are available for use in your pipelines. Nodes may not be deleted if they are being used by a pipeline. Nodes may use a template to format data sent to any models used by the node or the next node in a pipeline.</p>
+        <p>The following nodes are available for use in your pipelines. Nodes may only be deleted if they are NOT being used by a pipeline.</p>
         <table class="table table-striped">
             <thead>
                 <tr>
                     <th>Node</th>
-                    <th>Processor</th>
                     <th>Template</th>
-                    <th>Inputs Keys</th>
-                    <th>Output Hints</th>
+                    <th>Processor</th>
+                    <th>Inputs</th>
+                    <th>Outputs</th>
                     <th>Extras</th>
                     <th>Action</th>
                 </tr>
@@ -29,10 +29,11 @@
             <tbody id="nodeTable">
                 {% for node in nodes %}
                 <tr>
-                    <td><button class="btn btn-primary" disabled>{{ node.name }}</button></td>
-                    <td><button class="btn btn-secondary" disabled>{{ node.processor }}</button></td>
+                    <td><button type="button" class="btn btn-primary" disabled><i class="fas fa-coffee"></i> {{ node.name }}</button></td>
+                    <td><a class="btn btn-secondary" href="/templates/{{ node.template_id }}"><i class="fas fa-pen"></i> {{ node.get('template').get('name') }}</a></td>
+                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors" title="{{ node.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i> {{ node.processor }}</a></td>
 
-                    <td><a href="/templates/{{ node.template_id }}">{{ node.get('template').get('name') }}</a></td>
+
                     <td>
                         {% for input_fields in node.template.input_fields %}
                             {{ generate_regular_badge(input_fields.name, input_fields.type) }}
@@ -47,7 +48,10 @@
                         {% if node.extras %}
                         {% for extra in node.extras %}
                             {% for key, value in extra.items() %}
-                                {{ generate_extra_badge(key) }}
+                            <span>
+                                {{ generate_extra_badge(key, value) }}
+                            </span>
+                            <br>
                             {% endfor %}
                         {% endfor %}
                         {% endif %}
@@ -74,7 +78,8 @@
         <h2 class="page_heading">Node</h2>
         <div class="rounded-lg border p-3">
             <h4 class="mb-3">Create a New Node</h4>
-            <p>You have no nodes defined. Click the "Add Node" button below to create your first node. </p>
+            <p>You have no nodes defined. Click the "Add Node" button below to create your first node from one of your templates. </p>
+            <p>Templates use variables and those variables may be set in the template itself. If a variable's value is set to <strong>"generate"</strong> or <strong>None</strong>, you will be prompted for the variable's value when you create the node. </p>
             <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal">
                 <i class="fas fa-plus"></i> Add Node
             </button>
@@ -83,8 +88,12 @@
             <!-- No Nodes Available -->
         <h2 class="page_heading">Node</h2>
         <div class="rounded-lg border p-3">
-            <h4 class="mb-3">Cannot Create a New Node</h4>
-            <p>You have no templates defined. Click the "Add Template" button below to create your first template. </p>
+            <h4 class="mb-3">Create Node</h4>
+            <p>You don't have any templates. You will need to create a template before you can create a node.</p>
+            <p>Once you create a new node, you can add it to a pipeline.</p>
+            <p></p>
+            <h5 class="mb-3">Task: Create a New Template First</h5>
+            <p>Click the "Add Template" button below to create your first template. </p>
             <button type="button" id="addTemplateButton" class="btn btn-success" data-toggle="modal">
                 <i class="fas fa-plus"></i> Add Template
             </button>
@@ -125,9 +134,10 @@
                     <div class="spinner-border" role="status" id="nodeTemplateSpinner">
                         <span class="sr-only"></span>
                     </div>
-                    <div class="form-group" style="display: none;" id="dynamicFieldsContainer">
-                        <!-- JavaScript will populate this container with new fields -->
-                    </div>
+                <div class="form-group" style="display: none;" id="dynamicFieldsContainer">
+                    <!-- JavaScript will populate this container with new fields -->
+                </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -143,24 +153,27 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-    function checkAndReloadIfEmpty() {
-        var tbodyElement = $("tbody");
-        if (tbodyElement.length === 0) {
-            return;
-        }
-        var rowCount = tbodyElement.find("tr").length;
-        if (rowCount === 0) {
-            window.location.href = "/nodes";
+    function getRowCount() {
+        const tbody = document.querySelector('table tbody');
+        if (tbody) {
+            const rowCount = tbody.getElementsByTagName('tr').length;
+            return rowCount;
+        } else {
+            return 0;
         }
     }
-    
-    checkAndReloadIfEmpty();
-    setInterval(checkAndReloadIfEmpty, 2000);
+
+    // badge popovers
+    $('.extras').popover({
+      trigger: 'focus'
+    });
+    $('.processors').popover({
+      trigger: 'focus'
+    });
 
     $(".delete-button").on("click", function () {
         var node_id = $(this).data("node-id");
         var $this = $(this);
-        var rowCount = $("tbody tr").length;
         var spinner = $this.siblings(".spinner-border");
         
         $this.hide();
@@ -179,12 +192,15 @@ $(document).ready(function() {
             complete: function () {
                 $this.show();
                 spinner.hide();
-            }.bind(this) // Maintain the reference to the button
+                if (getRowCount() === 0) {
+                    window.location.href = '/nodes';
+                }
+            }.bind(this)
         });
     });
 
     // JavaScript to change button colors
-    const buttons = document.querySelectorAll("#nodeTable button");
+    const buttons = document.querySelectorAll("#nodeTable .btn");
 
     buttons.forEach(button => {
         const name = button.innerText;
@@ -193,10 +209,28 @@ $(document).ready(function() {
         button.style.borderColor = color;
     });
 
+    // JavaScript to change button colors
+    const badges = document.querySelectorAll("#nodeTable .badge");
+
+    badges.forEach(badge => {
+        const name = processString(badge.innerText);
+        const color = getColorFromName(name);
+        badge.style.backgroundColor = color;
+        badge.style.borderColor = color;
+    });
+
+    function processString(inputString) {
+      if (inputString.includes(':')) {
+        const parts = inputString.split(':');
+        part = parts[1].trim();
+        return part;
+      } else {
+        return inputString;
+      }
+    }
+
     // Function to generate a color based on the name
     function getColorFromName(name) {
-        // You can use any algorithm or library to generate colors from the name
-        // Here's a simple example using a hash function
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
             hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -210,12 +244,20 @@ $(document).ready(function() {
     });
 
     $("#addNodeButton").on("click", function() {
+        var templateSelect = $('#nodeTemplate');
+
+        // empty the node pulldown and any extras
+        templateSelect.empty();
+        $("#dynamicFieldsContainer").empty();
+
+        // hide the pulldown until it's populated
+        $("#nodeTemplateSpinner").show();
+        $("#nodeTemplateContainer").hide();
+
         $.ajax({
             url: '/templates/list',
             type: 'GET',
             success: function(response) {
-                var templateSelect = $('#nodeTemplate');
-                templateSelect.empty();
                 templateSelect.append($('<option>', {
                     value: 'none',
                     text: "None"
@@ -224,7 +266,7 @@ $(document).ready(function() {
                 response.forEach(function (template) {
                     var optionText = template.name;
 
-                    // Check if the processor is available, and append it with a hyphen if it exists
+                    // Check if the processor is available, and append
                     if (template.processor) {
                         optionText += " ➔ " + template.processor;
                     }
@@ -249,80 +291,8 @@ $(document).ready(function() {
                         text: optionText
                     }));
                 });
-
                 $("#nodeTemplateSpinner").hide();
                 $("#nodeTemplateContainer").show();
-                
-                // Event listener for the template selection
-                $("#nodeTemplate").on("change", function() {
-                    $("#addNodeModalButton").prop("disabled", true);
-                    $("#dynamicFieldsContainer").empty();
-                    var selectedTemplateId = $(this).val();
-
-                    if (selectedTemplateId !== 'none') {
-                        $.ajax({
-                            url: '/templates/' + selectedTemplateId + '/detail',
-                            type: 'GET',
-                            success: function (response) {
-                                if (response.extras && Array.isArray(response.extras)) {
-                                    var hasRelevantFields = false;
-
-                                    for (var key in response.extras) {
-                                        if (response.extras.hasOwnProperty(key)) {
-                                            var extra = response.extras[key];
-
-                                            for (var prop in extra) {
-                                                if (extra.hasOwnProperty(prop)) {
-                                                    var extraValue = extra[prop];
-                                                    var fieldType = "text";
-                                                    if (prop.toLowerCase().includes("token") || prop.toLowerCase().includes("password")) {
-                                                        fieldType = "password";
-                                                    }
-
-                                                    if (
-                                                        (typeof extraValue === "string" && extraValue.includes("generate")) ||
-                                                        extraValue === null ||
-                                                        extraValue === undefined
-                                                    ) {
-                                                        // if you change this, you must fix the label yank in add node below
-                                                        var labelText = "<strong>" + prop + "</strong>:";
-                                                        var inputField = $("<input>")
-                                                            .attr("type", fieldType)
-                                                            .addClass("form-control")
-                                                            .attr("id", prop);
-                                                        var label = $("<label>")
-                                                            .attr("for", prop)
-                                                            .html(labelText);
-
-                                                        $("#dynamicFieldsContainer").append(label, inputField);
-
-                                                        hasRelevantFields = true;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if (hasRelevantFields) {
-                                        $("#dynamicFieldsContainer").show();
-                                    } else {
-                                        $("#dynamicFieldsContainer").hide();
-                                    }
-                                }
-                                
-                                if (response.processor) {
-                                    // Set the selected processor in the dropdown
-                                    $("#nodeProcessor").val(response.processor);
-                                }
-                                // renable the add button
-                                $("#addNodeModalButton").prop("disabled", false);
-                            },
-                            error: function (error) {
-                                toastr.error('Error fetching template detail:', error);
-                            }
-                        });
-                    }
-                });
 
             },
             error: function(error) {
@@ -333,6 +303,81 @@ $(document).ready(function() {
         // Generate a random name here
         var randomName = "{{name_random}}";
         $('#nodeName').val(randomName);
+    });
+
+    // Event listener for the template selection
+    $("#nodeTemplate").on("change", function() {
+        $("#addNodeModalButton").prop("disabled", true);
+        $("#dynamicFieldsContainer").empty();
+
+        var selectedTemplateId = $(this).val();
+
+        if (selectedTemplateId !== 'none') {
+            $.ajax({
+                url: '/templates/' + selectedTemplateId + '/detail',
+                type: 'GET',
+                success: function (response) {
+                    if (response.extras && Array.isArray(response.extras)) {
+                        var hasRelevantFields = false;
+                        
+                        $("#dynamicFieldsContainer").append($("<hr>")).append($("<h5>").text("User Extras"));
+
+                        for (var key in response.extras) {
+                            if (response.extras.hasOwnProperty(key)) {
+                                var extra = response.extras[key];
+
+                                for (var prop in extra) {
+                                    if (extra.hasOwnProperty(prop)) {
+                                        var extraValue = extra[prop];
+                                        var fieldType = "text";
+                                        if (prop.toLowerCase().includes("token") || prop.toLowerCase().includes("password")) {
+                                            fieldType = "password";
+                                        }
+
+                                        if (
+                                            (typeof extraValue === "string" && extraValue.includes("[user_extra]")) ||
+                                            extraValue === null ||
+                                            extraValue === undefined
+                                        ) {
+                                            var labelText = "<strong>" + prop + "</strong>:";
+                                            var inputField = $("<input>")
+                                                .attr("type", fieldType)
+                                                .addClass("form-control")
+                                                .attr("id", prop);
+                                            var label = $("<label>")
+                                                .attr("for", prop)
+                                                .html(labelText);
+
+                                            $("#dynamicFieldsContainer").append(label, inputField);
+
+                                            hasRelevantFields = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (hasRelevantFields) {
+                            $("#dynamicFieldsContainer").show();
+                        } else {
+                            $("#dynamicFieldsContainer").hide();
+                        }
+                    }
+
+                    if (response.processor) {
+                        // Set the selected processor in the dropdown
+                        $("#nodeProcessor").val(response.processor);
+                    } else if (response.extras.processor) {
+                        $("#nodeProcessor").val(response.extras.processor);
+                    }
+                    // renable the add button
+                    $("#addNodeModalButton").prop("disabled", false);
+                },
+                error: function (error) {
+                    toastr.error('Error fetching template detail:', error);
+                }
+            });
+        }
     });
 
     function validateOpenAIToken(openaiToken, callback) {
@@ -382,30 +427,46 @@ $(document).ready(function() {
             node: {
                 name: nodeName,
                 processor: nodeProcessor,
-                template_id: nodeTemplate
+                template_id: nodeTemplate,
+                extras: []
             }
         };
 
         $("#dynamicFieldsContainer label").each(function () {
             var labelFor = $(this).attr("for");
             var inputValue = $(this).next('input').val();
-            nodeData.node[labelFor] = inputValue;
+            var extrasObject = {};
+            extrasObject[labelFor] = inputValue;
+            nodeData.node.extras.push(extrasObject);
         });
-        console.log(nodeData)
-        if (nodeData.node.openai_token) {
-            validateOpenAIToken(nodeData.node.openai_token, function(isValid) {
-                if (!isValid) {
-                    toastr.error("Token validation failed");
-                    return;
-                } else {
-                    addNode(nodeData);
-                }
-            });
-        } else {
-            console.log("didn't have openai_token")
-            addNode(nodeData);
-        }
 
+        var isValidToken = true;
+        var validationPromises = [];
+
+        nodeData.node.extras.forEach(function (extra) {
+            var keys = Object.keys(extra);
+            var values = Object.values(extra);
+
+            if (keys.length > 0 && keys[0] == "openai_token") {
+                var validationPromise = $.Deferred();
+
+                validateOpenAIToken(values[0], function (isValid) {
+                    if (!isValid) {
+                        toastr.error("Token validation failed");
+                        isValidToken = false;
+                    }
+                    validationPromise.resolve(isValid);
+                });
+
+                validationPromises.push(validationPromise.promise());
+            }
+        });
+
+        $.when.apply($, validationPromises).done(function() {
+            if (isValidToken) {
+                addNode(nodeData);
+            }
+        });
     });
 
     function addNode(nodeData) {

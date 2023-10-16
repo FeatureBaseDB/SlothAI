@@ -55,7 +55,6 @@ def node_update(node_id):
                 node_data = json_data['node']
 
                 template = Template.get(template_id=node_data.get('template_id'))
-                print(template)
 
                 # Call the update function with the data from 'node' dictionary
                 updated_node = Node.update(
@@ -107,16 +106,27 @@ def node_create():
 
     if request.is_json:
         json_data = request.get_json()
-       
+
         if 'node' in json_data and isinstance(json_data['node'], dict):
             node_data = json_data['node']
-            print(node_data)
+
             template = Template.get(template_id=node_data.get('template_id'))
+
+            # deal with merging extras
+            node_extras = node_data.get('extras')
+            template_extras = template.get('extras')
+
+            dict1 = {key: value for item in template_extras for key, value in item.items()}
+            for item in node_extras:
+                for key, value in item.items():
+                    if key in dict1:
+                        dict1[key] = value
+            node_extras = [{key: value} for key, value in dict1.items()]
 
             created_node = Node.create(
                 name=node_data.get('name'),
                 uid=uid,
-                extras=template.get('extras', []),
+                extras=node_extras,
                 processor=node_data.get('processor'),
                 template_id=node_data.get('template_id')
             )

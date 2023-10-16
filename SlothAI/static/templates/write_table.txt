@@ -1,17 +1,9 @@
 {# Use this template to build a write to FeatureBase processor! #}
 
-{# NOTE: You may remove any template commented lines, such as this one. #}
-
-{# Write processors use all fields passed to the node, so no input_fields are required. #}
-input_fields = []
-
-{# Write processors will also pass all fields to the next node, if there is one. #}
-output_fields = []
-
 {# Write processors for FeatureBase need a table name. #}
-extras = [{'table': 'steve'}]
+extras = [{'table': '[user_extra]'}]
 
 {# Send the entire document to the 'steve' table: #}
 {{task.document}}
 
-{# Write processors pass all fields to the next node in the pipeline... #}
+{# Unless they are the last node, write processors will pass task.document to the next node in the pipeline... #}

@@ -66,51 +66,21 @@
 </div>
 
 {% macro generate_regular_badge(field_name, field_type) %}
-    {% set badge_class = {
-        'stringset': 'badge-primary',
-        'vector': 'badge-secondary',
-        'string': 'badge-success',
-        'integer': 'badge-warning',
-        'boolean': 'badge-danger',
-        'decimal': 'badge-outline',
-        'date': 'badge-info',
-        'timestamp': 'badge-info',
-        'list': 'badge-light'
-    } %}
-
-    {# Determine which badge class to use based on the field type #}
-    {% set badge_to_use = badge_class[field_type] if field_type in badge_class else badge_class['default'] %}
-    
-    <span class="badge {{ badge_to_use }}">
+    <span class="badge badge-dark">
         {{ field_name }}: {{ field_type }}
     </span>
 {% endmacro %}
 
 {% macro generate_extra_badge(extra_name, extra_value) %}
-    {# Determine which badge class to use based on the extra name (key) #}
-    {% set extra_badge_class = {
-        'vector_size': 'badge-success',
-        'model': 'badge-warning',
-        'URI': 'badge-primary',
-        'SQL': 'badge-secondary',
-        'table': 'badge-info',
-        'openai_token': 'badge-danger',
-        'token': 'badge-danger',
-        'default': 'badge-info'
-    } %}
-    
-    {% set badge_to_use = extra_badge_class[extra_name] if extra_name in extra_badge_class else extra_badge_class['default'] %}
-    
-    {# Check if extra_value is present and adjust the badge text accordingly #}
     {% if extra_value is defined %}
         {% set badge_text = extra_name ~ ': ' ~ extra_value %}
     {% else %}
         {% set badge_text = extra_name %}
     {% endif %}
  
-    <span class="badge {{ badge_to_use }}">
-        {{ badge_text }}
-    </span>
+    <a tabindex="1" data-toggle="popover" role="button" data-placement="left" data-trigger="focus" data-content="{% if extra_value != '[user_extra]' %}{{ extra_value }}{% else %}[user_extra]{% endif %}" class="badge badge-dark extras">
+        {{ extra_name }}
+    </a> 
 {% endmacro %}
 
 

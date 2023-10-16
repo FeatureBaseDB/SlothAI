@@ -13,6 +13,6 @@ output_fields = [{'name': "text_embedding", 'type': "vector"}]
 extras = [{'vector_size': 768}, {'model': 'instructor_large'}]  
 
 {# Process the inputted array of strings: #}
-{{task.document.texts}}
+{'texts': {{task.document.texts}} }
 
 {# Output is handled by next node in the pipeline... #}

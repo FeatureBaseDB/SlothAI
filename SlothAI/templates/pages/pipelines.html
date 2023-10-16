@@ -13,8 +13,8 @@
     {% if pipelines %}
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Pipelines</h4>
-        <p>Pipelines route data from endpoints to nodes. Nodes may transform the data, or write to and read from the database. Once data has been processsed by the pipeline's nodes, it can be queried in your <a href="https://cloud.featurebase.com/query/">FeatureBase Cloud</a> account with SQL.</p>
-        <table class="table table-striped">
+        <p>Clicking on the pipeline's nodes shows input and output field requirements. Clicking on the pipeline name gives detailed information about the flow of data through the pipeline.</p>
+        <table id="pipelineTable" class="table table-striped">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -25,14 +25,21 @@
             <tbody>
                 {% for pipeline in pipelines %}
                 <tr>
-                    <td><a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a></td>
                     <td>
-                        {% for node in pipeline.node_ids %}
-                        <span class="badge badge-warning">{{ node }}</span>
-                        {% endfor %}
+                        <button class="btn btn-danger" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'">{{ pipeline.name }}</button>
                     </td>
                     <td>
-                        <button class="delete-button btn btn-danger" data-pipeline-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="btn-group">
+                            {% for node in pipeline.node_ids %}
+                                <button class="btn btn-danger" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'">{{ node }}</button>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td>
+                        <button class="delete-button btn btn-danger" data-pipe-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="spinner-border text-danger" role="status" style="display: none;">
+                            <span class="sr-only"></span>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -40,55 +47,30 @@
         </table>
     </div>
     <p></p>
-    <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
-        Add Pipeline
+    <button id="createPipeline" type="button" class="btn btn-success">
+        <i class="fas fa-plus"></i> Create Pipeline
     </button>
 
     {% else %}
 
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Create a Pipeline</h4>
-        <p>Click on the "Add Pipeline" button to create a new Pipeline. Pipelines are lists of Nodes run in order on data.</p>
+        <p>Click on the "Add Pipeline" button to create a new Pipeline. Pipelines run documents through a list of node processors.</p>
 
-        <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#nodeFormModal">
-            Add Pipeline
+        <button id="createPipeline" type="button" class="btn btn-success">
+            <i class="fas fa-plus"></i> Create Pipeline
         </button>
         <p></p>
-        <p>An endpoint for ingesting data will be shown once the pipeline is created.</p>
-        <p>Using the endpoint will look like this:</p>
+        <p>Once you have a pipeline, you will send it data with a curl statement similar to this one:</p>
         <div class="code-block">curl -X POST \
     -H "Content-Type: application/json" \
-    -d '{"text":"There was a sudden knock at the door, then silence."}' \
+    -d '{"text": ["There was a sudden knock at the door, then silence."]}' \
     https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
         <p></p>
-        <p>When the document task sent, a response will look like this:</p>
-        <div class="code-block">{
-    "data": {
-        "attributes": [
-            [
-                "frontdoor",
-                "sound",
-                "person"
-            ]
-        ],
-        "text": [
-            "There was a knock at the door, then silence."
-        ]
-    },
-    "job_id": "9575216437535982918",
-    "nodes": [
-        {
-            "name": "instructor-large"
-        },
-        {
-            "name": "gpt-3.5-turbo"
-        }
-    ],
-    "name": "demos",
-    "tid": "QP46NBAHv2GntTOIf"
-}</div>
+        <p>The fields in the data sent to a pipeline will depend on the inputs required for each node in the pipeline.</p>
     </div>
     {% endif %}
+</div>
 
 <div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="nodeFormModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -106,38 +88,34 @@
                     <input type="text" class="form-control" id="pipelineName" placeholder="Pipeline name">
                 </div>
 
-<div class="form-group">
-    <label for="selectedNode">Add Node</label>
-    <div class="input-group">
-        <select class="form-control" id="selectedNode">
-            <optgroup id="nodePulldown" label="Available Nodes">
-                <option data-node_name="none">None</option>
-                {% for node in nodes %}
-                    <option data-node_name="{{ node.name }}" data-node_extras="{{ node.extras }}" data-node_processor="{{ node.processor }}">{{ node.name }} ({{ node.processor }})</option>
-                {% endfor %}
-            </optgroup>
-        </select>
-        <div class="input-group-append">
-            <button id="addNodeToList" class="btn btn-primary"><i class="fas fa-plus"></i> Add</button>
-        </div>
-    </div>
-</div>
+                <div class="form-group">
+                    <label for="selectedNode">Add Node</label>
+                    <div class="input-group">
+                        <select class="form-control" id="selectedNode">
+                            <optgroup id="nodePulldown" label="Available Nodes">
+                                <option data-node_name="none">None</option>
+                                {% for node in nodes %}
+                                    <option data-node_name="{{ node.name }}" data-node_extras="{{ node.extras }}" data-input_fields="{{ node.input_fields }}" data-output_fields="{{ node.output_fields }}" data-node_processor="{{ node.processor }}" data-node_template="{{ node.template_name }}">{{ node.name }} ➔ {{ node.template_name }} ➔ {{ node.processor }}</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                        <div class="input-group-append">
+                            <button id="addNodeToList" class="btn btn-dark"><i class="fas fa-plus"></i> Add</button>
+                        </div>
+                    </div>
+                </div>
 
-
-<!-- Node list section -->
-<div style="margin-top: 20px" class="form-group">
-    <p id="ListMessage">Pipeline will write directly to FeatureBase.</p>
-    <div class="rounded-lg border p-3" id="selectedNodesContainer" style="display: none;">
-        <!-- Content inside the container -->
-    </div>
-</div>
-
+                <!-- Node list section -->
+                <div style="margin-top: 20px" class="form-group">
+                    <div class="rounded-lg border p-3" id="selectedNodesContainer" style="display: none;">
+                        <!-- Content inside the container -->
+                    </div>
+                </div>
             </div>
-<div class="modal-footer">
-    <button type="button" class="btn btn-outline-dark" data-dismiss="modal">Cancel</button>
-    <button type="button" class="btn btn-dark" id="createButton">Create</button>
-</div>
-
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="createButton"><i class="fas fa-plus"></i> Create</button>
+            </div>
         </div>
     </div>
 </div>
@@ -149,27 +127,36 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function () {
-    // Attach a click event handler to the delete buttons
-    $(".delete-button").on("click", function () {
-        var pipelineId = $(this).data("pipeline-id");
-        var $this = $(this);
-        var rowCount = $(".pipeline tbody tr").length;
-        $this.addClass("flash");
-        // Send an AJAX request to delete the pipeline with the DELETE method
-        $.ajax({
-            url: '/pipeline/' + pipelineId,
-            type: 'DELETE',
-            success: function (response) {
-                $this.closest("tr").remove();
-                if (rowCount === 1) {
-                    window.location.reload();
-                }
-            },
-            error: function (error) {
-                console.error("Error deleting pipeline:", error);
-            }
-        });
-    });
+    function getRowCount() {
+        const tbody = document.querySelector('table tbody');
+        if (tbody) {
+            const rowCount = tbody.getElementsByTagName('tr').length;
+            return rowCount;
+        } else {
+            return 0;
+        }
+    }
+
+    // Function to generate a color based on the name
+    function getColorFromName(name) {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const color = `hsl(${hash % 360}, 70%, 60%)`; // Generate an HSL color
+        return color;
+    }
+
+    function stringToJson(inputString) {
+        console.log(inputString);
+        try {
+            const jsonObject = JSON.parse(inputString);
+            return jsonObject;
+        } catch (error) {
+            console.error("Error parsing JSON:", error);
+            return null;
+        }
+    }
 
     function toggleSelectedNodesContainer() {
         if (selectedNodes.length > 0) {
@@ -179,39 +166,72 @@ $(document).ready(function () {
         }
     }
 
+    function processString(inputString) {
+      if (inputString.includes(':')) {
+        const parts = inputString.split(':');
+        part = parts[1].trim();
+        return part;
+      } else {
+        return inputString;
+      }
+    }
+
+    $("#createPipeline").on("click", function() {
+        if ($("#nodePulldown").find('option').length > 1) {
+            $("#nodeFormModal").modal("show");
+        } else {
+            toastr.error("No nodes. Add a node first before adding a pipeline.");
+        }
+    });
+
+    // Attach a click event handler to the delete buttons
+    $(".delete-button").on("click", function () {
+        var pipelineId = $(this).data("pipe-id");
+        var $this = $(this);
+        var spinner = $this.siblings(".spinner-border");
+        
+        $this.hide();
+        spinner.show();
+
+        // Send an AJAX request to delete the pipeline with the DELETE method
+        $.ajax({
+            url: '/pipeline/' + pipelineId,
+            type: 'DELETE',
+            success: function (response) {
+                toastr.success('Pipeline deleted..');
+                $this.closest("tr").remove();
+            },
+            error: function (error) {
+                toastr.error(error.responseJSON.message);
+            },
+            complete: function() {
+                $this.show();
+                spinner.hide();
+                if (getRowCount() === 0) {
+                    window.location.href = '/pipelines';
+                }
+            }.bind(this)
+        });
+    });
+
     const selectedNodeDropdown = $('#selectedNode');
-    const addNodeButton = $('#addNodeToList');
     const selectedNodesContainer = $('#selectedNodesContainer');
     const ListMessage = $('#ListMessage');
 
     const selectedNodes = []; // Initialize an array to store selected nodes
 
-    addNodeButton.click(function () {
+    $('#addNodeToList').click(function () {        
         const selectedNodeOption = selectedNodeDropdown.find(':selected');
         const selectedNode = selectedNodeOption.val();
         const selectedNodeExtras = selectedNodeOption.data('node_extras');
+        const selectedNodeInputs = selectedNodeOption.data('input_fields');
+        const selectedNodeOutputs = selectedNodeOption.data('output_fields');
         const selectedNodeProcessor = selectedNodeOption.data('node_processor');
-
+        const selectedNodeName = selectedNodeOption.data('node_name');
+        const selectedNodeTemplate = selectedNodeOption.data('node_template');
+        
         if (selectedNode !== "None" && selectedNode && !selectedNodes.includes(selectedNode)) {
             selectedNodes.push(selectedNode);
-
-            // Determine the badge type based on the selectedNodeMethod
-            const processorToButtonType = {
-                "bare": "btn-secondary",
-                "callback": "btn-primary",
-                "uri_to_text": "btn-success",
-                "uri_to_stringset": "btn-info",
-                "text_to_strings": "btn-danger",
-                "strings_to_stringset": "btn-warning",
-                "stringset_to_strings": "btn-light",
-                "strings_to_embeddings": "btn-dark",
-                "embedding_to_sql": "btn-info",
-                "dict_to_sql": "btn-primary",
-                "dict_to_table": "btn-success",
-            };
-
-            let buttonType = processorToButtonType[selectedNodeProcessor] || "btn-outline-success";
-
 
             const trashIcon = $('<i></i>', {
                 class: 'fas fa-trash-alt', // Font Awesome trashcan icon
@@ -245,19 +265,125 @@ $(document).ready(function () {
 
             deleteButton.append(trashIcon); // Add trashcan icon to the delete button
 
-            const badge = $('<a></a>', {
+            // input badges for node button
+            const inputBadges = $('<div></div>');
+            
+            // Replace single quotes around keys and values in selectedNodeInputs
+            const cleanSelectedNodeInputs = selectedNodeInputs.replace(/'([^']+)'/g, '"$1"');
+
+            // Convert the cleaned string to JSON
+            const selectedNodeInputsJSON = JSON.parse(`{"inputs": ${cleanSelectedNodeInputs}}`);
+            if (selectedNodeInputsJSON.inputs.length === 0) {
+                const passthroughBadge = $('<span>', {
+                    class: 'badge badge-dark',
+                    text: 'passthrough'
+                });
+                inputBadges.append(passthroughBadge);
+            } else {
+                $.each(selectedNodeInputsJSON.inputs, function(index, input_field) {
+                    const badge = $('<span>', {
+                        class: 'badge',
+                        text: `${input_field.name}:${input_field.type}`
+                    });
+                    badge.attr('data-name', input_field.name);
+                    inputBadges.append(badge);
+                });
+            }
+
+            // Convert inputBadges to an HTML string
+            const inputBadgesHtml = inputBadges.html();
+            console.log(inputBadgesHtml)
+
+            const node_button = $('<a></a>', {
+                tabindex: 0,
+                role: 'button',
+                class: `btn btn-danger`,
+                title: 'Node Inputs',
+                'data-toggle': 'popover',
+                'data-trigger': 'focus',
+                'data-html': true,
+                'data-placement': "top",
+                'data-content': inputBadgesHtml,
+            });
+            node_button.html(selectedNodeName);
+
+            // input badges for node button
+            const outputBadges = $('<div></div>');
+            
+            // Replace single quotes around keys and values in selectedNodeInputs
+            const cleanSelectedProcessorOutputs = selectedNodeOutputs.replace(/'([^']+)'/g, '"$1"');
+
+            // Convert the cleaned string to JSON
+            const selectedProcessorOutputsJSON = JSON.parse(`{"outputs": ${cleanSelectedProcessorOutputs}}`);
+            if (selectedProcessorOutputsJSON.outputs.length === 0) {
+                const passthroughBadge = $('<span>', {
+                    class: 'badge badge-info',
+                    text: 'passthrough'
+                });
+                outputBadges.append(passthroughBadge);
+            } else {
+                $.each(selectedProcessorOutputsJSON.outputs, function(index, output_field) {
+                    const badge = $('<span>', {
+                        class: 'badge badge-primary',
+                        text: `${output_field.name}:${output_field.type}`
+                    });
+                    badge.attr('data-name', output_field.name);
+                    outputBadges.append(badge);
+                });
+            }
+
+            // Convert outputBadges to an HTML string
+            const outputBadgesHtml = outputBadges.html();
+
+            const processor_button = $('<a></a>', {
                 tabindex: 0, // Add tabindex for focus
                 role: 'button',
-                class: `btn ${buttonType}`,
-                text: selectedNode,
-                'data-toggle': 'popover', // Add data-toggle for the popover
-                title: 'Node Info', // Title for the popover
-                'data-trigger': 'focus', // Close popover on focus
-                'data-content': `Extras: ${selectedNodeExtras} Processor: ${selectedNodeProcessor}`, // Content for the popover
+                class: `btn btn-primary`,
+                title: 'Processor Outputs',
+                'data-toggle': 'popover',
+                'data-trigger': 'focus',
+                'data-html': true,
+                'data-placement': "top",                    
+                'data-content': outputBadgesHtml
+            });
+            processor_button.html(selectedNodeProcessor);
+
+            // Set the background and border colors
+            const name = processString(processor_button.text());
+            const color = getColorFromName(name);
+            processor_button.css('background-color', color);
+            processor_button.css('border-color', color);
+
+            const template_button = $('<a></a>', {
+                tabindex: 0, // Add tabindex for focus
+                role: 'button',
+                class: `btn btn-primary`,
+                text: `${selectedNodeTemplate}`,
+                title: 'Processor Info', // Title for the popover
+            });
+            template_button.html(selectedNodeTemplate);
+
+            // append the buttons to the new node
+            buttonGroup.append(node_button);
+            buttonGroup.append(template_button);
+            buttonGroup.append(processor_button);
+            buttonGroup.append(deleteButton);
+
+            node_button.on('shown.bs.popover', function () {
+                const name = $(this).data('name');
+                console.log("Name from data-name:", name);
             });
 
-            buttonGroup.append(badge);
-            buttonGroup.append(deleteButton); // Place the trashcan button on the right
+            processor_button.on('shown.bs.popover', function () {
+                // Access the badge elements inside the popover content
+                const badges = $(this).next().find('.badge');
+                console.log(badges)
+                
+                badges.each(function() {
+                    const name = $(this).data('name');
+                    console.log("Name from data-name:", name);
+                });
+            });
 
             const listItem = $('<div></div>', {
                 class: 'selected-node',
@@ -269,8 +395,19 @@ $(document).ready(function () {
             ListMessage.text('Pipeline execution order:');
             toggleSelectedNodesContainer();
 
+            // update the large buttons
+            $("#selectedNodesContainer .btn").each(function() {
+                const name = processString($(this).text());
+                const color = getColorFromName(name);
+                $(this).css('backgroundColor', color);
+                $(this).css('borderColor', color);
+            });
+
             // Initialize Bootstrap popovers for the badge elements
-            badge.popover({
+            node_button.popover({
+                trigger: 'focus',
+            });
+            processor_button.popover({
                 trigger: 'focus',
             });
         }
@@ -281,38 +418,47 @@ $(document).ready(function () {
         { name: 'nodes', id: 'nodes' }
     ];
 
-$("#createButton").click(function () {
-    var formData = {};
+    $("#createButton").click(function () {
+        var formData = {};
 
-    // Populate formData object from formFields array
-    for (var i = 0; i < formFields.length; i++) {
-        var field = formFields[i];
-        formData[field.name] = $("#" + field.id).val();
-    }
+        // Populate formData object from formFields array
+        for (var i = 0; i < formFields.length; i++) {
+            var field = formFields[i];
+            formData[field.name] = $("#" + field.id).val();
+        }
 
-    formData.nodes = selectedNodes;
+        formData.nodes = selectedNodes;
 
-    // Move this to a notice in the form
-    if (!/^[a-z-_]+$/.test(formData.pipelineName)) {
-        toastr.error("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
-    } else {
-        $.ajax({
-            type: "POST",
-            url: "/pipeline",
-            data: JSON.stringify(formData), // Send data as JSON
-            contentType: "application/json; charset=utf-8",
-            dataType: "json",
-            success: function (response) {
-                window.location.href = "/pipelines/" + response.tid;
-            },
-            error: function (error) {
-                console.error("Error submitting form:", error);
-            }
-        });
-    }
-});
+        // Move this to a notice in the form
+        if (!/^[a-z-_]+$/.test(formData.pipelineName)) {
+            toastr.error("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
+        } else {
+            $.ajax({
+                type: "POST",
+                url: "/pipeline",
+                data: JSON.stringify(formData), // Send data as JSON
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    toastr.success("Created pipeline.");
+                    window.location.href = "/pipelines/" + response.pipe_id;
+                },
+                error: function (error) {
+                    toastr.error(error.responseJSON.message);
+                }
+            });
+        }
+    });
 
+    // JavaScript to change button colors
+    const buttons = document.querySelectorAll("#pipelineTable button");
 
+    buttons.forEach(button => {
+        const name = button.innerText;
+        const color = getColorFromName(name);
+        button.style.backgroundColor = color;
+        button.style.borderColor = color;
+    });
 });
 </script>
 {% endblock %}

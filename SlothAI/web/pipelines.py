@@ -74,17 +74,20 @@ def pipeline_add():
 
 	return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
 
+
 @pipeline.route('/pipeline/<pipe_id>', methods=['DELETE'])
 @flask_login.login_required
 def pipeline_delete(pipe_id):
 	pipe = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+
 	if pipe:
 		# delete table
 		Pipeline.delete_by_pipe_id(pipe.get('pipe_id'))
-		flash(f"Deleted pipeline `{pipe.get('name')}`.")
+
 		return jsonify({"response": "success", "message": "Table deleted successfully!"}), 200
 	else:
-		return jsonify({"error": f"Unable to delete pipeline with id {pipe_id}"}), 501
+		return jsonify({"error": f"DELETE failed", "message": "Can't delete the pipeline."}), 501
+
 
 @pipeline.route('/pipeline/<pipeline_id>/task', methods=['POST'])
 @flask_login.login_required

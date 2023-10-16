@@ -1,4 +1,6 @@
 import datetime
+import zlib
+import base64
 
 from google.cloud import ndb
 
@@ -59,6 +61,17 @@ class Template(ndb.Model):
     processor = ndb.StringProperty()
     created = ndb.DateTimeProperty()
 
+    @staticmethod
+    def compress_text(text):
+        compressed_bytes = zlib.compress(text.encode('utf-8'))
+        return base64.b64encode(compressed_bytes).decode('utf-8')
+
+    @staticmethod
+    def decompress_text(compressed_text):
+        compressed_bytes = base64.b64decode(compressed_text.encode('utf-8'))
+        decompressed_bytes = zlib.decompress(compressed_bytes)
+        return decompressed_bytes.decode('utf-8')
+
     @classmethod
     @ndb_context_manager
     def create(cls, name, uid, text, input_fields=[], output_fields=[], extras=[], processor="template"):
@@ -71,7 +84,7 @@ class Template(ndb.Model):
                 template_id=template_id,
                 name=name,
                 uid=uid,
-                text=text,
+                text=cls.compress_text(text),
                 input_fields=input_fields,
                 output_fields=output_fields,
                 extras=extras,
@@ -92,7 +105,7 @@ class Template(ndb.Model):
             return None
 
         template.name = name
-        template.text = text
+        template.text = cls.compress_text(text)
         template.input_fields = input_fields
         template.output_fields = output_fields
         template.extras = extras
@@ -124,14 +137,18 @@ class Template(ndb.Model):
 
         templates = []
         for entity in entities:
-            templates.append(entity.to_dict())
+            template = entity.to_dict()
+            template['text'] = cls.decompress_text(entity.text)  # Decompress the stored text
+            templates.append(template)
 
         return templates
+
 
     @classmethod
     @ndb_context_manager
     def get(cls, **kwargs):
         query_conditions = []
+
         if 'processor' in kwargs and 'uid' in kwargs:
             query_conditions.append(cls.processor == kwargs['processor'], cls.uid == kwargs['uid'])
         if 'template_id' in kwargs:
@@ -144,11 +161,14 @@ class Template(ndb.Model):
         if query_conditions:
             query = ndb.AND(*query_conditions)
             template = cls.query(query).get()
- 
-        if query_conditions and template:
-            return template.to_dict()
+
+        if template:
+            template_dict = template.to_dict()
+            template_dict['text'] = cls.decompress_text(template.text)  # Decompress the stored text
+            return template_dict
         else:
             return None
+
 
     @classmethod
     @ndb_context_manager

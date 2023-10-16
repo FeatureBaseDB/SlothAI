@@ -22,6 +22,43 @@ client = ndb.Client()
 def sitemap():
     return render_template('pages/sitemap.txt')
 
+# hard coded, for now
+processors = [
+    {"value": "jinja2", "label": "Jinja2 Processor"},
+    {"value": "callback", "label": "Callback Processor"},
+    {"value": "read_file", "label": "Read Processor (File)"},
+    {"value": "read_uri", "label": "Read Processor (URI)"},
+    {"value": "read_featurebase", "label": "Read Processor (FeatureBase)"},
+    {"value": "write_featurebase", "label": "Write Processor (FeatureBase)"},
+    {"value": "aidict", "label": "Generative Completion Processor"},
+    {"value": "aichat", "label": "Generative Chat Processor"},
+    {"value": "embedding", "label": "Embedding Vectors Processor"},
+    {"value": "aivision", "label": "Vision Processor"},
+    {"value": "aiaudio", "label": "Audio Processor"}
+]
+
+# template examples
+template_examples = [
+    {"name": "Get started with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
+    {"name": "Generate random words", "template_name": "get_started_random_word", "processor_type": "jinja2"},
+    {"name": "Read PDF and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
+    {"name": "Read image and convert objects to labels", "template_name": "image_to_labels", "processor_type": "read_file"},
+    {"name": "Read from a URI and convert to text", "template_name": "uri_to_text", "processor_type": "read_uri"},
+    {"name": "Extract keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
+    {"name": "Create a question from text and keyterms", "template_name": "text_and_keyterms_to_question", "processor_type": "aidict"},
+    {"name": "Generate a summary from text", "template_name": "text_to_summary", "processor_type": "aidict"},
+    {"name": "Convert text to stringset", "template_name": "text_to_stringset", "processor_type": "aidict"},
+    {"name": "Analyze text sentiment", "template_name": "text_to_sentiment", "processor_type": "aidict"},
+    {"name": "Generate answers from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aidict"},
+    {"name": "Converse and answer questions from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aichat"},
+    {"name": "Convert text to vector", "template_name": "text_to_vector", "processor_type": "embedding"},
+    {"name": "Convert text to an OpenAI ada-similarity vector", "template_name": "text_to_ada_vector", "processor_type": "embedding"},
+    {"name": "Convert text and keyterms to vector", "template_name": "text_keyterms_to_vector", "processor_type": "embedding"},
+    {"name": "Find similar texts using a vector", "template_name": "vector_to_texts", "processor_type": "read_featurebase"},
+    {"name": "Query table for records", "template_name": "query_table", "processor_type": "read_featurebase"},
+    {"name": "Write to table", "template_name": "write_table", "processor_type": "write_featurebase"},
+]
+
 
 @site.route('/', methods=['GET'])
 @site.route('/pipelines', methods=['GET'])
@@ -33,8 +70,15 @@ def pipelines():
     pipelines = Pipeline.fetch(uid=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
     
-    print(nodes)
-    return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=nodes)
+    _nodes = []
+    for node in nodes:
+        template = Template.get(template_id=node.get('template_id'))
+        node['template_name'] = template.get('name')
+        node['input_fields'] = template.get('input_fields')
+        node['output_fields'] = template.get('output_fields')
+        _nodes.append(node)
+
+    return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
 
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
@@ -49,43 +93,7 @@ def pipeline_view(pipe_id):
 	if not pipeline:
 		return redirect(url_for('site.pipelines'))
 
-	mermaid_string = "graph TD\n"
-	mermaid_string += "A -->|JSON| G[Response]\n"
-	mermaid_string += "G --> H[User]\n"
-
-	# check if nodes are present
-	if pipeline and pipeline.get('node_ids'):
-		previous_node = None
-		for i, n in enumerate(pipeline['node_ids']):
-			node = Node.get(uid=current_user.uid, name=n)
-			current_node = chr(65 + i)  # 65 is ASCII for 'A'
-			if previous_node:
-				mermaid_string += f"{previous_node} -->{output}{current_node}[{node.get('method')}\n{node.get('name')}]\n"
-			else:
-				# initilize mermaid string
-				if node.get('method') == 'data_source' and node.get('extras').get('model', None) == 'endpoint':
-					mermaid_string += f"{current_node}[POST /pipeline/{pipe_id}/task]\n"
-
-
-			# define the specific output based on model 'kind'
-			if node.get('method') == 'keyterm':
-				output = "|keyterms: stringset|"
-			elif node.get('method') == 'embedding':
-				output = "|embedding: vector|"
-			elif node.get('method') == 'form_question':
-				output = "|question: string|"
-			elif node.get('method') == 'data_source':
-				output = "| JSON |"
-			elif node.get('method') == 'write':
-				output = "| SQL INSERT | "
-			else:
-				output = "|text: string|"  # default case
-			previous_node = current_node
-
-		if node.get('method') == 'write':
-			mermaid_string += f"{current_node} -->{output}F[FeatureBase\n{pipeline.get('name')}]\n"
-
-	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, mermaid_string=mermaid_string)
+	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline)
 
 
 @site.route('/nodes', methods=['GET'])
@@ -108,19 +116,12 @@ def nodes():
 
     name_random = random_name(2).split('-')[1]
 
-    processors = [
-        {"value": "jinja2", "label": "Jinja2 Processor"},
-        {"value": "callback", "label": "Callback Processor"},
-        {"value": "read_file", "label": "Read Processor (File)"},
-        {"value": "read_uri", "label": "Read Processor (URI)"},
-        {"value": "read_featurebase", "label": "Read Processor (FeatureBase)"},
-        {"value": "write_featurebase", "label": "Write Processor (FeatureBase)"},
-        {"value": "aidict", "label": "Generative Completion Processor"},
-        {"value": "aichat", "label": "Generative Chat Processor"},
-        {"value": "embedding", "label": "Embedding Vectors Processor"},
-        {"value": "aivision", "label": "Vision Processor"},
-        {"value": "aiaudio", "label": "Audio Processor"}
-    ]
+    # hide the tokens and passwords
+    for node in nodes:
+        for extra_dict in node['extras']:
+            for key in extra_dict.keys():
+                if 'token' in key or 'password' in key:
+                    extra_dict[key] = '[secret]'
 
     # update the template names
     _nodes = []
@@ -147,7 +148,7 @@ def templates():
         return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
 
     return render_template(
-        'pages/templates.html', username=username, templates=templates
+        'pages/templates.html', username=username, templates=templates, processors=processors
     )
 
 
@@ -159,35 +160,21 @@ def template_detail(template_id="new"):
     username = current_user.name
     api_token = current_user.api_token
     dbid = current_user.dbid
+    
     template = Template.get(uid=current_user.uid,template_id=template_id)
+    
+    # test if there are more templates
+    has_templates = False
+    templates = Template.fetch(uid=current_user.uid)
+    if templates:
+        has_templates = True
+
     hostname = request.host
 
     name_random = random_name(2)
 
-    # template examples
-    template_examples = [
-        {"name": "Callback a URL with data", "template_name": "callback", "processor_type": "callback"},
-        {"name": "Read PDF and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
-        {"name": "Read image and convert objects to labels", "template_name": "image_to_labels", "processor_type": "read_file"},
-        {"name": "Read from a URI and convert to text", "template_name": "uri_to_text", "processor_type": "read_uri"},
-        {"name": "Generate a random word", "template_name": "random_word", "processor_type": "jinja2"},
-        {"name": "Extract keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
-        {"name": "Create a question from text and keyterms", "template_name": "text_and_keyterms_to_question", "processor_type": "aidict"},
-        {"name": "Generate a summary from text", "template_name": "text_to_summary", "processor_type": "aidict"},
-        {"name": "Convert text to stringset", "template_name": "text_to_stringset", "processor_type": "aidict"},
-        {"name": "Analyze text sentiment", "template_name": "text_to_sentiment", "processor_type": "aidict"},
-        {"name": "Generate answers from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aidict"},
-        {"name": "Converse and answer questions from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aichat"},
-        {"name": "Convert text to vector", "template_name": "text_to_vector", "processor_type": "embedding"},
-        {"name": "Convert text to an OpenAI ada-similarity vector", "template_name": "text_to_ada_vector", "processor_type": "embedding"},
-        {"name": "Convert text and keyterms to vector", "template_name": "text_keyterms_to_vector", "processor_type": "embedding"},
-        {"name": "Find similar texts using a vector", "template_name": "vector_to_texts", "processor_type": "read_featurebase"},
-        {"name": "Query table for records", "template_name": "query_table", "processor_type": "read_featurebase"},
-        {"name": "Write to table", "template_name": "write_table", "processor_type": "write_featurebase"},
-    ]
-
     return render_template(
-        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, hostname=hostname, name_random=name_random,  template_examples=template_examples
+        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random,  template_examples=template_examples
     )
 
 

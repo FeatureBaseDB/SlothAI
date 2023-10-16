@@ -24,13 +24,11 @@
                     <th>Action</th>
                 </tr>
             </thead>
-            {# the hacky reload thing requires no tbody be present, so it can reload #}
-            {% if templates %}
             <tbody id="templateTable">
                 {% for template in templates %}
-                <tr>
-                    <td><a href="/templates/{{ template.template_id }}">{{ template.name }}</a></td>
-                    <td><button class="btn btn-secondary" disabled>{{ template.processor }}</button></td>
+                    <td><button class="btn btn-danger" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-pen"></i> {{ template.name }}</button></td>
+                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors" title="{{ template.name }}" data-content="{{ processors | selectattr('value', 'equalto', template.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i> {{ template.processor }}</a></td>
+
                     <td>
                         {% for input_field in template.input_fields %}
                             <span>
@@ -52,7 +50,7 @@
                             {% for extra in template.extras %}
                                 {% for key, value in extra.items() %}
                                     <span>
-                                        {{ generate_extra_badge(key) }}
+                                        {{ generate_extra_badge(key, value) }}
                                     </span>
                                     <br>
                                 {% endfor %}
@@ -68,7 +66,6 @@
                 </tr>
                 {% endfor %}
             </tbody>
-            {% endif %}
         </table>
     </div>
     <p></p>
@@ -81,19 +78,15 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-    function checkAndReloadIfEmpty() {
-        var tbodyElement = $("tbody");
-        if (tbodyElement.length === 0) {
-            return;
-        }
-        var rowCount = tbodyElement.find("tr").length;
-        if (rowCount === 0) {
-            window.location.href = "/templates/new";
+    function getRowCount() {
+        const tbody = document.querySelector('table tbody');
+        if (tbody) {
+            const rowCount = tbody.getElementsByTagName('tr').length;
+            return rowCount;
+        } else {
+            return 0;
         }
     }
-    
-    checkAndReloadIfEmpty();
-    setInterval(checkAndReloadIfEmpty, 2000);
 
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
@@ -116,11 +109,24 @@ $(document).ready(function() {
             complete: function () {
                 $(this).show();
                 spinner.hide();
-            }.bind(this) // Maintain the reference to the button
+                if (getRowCount() === 0) {
+                    window.location.href = '/templates/new';
+                }
+            }.bind(this)
         });
     });
+
+    // popovers
+    $('.extras').popover({
+      trigger: 'focus'
+    })
+    $('.processors').popover({
+      trigger: 'focus'
+    });
+
+
     // JavaScript to change button colors
-    const buttons = document.querySelectorAll("#templateTable button");
+    const buttons = document.querySelectorAll("#templateTable .btn");
 
     buttons.forEach(button => {
         const name = button.innerText;
@@ -129,13 +135,33 @@ $(document).ready(function() {
         button.style.borderColor = color;
     });
 
+    // JavaScript to change button colors
+    const badges = document.querySelectorAll("#templateTable .badge");
+
+    badges.forEach(badge => {
+        const name = processString(badge.innerText);
+        const color = getColorFromName(name);
+        badge.style.backgroundColor = color;
+        badge.style.borderColor = color;
+    });
+
+    function processString(inputString) {
+      if (inputString.includes(':')) {
+        const parts = inputString.split(':');
+        part = parts[1].trim();
+        return part;
+      } else {
+        return inputString;
+      }
+    }
+
     // Function to generate a color based on the name
     function getColorFromName(name) {
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 3) - hash);
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
         }
-        const color = `hsl(${hash % 360}, 70%, 50%)`; // Generate an HSL color
+        const color = `hsl(${hash % 360}, 70%, 60%)`; // Generate an HSL color
         return color;
     }
 });

@@ -3,13 +3,13 @@
 {# NOTE: You may remove any template commented lines, such as this one. #}
 
 {# Define the input_fields used in this template: #}
-input_fields = [{'name': "text", 'type': "string"},{'name': "keyterms", 'type': "stringset"}]
+input_fields = [{'name': "text", 'type': "string"}]
 
 {# Hints for the output_fields expected from the node processor using this template: #}
 output_fields = [{'name': "keyterms", 'type': "stringset"}]
 
 {# Define the 'extras' for number of keyterms desired  #}
-extras = [{'num_keyterms': None, 'openai_token': "generate", 'model': 'gpt-3.5-turbo'}]
+extras = [{'num_keyterms': None}, {'openai_token': "[user_extra]"}, {'model': 'gpt-3.5-turbo'}]
 
 {# Process the inputted array of strings: #}
 # complete dict task

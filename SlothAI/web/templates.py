@@ -13,6 +13,41 @@ from SlothAI.web.models import Template, Node
 
 template = Blueprint('template', __name__)
 
+# check if extras arrays of dicts are same same
+def are_arrays_of_dicts_equivalent(array1, array2):
+    def are_dicts_equivalent(dict1, dict2):
+        return sorted(dict1.items()) == sorted(dict2.items())
+
+    array2_copy = list(array2)
+
+    for dict2 in array2:
+        dict2_copy = dict2.copy()
+
+        for key, value in dict2.items():
+            if value is None or (isinstance(value, str) and value.startswith('[') and value.endswith(']')):
+                del dict2_copy[key]
+                for dict1 in array1:
+                    if key in dict1:
+                        del dict1[key]
+
+        dict2.clear()
+        dict2.update(dict2_copy)
+
+    if len(array1) != len(array2):
+        return False
+
+    for dict1 in array1:
+        found_equivalent = False
+        for dict2 in array2_copy:
+            if are_dicts_equivalent(dict1, dict2):
+                found_equivalent = True
+                break
+        if not found_equivalent:
+            return False
+
+    return True
+
+
 # API HANDLERS
 @template.route('/templates/list', methods=['GET'])
 @flask_login.login_required
@@ -49,7 +84,7 @@ def template_update(template_id):
     if template:
         if request.is_json:
             json_data = request.get_json()
-            print(json_data)
+
             # Check if 'template' key exists in json_data and use it to update the template
             if 'template' in json_data and isinstance(json_data['template'], dict):
                 template_data = json_data['template']
@@ -95,18 +130,14 @@ def template_update(template_id):
                     extras=extras,
                     processor=template_data.get('processor', template.get('processor'))
                 )
-                print(updated_template.get('processor'))
+
                 # find the nodes using this and update the extras
                 nodes = Node.fetch(template_id=template_id)
 
                 for node in nodes:
-                    updated_node = Node.update(
-                        node_id=node.get('node_id'),
-                        name=node.get('name'),
-                        extras=extras,
-                        processor=node.get('processor'),
-                        template_id=node.get('template_id')
-                    )
+                    print(node.get('extras'), extras)
+                    if not are_arrays_of_dicts_equivalent(node.get('extras'), extras):
+                        return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node."}), 500
 
                 if updated_template:
                     return jsonify(updated_template)
@@ -170,6 +201,13 @@ def template_create():
                 except Exception as ex:
                     return jsonify({"error": f"Invalid syntax {ex}", "message": "Syntax error on input, output or extras. Check your syntax."}), 400
             
+            for extra in extras:
+                if extra.get('processor'):
+                    processor = extra.get('processor')
+                    break
+            else:
+                processor = template_data.get('processor', "jinja2")
+
             created_template = Template.create(
                 name=template_data.get('name'),
                 uid=uid,
@@ -177,7 +215,7 @@ def template_create():
                 input_fields=input_fields,
                 output_fields=output_fields,
                 extras=extras,
-                processor=template_data.get('processor')
+                processor=processor
             )
 
             if created_template:

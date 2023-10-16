@@ -61,6 +61,12 @@ div.login_form h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px; /* Adjust the maximum width as needed */
+  font-size: 0.9em;
+}
+
+.dropdown-menu {         
+  max-height: 480px;
+  overflow-y: auto;
 }
 
 .highlighted-link {

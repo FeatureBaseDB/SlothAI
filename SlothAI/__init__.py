@@ -12,6 +12,7 @@ from SlothAI.web.tasks import tasks
 from SlothAI.web.pipelines import pipeline
 from SlothAI.web.nodes import node
 from SlothAI.web.templates import template
+from SlothAI.web.custom_commands import custom_commands
 
 from SlothAI.web.models import User
 
@@ -79,6 +80,7 @@ def create_app(conf='dev'):
         app.register_blueprint(pipeline)
         app.register_blueprint(node)
         app.register_blueprint(template)
+        app.register_blueprint(custom_commands)
 
     login_manager.blueprint_login_views = {
         'site': "/login",
