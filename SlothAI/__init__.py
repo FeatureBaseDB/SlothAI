@@ -2,6 +2,8 @@ import flask_login
 
 from flask import Flask, render_template, make_response, request
 
+from apscheduler.schedulers.background import BackgroundScheduler
+
 from google.cloud import ndb
 
 from SlothAI.web.site import site
@@ -15,7 +17,9 @@ from SlothAI.web.templates import template
 from SlothAI.web.custom_commands import custom_commands
 from SlothAI.web.callback import callback
 
-from SlothAI.web.models import User
+from SlothAI.web.models import User, Log
+
+import datetime
 
 import config as config 
 
@@ -40,6 +44,15 @@ def create_app(conf='dev'):
 
     # client connection
     client = ndb.Client()
+
+    scheduler = BackgroundScheduler()
+    def clean_logs():
+        threshold = datetime.datetime.now() + datetime.timedelta(minutes=60)
+        Log.delete_older_than(threshold=threshold)
+        
+    _ = scheduler.add_job(clean_logs, 'interval', minutes=5)
+    scheduler.start()
+
 
     @login_manager.request_loader
     def load_request(request):

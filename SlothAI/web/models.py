@@ -593,3 +593,11 @@ class Log(flask_login.UserMixin, ndb.Model):
         )
         log.put()
         return cls.query(cls.id == id).get().to_dict()
+    
+    @classmethod
+    @ndb_context_manager
+    def delete_older_than(cls, threshold):
+        entities = cls.query(cls.created < threshold).fetch()
+        if entities:
+            for entity in entities:
+                entity.key.delete()
