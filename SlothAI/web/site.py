@@ -10,7 +10,7 @@ from flask_login import current_user
 
 from SlothAI.lib.tasks import list_tasks
 from SlothAI.lib.util import random_name
-from SlothAI.web.models import Pipeline, Node, Template
+from SlothAI.web.models import Pipeline, Node, Template, Log
 from SlothAI.lib.nodes import initilize_nodes
 
 site = Blueprint('site', __name__)
@@ -81,6 +81,18 @@ def pipelines():
     return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
 
 
+@site.route('/logs', methods=['GET'])
+@flask_login.login_required
+def logs():
+    # get the user and their tables
+    username = current_user.name
+    hostname = request.host
+
+    logs = Log.fetch(uid=current_user.uid)
+
+    return render_template('pages/logs.html', username=username, hostname=hostname, logs=logs)
+
+
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
 def pipeline_view(pipe_id):
@@ -95,6 +107,8 @@ def pipeline_view(pipe_id):
 
 	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline)
 
+
+# @site.route('/callback/<user_id>', methods=['POST'])
 
 @site.route('/nodes', methods=['GET'])
 @flask_login.login_required
