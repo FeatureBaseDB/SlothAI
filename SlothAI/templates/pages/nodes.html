@@ -18,7 +18,6 @@
             <thead>
                 <tr>
                     <th>Node</th>
-                    <th>Template</th>
                     <th>Processor</th>
                     <th>Inputs</th>
                     <th>Outputs</th>
@@ -30,7 +29,6 @@
                 {% for node in nodes %}
                 <tr>
                     <td><button type="button" class="btn btn-secondary" disabled><i class="fas fa-coffee"></i> {{ node.name }}</button></td>
-                    <td><a class="btn btn-secondary" href="/templates/{{ node.template_id }}"><i class="fas fa-pen"></i> {{ node.get('template').get('name') }}</a></td>
                     <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors" title="{{ node.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i> {{ node.processor }}</a></td>
 
 
@@ -62,6 +60,7 @@
                         <div class="spinner-border text-danger" role="status" style="display: none;">
                             <span class="sr-only"></span>
                         </div>
+                        <a data-toggle="tooltip" data-placement="top" title="{{ node.get('template').get('name') }}" class="btn btn-secondary"  href="/templates/{{ node.get('template_id') }}"><i class="fas fa-pen"></i></a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -204,9 +203,20 @@ $(document).ready(function() {
 
     buttons.forEach(button => {
         const name = button.innerText;
-        const color = getColorFromName(name);
-        button.style.backgroundColor = color;
-        button.style.borderColor = color;
+        var color = "";
+        if (!name) {
+            const altname = $(button).attr('title');
+            if (altname) {
+                color = getColorFromName(altname);
+                button.style.backgroundColor = color;
+                button.style.borderColor = color;
+            }
+        } else {
+            color = getColorFromName(name);
+            button.style.backgroundColor = color;
+            button.style.borderColor = color;
+        }        
+
     });
 
     // JavaScript to change button colors
@@ -230,6 +240,7 @@ $(document).ready(function() {
     }
 
     function getColorFromName(name) {
+        console.log(name);
         name = name.trim(); // Remove leading and trailing spaces
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
@@ -485,7 +496,9 @@ $(document).ready(function() {
             }
         });
     }
-
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    })
 
 });
 </script>

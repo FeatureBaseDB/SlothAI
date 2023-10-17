@@ -154,7 +154,7 @@ def node_delete(node_id):
         is_in_pipeline = any(node_id in pipeline.get('node_ids', []) for pipeline in pipelines)
 
         if is_in_pipeline:
-            return jsonify({"error": "Node is in a pipeline", "message": "This node cannot be deleted until it's removed from the pipeline."}), 400
+            return jsonify({"error": "Node is in a pipeline", "message": "This node cannot be deleted until it's removed from the pipelines using it."}), 400
 
         # If the node is not in any pipeline, proceed with deletion
         Node.delete(node_id=node.get('node_id'))

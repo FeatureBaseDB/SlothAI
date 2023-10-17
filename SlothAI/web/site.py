@@ -128,7 +128,7 @@ def nodes():
     api_token = current_user.api_token
     dbid = current_user.dbid
     nodes = Node.fetch(uid=current_user.uid)
-
+    
     templates = Template.fetch(uid=current_user.uid)
     
     templates_exist = True
