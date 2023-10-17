@@ -40,15 +40,14 @@ def pipeline_add():
 		print(json_data)
 
 		# Make sure request JSON contains name and node_ids keys
-		name = json_data.get('pipelineName', None)
+		name = json_data.get('name', None)
 		nodes = json_data.get('nodes', None)
-		nodes = [node.split(" ")[0] for node in nodes]
 
 		if not name or not nodes:
 			return jsonify({"error": "Invalid JSON Object", "message": "The request body must be valid JSON data and contain a 'name' and 'nodess' key."}), 400
 		
 		if not isinstance(nodes, list):
-			return jsonify({"error": "Invalid JSON Object", "message": f"The value of the 'node_ids' key must be a list or node ids. Got: {type(nodes)}"}), 400
+			return jsonify({"error": "Invalid JSON Object", "message": f"The value of the 'nodes' key must be a list of node_ids. Got: {type(nodes)}"}), 400
 
 		# Make sure pipeline name is avaliable
 		if pipelines:
@@ -58,18 +57,13 @@ def pipeline_add():
  
 		# Make sure all nodes exist
 		for node in nodes:
-			print(f"name: {node}")
-			print(f"user_id: {user_id}")
-			
-			node = Node.fetch(name=node, uid=user_id)
-			print(node)
+			node = Node.fetch(node_id=node, uid=user_id)
 			if not node:
 				return jsonify({"error": "Invalid Node ID", "message": f"Unable to find a node with name {node}"}), 400
 
-
 		pipeline = Pipeline.create(user_id, name, nodes)
 		if not pipeline:
-			return jsonify({"error": "Unable to create pipeline in repository"}), 501
+			return jsonify({"error": "Create failed", "message": "Unable to create pipeline."}), 501
 		
 		return jsonify(pipeline), 200
 

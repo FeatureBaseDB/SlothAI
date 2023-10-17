@@ -135,7 +135,6 @@ def template_update(template_id):
                 nodes = Node.fetch(template_id=template_id)
 
                 for node in nodes:
-                    print(node.get('extras'), extras)
                     if not are_arrays_of_dicts_equivalent(node.get('extras'), extras):
                         return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node."}), 500
 

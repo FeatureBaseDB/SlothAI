@@ -69,7 +69,15 @@ def pipelines():
     hostname = request.host
     pipelines = Pipeline.fetch(uid=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
-    
+
+    # hide the tokens and passwords
+    for node in nodes:
+        for extra_dict in node['extras']:
+            for key in extra_dict.keys():
+                if 'token' in key or 'password' in key:
+                    extra_dict[key] = '[secret]'
+                    
+    # add input and output fields, plus template name
     _nodes = []
     for node in nodes:
         template = Template.get(template_id=node.get('template_id'))
@@ -78,6 +86,7 @@ def pipelines():
         node['output_fields'] = template.get('output_fields')
         _nodes.append(node)
 
+    print(nodes)
     return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
 
 

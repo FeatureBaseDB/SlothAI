@@ -26,7 +26,7 @@
             </thead>
             <tbody id="templateTable">
                 {% for template in templates %}
-                    <td><button class="btn btn-danger" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-pen"></i> {{ template.name }}</button></td>
+                    <td><button class="btn btn-secondary" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-pen"></i> {{ template.name }}</button></td>
                     <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors" title="{{ template.name }}" data-content="{{ processors | selectattr('value', 'equalto', template.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i> {{ template.processor }}</a></td>
 
                     <td>
@@ -157,11 +157,12 @@ $(document).ready(function() {
 
     // Function to generate a color based on the name
     function getColorFromName(name) {
+        name = name.trim(); // Remove leading and trailing spaces
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
             hash = name.charCodeAt(i) + ((hash << 5) - hash);
         }
-        const color = `hsl(${hash % 360}, 70%, 60%)`; // Generate an HSL color
+        const color = `hsl(${hash % 360}, 70%, 60%)`;
         return color;
     }
 });

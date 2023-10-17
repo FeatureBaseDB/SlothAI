@@ -93,9 +93,9 @@
                     <div class="input-group">
                         <select class="form-control" id="selectedNode">
                             <optgroup id="nodePulldown" label="Available Nodes">
-                                <option data-node_name="none">None</option>
+                                <option value="None">None</option>
                                 {% for node in nodes %}
-                                    <option data-node_name="{{ node.name }}" data-node_extras="{{ node.extras }}" data-input_fields="{{ node.input_fields }}" data-output_fields="{{ node.output_fields }}" data-node_processor="{{ node.processor }}" data-node_template="{{ node.template_name }}">{{ node.name }} ➔ {{ node.template_name }} ➔ {{ node.processor }}</option>
+                                    <option value="{{ node.node_id }}">{{ node.name }} ➔ {{ node.template_name }} ➔ {{ node.processor }}</option>
                                 {% endfor %}
                             </optgroup>
                         </select>
@@ -127,53 +127,76 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function () {
-    function getRowCount() {
-        const tbody = document.querySelector('table tbody');
-        if (tbody) {
-            const rowCount = tbody.getElementsByTagName('tr').length;
-            return rowCount;
+    // grab the nodes from the template and make them available via getNodeInfo
+    var nodes = JSON.parse('{{nodes | tojson}}');
+    function getNodeInfo(nodeId) {
+        const node = nodes.find(node => node.node_id === nodeId);
+
+        if (node) {
+            const { name, template_name, processor, input_fields, output_fields, extras } = node;
+            return { name, template_name, processor, input_fields, output_fields, extras };
         } else {
-            return 0;
-        }
-    }
-
-    // Function to generate a color based on the name
-    function getColorFromName(name) {
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`; // Generate an HSL color
-        return color;
-    }
-
-    function stringToJson(inputString) {
-        console.log(inputString);
-        try {
-            const jsonObject = JSON.parse(inputString);
-            return jsonObject;
-        } catch (error) {
-            console.error("Error parsing JSON:", error);
             return null;
         }
     }
 
-    function toggleSelectedNodesContainer() {
-        if (selectedNodes.length > 0) {
-            $('#selectedNodesContainer').show();
-        } else {
-            $('#selectedNodesContainer').hide();
+    function getColorFromName(name) {
+        name = name.trim(); // Remove leading and trailing spaces
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
         }
+        const color = `hsl(${hash % 360}, 70%, 60%)`;
+        return color;
     }
 
-    function processString(inputString) {
-      if (inputString.includes(':')) {
-        const parts = inputString.split(':');
-        part = parts[1].trim();
-        return part;
-      } else {
-        return inputString;
-      }
+    // create buttons in the list
+    function createButton(name, title, content, extras=false) {
+        const container = $('<div>');
+        if (extras && content.length > 0) {
+            content.forEach(extra => {
+                for (const key in extra) {
+                    if (extra.hasOwnProperty(key)) {
+                        const value = extra[key];
+                        const badge = $('<span>', {
+                            class: 'badge badge-secondary',
+                            text: `${key}:${value}`,
+                        });
+                        container.append(badge);
+                    }
+                }
+            });
+        } else if (content.length > 0) {
+            content.forEach(entry => {
+                const badge = $('<span>', {
+                    class: 'badge badge-primary',
+                    text: `${entry.name}:${entry.type}`,
+                    type: entry.type
+                });
+                container.append(badge);
+            });
+        } else {
+            const badge = $('<span>', {
+                class: 'badge badge-success',
+                text: `passthrough`
+            });
+            container.append(badge);
+        }
+        const button = $('<a>', {
+            tabindex: 0,
+            role: 'button',
+            class: 'btn btn-secondary',
+            title: title,
+            'data-toggle': 'popover',
+            'data-trigger': 'focus',
+            'data-html': true,
+            'data-placement': 'top',
+            'data-content': container.html(),
+        });
+        button.css('background-color', getColorFromName(name));
+        button.html(name);
+        button.popover({trigger: 'focus'});
+        return button;
     }
 
     $("#createPipeline").on("click", function() {
@@ -182,6 +205,67 @@ $(document).ready(function () {
         } else {
             toastr.error("No nodes. Add a node first before adding a pipeline.");
         }
+    });
+
+    const selectedNodes = [];
+    $('#addNodeToList').click(function () {
+        const selectedNode = $('#selectedNode').find(':selected').attr('value');
+
+        // add the node if it's not None
+        if ( selectedNode == "None" || !selectedNode ) {
+            toastr.error("Select a valid node to add to the pipeline.");
+            return;
+        } else if ( selectedNodes.includes(selectedNode) ) {
+            toastr.error("Node is already in the pipeline.");
+            return;
+        }
+
+        selectedNodes.push(selectedNode);
+
+        const buttonGroup = $('<div></div>', {
+            class: 'btn-group btn-group-toggle',
+            'data-toggle': 'buttons',
+        });
+
+        const deleteButton = $('<a></a>', {
+            tabindex: 0,
+            role: 'button',
+            class: `btn btn-danger rounded-right`,
+            title: 'Delete Node',
+            click: function () {
+                const indexToRemove = selectedNodes.indexOf(selectedNode);
+                if (indexToRemove !== -1) {
+                    selectedNodes.splice(indexToRemove, 1);
+                }
+                listItem.remove();
+
+                // set the dropdown to None 
+                $("#selectedNodesContainer").val("None");
+
+                // hide or show the container
+                if ($('#selectedNodes').length == 0) {
+                    $('#selectedNodesContainer').hide();
+                } else {
+                    $('#selectedNodesContainer').show();
+                }
+            }
+        });
+        deleteButton.append($('<i class="fas fa-trash-alt"></i>'));
+        
+        buttonGroup.append(createButton(getNodeInfo(selectedNode).name, "Node Input", getNodeInfo(selectedNode).input_fields));
+        buttonGroup.append(createButton(getNodeInfo(selectedNode).template_name, "Template", getNodeInfo(selectedNode).extras, true));
+        buttonGroup.append(createButton(getNodeInfo(selectedNode).processor, "Processor Output", getNodeInfo(selectedNode).output_fields));
+        buttonGroup.append(deleteButton);
+
+        const listItem = $('<div></div>', {
+            class: 'selected-node',
+        });
+
+        // append to the existing list
+        listItem.append(buttonGroup);
+
+        $("#selectedNodesContainer").append(listItem);
+        $('#selectedNodesContainer').show();
     });
 
     // Attach a click event handler to the delete buttons
@@ -214,229 +298,17 @@ $(document).ready(function () {
         });
     });
 
-    const selectedNodeDropdown = $('#selectedNode');
-    const selectedNodesContainer = $('#selectedNodesContainer');
-    const ListMessage = $('#ListMessage');
-
-    const selectedNodes = []; // Initialize an array to store selected nodes
-
-    $('#addNodeToList').click(function () {        
-        const selectedNodeOption = selectedNodeDropdown.find(':selected');
-        const selectedNode = selectedNodeOption.val();
-        const selectedNodeExtras = selectedNodeOption.data('node_extras');
-        const selectedNodeInputs = selectedNodeOption.data('input_fields');
-        const selectedNodeOutputs = selectedNodeOption.data('output_fields');
-        const selectedNodeProcessor = selectedNodeOption.data('node_processor');
-        const selectedNodeName = selectedNodeOption.data('node_name');
-        const selectedNodeTemplate = selectedNodeOption.data('node_template');
-        
-        if (selectedNode !== "None" && selectedNode && !selectedNodes.includes(selectedNode)) {
-            selectedNodes.push(selectedNode);
-
-            const trashIcon = $('<i></i>', {
-                class: 'fas fa-trash-alt', // Font Awesome trashcan icon
-            });
-
-            const buttonGroup = $('<div></div>', {
-                class: 'btn-group btn-group-toggle',
-                'data-toggle': 'buttons',
-            });
-
-            const deleteButton = $('<a></a>', {
-                tabindex: 0, // Add tabindex for focus
-                role: 'button',
-                class: `btn btn-danger rounded-right`, // Rounded on the right, red (danger)
-                title: 'Delete Node',
-                click: function () {
-                    const indexToRemove = selectedNodes.indexOf(selectedNode);
-                    if (indexToRemove !== -1) {
-                        selectedNodes.splice(indexToRemove, 1);
-                    }
-                    listItem.remove();
-                    if (selectedNodes.length === 0) {
-                        ListMessage.text('Pipeline will write directly to FeatureBase.');
-                    }
-
-                    selectedNodeDropdown.val("None");
-                    toggleSelectedNodesContainer();
-
-                },
-            });
-
-            deleteButton.append(trashIcon); // Add trashcan icon to the delete button
-
-            // input badges for node button
-            const inputBadges = $('<div></div>');
-            
-            // Replace single quotes around keys and values in selectedNodeInputs
-            const cleanSelectedNodeInputs = selectedNodeInputs.replace(/'([^']+)'/g, '"$1"');
-
-            // Convert the cleaned string to JSON
-            const selectedNodeInputsJSON = JSON.parse(`{"inputs": ${cleanSelectedNodeInputs}}`);
-            if (selectedNodeInputsJSON.inputs.length === 0) {
-                const passthroughBadge = $('<span>', {
-                    class: 'badge badge-dark',
-                    text: 'passthrough'
-                });
-                inputBadges.append(passthroughBadge);
-            } else {
-                $.each(selectedNodeInputsJSON.inputs, function(index, input_field) {
-                    const badge = $('<span>', {
-                        class: 'badge',
-                        text: `${input_field.name}:${input_field.type}`
-                    });
-                    badge.attr('data-name', input_field.name);
-                    inputBadges.append(badge);
-                });
-            }
-
-            // Convert inputBadges to an HTML string
-            const inputBadgesHtml = inputBadges.html();
-            console.log(inputBadgesHtml)
-
-            const node_button = $('<a></a>', {
-                tabindex: 0,
-                role: 'button',
-                class: `btn btn-danger`,
-                title: 'Node Inputs',
-                'data-toggle': 'popover',
-                'data-trigger': 'focus',
-                'data-html': true,
-                'data-placement': "top",
-                'data-content': inputBadgesHtml,
-            });
-            node_button.html(selectedNodeName);
-
-            // input badges for node button
-            const outputBadges = $('<div></div>');
-            
-            // Replace single quotes around keys and values in selectedNodeInputs
-            const cleanSelectedProcessorOutputs = selectedNodeOutputs.replace(/'([^']+)'/g, '"$1"');
-
-            // Convert the cleaned string to JSON
-            const selectedProcessorOutputsJSON = JSON.parse(`{"outputs": ${cleanSelectedProcessorOutputs}}`);
-            if (selectedProcessorOutputsJSON.outputs.length === 0) {
-                const passthroughBadge = $('<span>', {
-                    class: 'badge badge-info',
-                    text: 'passthrough'
-                });
-                outputBadges.append(passthroughBadge);
-            } else {
-                $.each(selectedProcessorOutputsJSON.outputs, function(index, output_field) {
-                    const badge = $('<span>', {
-                        class: 'badge badge-primary',
-                        text: `${output_field.name}:${output_field.type}`
-                    });
-                    badge.attr('data-name', output_field.name);
-                    outputBadges.append(badge);
-                });
-            }
-
-            // Convert outputBadges to an HTML string
-            const outputBadgesHtml = outputBadges.html();
-
-            const processor_button = $('<a></a>', {
-                tabindex: 0, // Add tabindex for focus
-                role: 'button',
-                class: `btn btn-primary`,
-                title: 'Processor Outputs',
-                'data-toggle': 'popover',
-                'data-trigger': 'focus',
-                'data-html': true,
-                'data-placement': "top",                    
-                'data-content': outputBadgesHtml
-            });
-            processor_button.html(selectedNodeProcessor);
-
-            // Set the background and border colors
-            const name = processString(processor_button.text());
-            const color = getColorFromName(name);
-            processor_button.css('background-color', color);
-            processor_button.css('border-color', color);
-
-            const template_button = $('<a></a>', {
-                tabindex: 0, // Add tabindex for focus
-                role: 'button',
-                class: `btn btn-primary`,
-                text: `${selectedNodeTemplate}`,
-                title: 'Processor Info', // Title for the popover
-            });
-            template_button.html(selectedNodeTemplate);
-
-            // append the buttons to the new node
-            buttonGroup.append(node_button);
-            buttonGroup.append(template_button);
-            buttonGroup.append(processor_button);
-            buttonGroup.append(deleteButton);
-
-            node_button.on('shown.bs.popover', function () {
-                const name = $(this).data('name');
-                console.log("Name from data-name:", name);
-            });
-
-            processor_button.on('shown.bs.popover', function () {
-                // Access the badge elements inside the popover content
-                const badges = $(this).next().find('.badge');
-                console.log(badges)
-                
-                badges.each(function() {
-                    const name = $(this).data('name');
-                    console.log("Name from data-name:", name);
-                });
-            });
-
-            const listItem = $('<div></div>', {
-                class: 'selected-node',
-            });
-
-            listItem.append(buttonGroup);
-
-            selectedNodesContainer.append(listItem);
-            ListMessage.text('Pipeline execution order:');
-            toggleSelectedNodesContainer();
-
-            // update the large buttons
-            $("#selectedNodesContainer .btn").each(function() {
-                const name = processString($(this).text());
-                const color = getColorFromName(name);
-                $(this).css('backgroundColor', color);
-                $(this).css('borderColor', color);
-            });
-
-            // Initialize Bootstrap popovers for the badge elements
-            node_button.popover({
-                trigger: 'focus',
-            });
-            processor_button.popover({
-                trigger: 'focus',
-            });
-        }
-    });
-
-    var formFields = [
-        { name: 'pipelineName', id: 'pipelineName' },
-        { name: 'nodes', id: 'nodes' }
-    ];
-
     $("#createButton").click(function () {
-        var formData = {};
-
-        // Populate formData object from formFields array
-        for (var i = 0; i < formFields.length; i++) {
-            var field = formFields[i];
-            formData[field.name] = $("#" + field.id).val();
-        }
-
-        formData.nodes = selectedNodes;
+        pipelineData = {"name": $("#pipelineName").val(), "nodes": selectedNodes};
 
         // Move this to a notice in the form
-        if (!/^[a-z-_]+$/.test(formData.pipelineName)) {
+        if (!/^[a-z-_]+$/.test(pipelineData.name)) {
             toastr.error("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
         } else {
             $.ajax({
                 type: "POST",
                 url: "/pipeline",
-                data: JSON.stringify(formData), // Send data as JSON
+                data: JSON.stringify(pipelineData), // Send data as JSON
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function (response) {
@@ -450,15 +322,6 @@ $(document).ready(function () {
         }
     });
 
-    // JavaScript to change button colors
-    const buttons = document.querySelectorAll("#pipelineTable button");
-
-    buttons.forEach(button => {
-        const name = button.innerText;
-        const color = getColorFromName(name);
-        button.style.backgroundColor = color;
-        button.style.borderColor = color;
-    });
 });
 </script>
 {% endblock %}
