@@ -76,7 +76,7 @@ def pipelines():
             for key in extra_dict.keys():
                 if 'token' in key or 'password' in key:
                     extra_dict[key] = '[secret]'
-                    
+
     # add input and output fields, plus template name
     _nodes = []
     for node in nodes:
@@ -86,7 +86,6 @@ def pipelines():
         node['output_fields'] = template.get('output_fields')
         _nodes.append(node)
 
-    print(nodes)
     return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
 
 
@@ -105,16 +104,35 @@ def logs():
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
 def pipeline_view(pipe_id):
-	# get the user and their tables
-	username = current_user.name
-	token = current_user.api_token
-	hostname = request.host
+    # get the user and their tables
+    username = current_user.name
+    token = current_user.api_token
+    hostname = request.host
 
-	pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
-	if not pipeline:
-		return redirect(url_for('site.pipelines'))
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
 
-	return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline)
+    nodes = Node.fetch(uid=current_user.uid)
+
+    # hide the tokens and passwords
+    for node in nodes:
+        for extra_dict in node['extras']:
+            for key in extra_dict.keys():
+                if 'token' in key or 'password' in key:
+                    extra_dict[key] = '[secret]'
+
+    # add input and output fields, plus template name
+    _nodes = []
+    for node in nodes:
+        template = Template.get(template_id=node.get('template_id'))
+        node['template_name'] = template.get('name')
+        node['input_fields'] = template.get('input_fields')
+        node['output_fields'] = template.get('output_fields')
+        _nodes.append(node)
+
+    if not pipeline:
+        return redirect(url_for('site.pipelines'))
+
+    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline)
 
 
 # @site.route('/callback/<user_id>', methods=['POST'])
@@ -128,7 +146,7 @@ def nodes():
     api_token = current_user.api_token
     dbid = current_user.dbid
     nodes = Node.fetch(uid=current_user.uid)
-    
+
     templates = Template.fetch(uid=current_user.uid)
     
     templates_exist = True

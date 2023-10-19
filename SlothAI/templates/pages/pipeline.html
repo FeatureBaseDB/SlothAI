@@ -19,24 +19,13 @@
         <div class="card-body">
             <h4 class="card-title card-callout">{{ pipeline.name }}</h4>
 
-			<p class="card-text">
+            <p class="card-text">
                 {% for node in nodes %}
-                <strong>{{ node.name }}</strong>
+                    {% if node.node_id == node_id %}
+                        <button class="btn btn-secondary">{{ node.name }}</button>
+                    {% endif %}
                 {% endfor %}
             </p>
-<p class="card-text">
-    This pipeline is running: 
-    {% for node in nodes %}
-        {% if "embedding" in node.method %}
-            <span class="badge badge-primary">{{ node.method }} with {{ node.name }}</span>
-        {% elif "keyterm" in node.method %}
-            <span class="badge badge-warning">{{ node.method }} with {{ node.name }}</span>
-        {% elif "question" in node.method %}
-            <span class="badge badge-success">{{ node.method }} with {{ node.name }}</span>
-        {% endif %}
-    {% endfor %}
-    <span class="badge badge-dark">write to database</span>
-</p>
 
             <p class="card-text">This is the ingestion endpoint for your pipeline:</p>
 

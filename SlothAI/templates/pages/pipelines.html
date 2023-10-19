@@ -26,18 +26,22 @@
                 {% for pipeline in pipelines %}
                 <tr>
                     <td>
-                        <button class="btn btn-danger" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'">{{ pipeline.name }}</button>
+                        <button class="btn btn-secondary" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'">{{ pipeline.name }}</button>
                     </td>
                     <td>
                         <div class="btn-group">
-                            {% for node in pipeline.node_ids %}
-                                <button class="btn btn-danger" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'">{{ node }}</button>
+                            {% for node_id in pipeline.node_ids %}
+                                {% for node in nodes %}
+                                    {% if node.node_id == node_id %}
+                                        <button class="btn btn-secondary">{{ node.name }}</button>
+                                    {% endif %}
+                                {% endfor %}
                             {% endfor %}
                         </div>
                     </td>
                     <td>
                         <button class="delete-button btn btn-danger" data-pipe-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
-                        <div class="spinner-border text-danger" role="status" style="display: none;">
+                        <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">
                             <span class="sr-only"></span>
                         </div>
                     </td>
@@ -139,6 +143,16 @@ $(document).ready(function () {
             return null;
         }
     }
+    
+    function getRowCount() {
+        const tbody = document.querySelector('table tbody');
+        if (tbody) {
+            const rowCount = tbody.getElementsByTagName('tr').length;
+            return rowCount;
+        } else {
+            return 0;
+        }
+    }
 
     function getColorFromName(name) {
         name = name.trim(); // Remove leading and trailing spaces
@@ -149,6 +163,15 @@ $(document).ready(function () {
         const color = `hsl(${hash % 360}, 70%, 60%)`;
         return color;
     }
+
+    const buttons = document.querySelectorAll("#pipelineTable .btn");
+    buttons.forEach(button => {
+        const name = button.innerText;
+        const color = getColorFromName(name);
+        button.style.backgroundColor = color;
+        button.style.borderColor = color;
+
+    });
 
     // create buttons in the list
     function createButton(name, title, content, extras=false) {
@@ -299,6 +322,7 @@ $(document).ready(function () {
     });
 
     $("#createButton").click(function () {
+        $("#createPipeline").prop("disabled", true);
         pipelineData = {"name": $("#pipelineName").val(), "nodes": selectedNodes};
 
         // Move this to a notice in the form
@@ -316,6 +340,7 @@ $(document).ready(function () {
                     window.location.href = "/pipelines/" + response.pipe_id;
                 },
                 error: function (error) {
+                    $("#createPipeline").prop("disabled", false);
                     toastr.error(error.responseJSON.message);
                 }
             });

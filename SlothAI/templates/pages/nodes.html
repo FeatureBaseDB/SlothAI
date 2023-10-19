@@ -56,11 +56,9 @@
                     </td>
 
                     <td>
-                        <button class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></button>
-                        <div class="spinner-border text-danger" role="status" style="display: none;">
-                            <span class="sr-only"></span>
-                        </div>
                         <a data-toggle="tooltip" data-placement="top" title="{{ node.get('template').get('name') }}" class="btn btn-secondary"  href="/templates/{{ node.get('template_id') }}"><i class="fas fa-pen"></i></a>
+                        <button class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;"><span class="sr-only"></span></div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -130,7 +128,7 @@
                         <select class="form-control" id="nodeTemplate">
                         </select>
                     </div>
-                    <div class="spinner-border" role="status" id="nodeTemplateSpinner">
+                    <div class="spinner-grow" role="status" id="nodeTemplateSpinner">
                         <span class="sr-only"></span>
                     </div>
                 <div class="form-group" style="display: none;" id="dynamicFieldsContainer">
@@ -481,6 +479,8 @@ $(document).ready(function() {
     });
 
     function addNode(nodeData) {
+        $("#addNodeButton").prop("disabled", true);
+
         $.ajax({
             url: '/nodes/create',
             type: 'POST',
@@ -492,6 +492,7 @@ $(document).ready(function() {
                 window.location.reload();
             },
             error: function(error) {
+                $("#addNodeButton").prop("disabled", false);
                 toastr.error('Error adding the node: ' + error.responseJSON.message);
             }
         });
