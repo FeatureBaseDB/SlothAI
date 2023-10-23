@@ -107,3 +107,67 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
 		ai_dict = {}
 
 	return ai_dict
+
+
+def fields_text_from_template(template):
+
+	# Regular expressions to find input and output fields in the template
+	input_pattern = re.compile(r'input_fields\s*=\s*(\[.*?\])', re.DOTALL)
+	output_pattern = re.compile(r'output_fields\s*=\s*(\[.*?\])', re.DOTALL)
+
+	input_match = input_pattern.search(template)
+	output_match = output_pattern.search(template)
+
+	input_content = input_match.group(1) if input_match else None
+	output_content = output_match.group(1) if output_match else None
+
+	return input_content, output_content
+
+def fields_from_template(template):
+	input_fields = []
+	output_fields = []
+
+	input_content, output_content = fields_text_from_template(template)
+
+	input_fields = eval(input_content) if input_content else None
+	output_fields = eval(output_content) if output_content else None
+
+	return input_fields, output_fields
+
+def extras_from_template(template):
+	extras_pattern = re.compile(r'extras\s*=\s*(\[.*?\])', re.DOTALL)
+	extras_match = extras_pattern.search(template)
+
+	if extras_match:
+		extras_content = extras_match.group(1)
+		return extras_content
+	else:
+		return None
+
+def jinja_from_template(template):
+	if not isinstance(template, str):
+		return ""
+
+	jinja = template[:]
+	
+	input_content, output_content = fields_text_from_template(template)
+	extras_content = extras_from_template(template)
+
+	# remove jinja comments
+	jinja = re.sub(r'{#.*?#}', '', jinja)
+	jinja = re.sub(r'{#.*?#}', '', jinja)
+	jinja = re.sub(r'{#.*?#}', '', jinja)
+	inp = re.compile(r'\s*input_fields\s*=\s*')
+	out = re.compile(r'\s*output_fields\s*=\s*')
+	jin = re.compile(r'\s*extras\s*=\s*')
+	jinja = re.sub(inp, '', jinja)
+	jinja = re.sub(out, '', jinja)
+	jinja = re.sub(jin, '', jinja)
+	if input_content:
+		jinja = jinja.replace(input_content, '')
+	if output_content:
+		jinja = jinja.replace(output_content, '')
+	if extras_content:
+		jinja = jinja.replace(extras_content, '')
+
+	return jinja

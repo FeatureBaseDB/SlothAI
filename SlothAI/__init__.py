@@ -19,8 +19,6 @@ from SlothAI.web.callback import callback
 
 from SlothAI.web.models import User, Log
 
-import datetime
-
 import config as config 
 
 def create_app(conf='dev'):
@@ -45,11 +43,11 @@ def create_app(conf='dev'):
     # client connection
     client = ndb.Client()
 
-    scheduler = BackgroundScheduler()
     def clean_logs():
-        threshold = datetime.datetime.now() + datetime.timedelta(minutes=60)
-        Log.delete_older_than(threshold=threshold)
-        
+        Log.delete_older_than(hours=1)
+        app.logger.info('ran background process to delete old callback logs')
+    
+    scheduler = BackgroundScheduler()
     _ = scheduler.add_job(clean_logs, 'interval', minutes=5)
     scheduler.start()
 

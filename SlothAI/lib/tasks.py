@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from ping3 import ping
 from SlothAI.lib.util import check_webserver_connection
 
-from typing import List
+from typing import List, Tuple, Dict
 
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
@@ -20,13 +20,14 @@ from SlothAI.lib.schemar import string_to_datetime, datetime_to_string, FBTypes
 from flask import current_app as app
 
 class Task:
-	def __init__(self, id: str, user_id: str, pipe_id: str, nodes_to_visit: List[str], document: dict, created_at: datetime):
+	def __init__(self, id: str, user_id: str, pipe_id: str, nodes_to_visit: List[str], document: dict, created_at: datetime, retries: int):
 		self.id = id
 		self.user_id = user_id
 		self.pipe_id = pipe_id
 		self.nodes_to_visit = nodes_to_visit
 		self.document = document
 		self._created_at = created_at
+		self.retries = retries
 
 	@property
 	def created_at(self):
@@ -42,7 +43,8 @@ class Task:
 			"pipe_id": self.pipe_id,
 			"nodes_to_visit": self.nodes_to_visit,
 			"document": self.document,
-			"created_at": self.created_at.strftime('%Y-%m-%dT%H:%M:%SZ')
+			"created_at": self.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
+			"retries": self.retries
 		}
 
 	@classmethod
@@ -56,7 +58,8 @@ class Task:
 			pipe_id=task_dict["pipe_id"],
 			nodes_to_visit=task_dict["nodes_to_visit"],
 			document=task_dict["document"],
-			created_at= datetime.strptime(task_dict["created_at"], '%Y-%m-%dT%H:%M:%SZ')
+			created_at= datetime.strptime(task_dict["created_at"], '%Y-%m-%dT%H:%M:%SZ'),
+			retries=task_dict['retries']
 		)
 
 	def to_json(self) -> str:
@@ -120,8 +123,7 @@ class Task:
 		# Send the task to the Cloud Tasks queue
 		response = client.create_task(parent=queue, task=task)
 
-		# return the task ID
-		return response.name.split('/')[-1]
+		self.id = response.name.split('/')[-1]
 
 	def next_node(self):
 		return self.nodes_to_visit[0]
@@ -288,21 +290,39 @@ def create_task(document):
 	# return the task ID
 	return task_id
 
-def get_task_schema(document):
+def get_task_schema(data: Dict[str, any]) -> Tuple[Dict[str, str], str]:
 	'''
 	Populate with schema dict
 	'''
-	data = document.get('data', None)
-	if not data:
-		document['schema'] = {}
-	else:		
-		try:
-			document['schema'] = Schemar(data=data).infer_schema()
-		except Exception as ex:
-			document['schema'] = {}
-			document['error'] = f"in get_task_schema: {ex}"
 
-	return document
+	if not data:
+		return dict(), None
+
+	try:
+		schema = Schemar(data=data).infer_schema()
+	except Exception as ex:
+		return dict(), f"in get_task_schema: {ex}"
+
+	return schema, None
+
+def get_values_by_json_paths(json_paths, document):
+    results = {}
+    
+    for json_path in json_paths:
+        path_components = json_path.split('.')
+        current_location = document
+        
+        for key in path_components:
+            if key in current_location:
+                current_location = current_location[key]
+            else:
+                # If a key is not found, skip this path
+                break
+        else:
+            # This block executes if the loop completed without a 'break'
+            results[path_components[-1]] = current_location
+    
+    return results
 
 def retry_task(document):
 	document['retries'] += 1
@@ -348,75 +368,101 @@ def process_data_dict_for_insert(data, column_type_map, table):
 	"""
     
 	records = []
-	columns = ['_id'] + list(data.keys())
+	columns = list(data.keys())
+
+	if "_id" not in columns:
+		columns = ["_id"] + columns
 
 	# build insert tuple for each record
-	for i, _ in enumerate(data['text']):
+	for i, _ in enumerate(data[list(data.keys())[0]]):
 		record = ""
 		for column in columns:
 			col_type = column_type_map[column]
 			if column == '_id':
-				value = f"'{random_string(6)}'" if col_type == "string" else f"identifier('{table}')"
-			else:
-				value = data[column][i]
-				if FBTypes.TIMESTAMP in col_type:
-					value = f"'{datetime_to_string(string_to_datetime(value))}'"
-				if col_type == FBTypes.STRING:
-					value = f"'{handle_quotes(value)}'"
-				if col_type == FBTypes.STRINGSET:
-					value = "['" + "','".join(handle_quotes(value)) + "']"	
+				if column not in list(data.keys()):
+					record += f"'{random_string(6)}'," if col_type == "string" else f"identifier('{table}'),"
+					continue
+			value = data[column][i]
+			if FBTypes.TIMESTAMP in col_type:
+				value = f"'{datetime_to_string(string_to_datetime(value))}'"
+			if col_type == FBTypes.STRING:
+				value = f"'{handle_quotes(value)}'"
+			if col_type == FBTypes.STRINGSET:
+				value = "['" + "','".join(handle_quotes(value)) + "']"	
 			record += f"{value},"
 		records.append(f"({record[:-1]})")
 
 	return columns, records
 
+def validate_dict_structure(keys_list, input_dict):
+    for key in keys_list:
+        keys = key.get('name').split('.')
+        current_dict = input_dict
 
-# probaby not the best place for this, so welcome to agile!
-def box_required_for_node(node):
+        for k in keys:
+            if k not in current_dict:
+                return key
+            current_dict = current_dict[k]
 
+    return None
+
+def transform_data(output_keys, data):
+	out = {}
+
+	if len(output_keys) == 1 and output_keys[0]['name'] == 'data':
+		# Special case: If the output key is 'data', wrap the data in a single key
+		out['data'] = data
+	else:
+		for key_info in output_keys:
+			key_name = key_info['name']
+
+			if key_name in data:
+				out[key_name] = data[key_name]
+			else:
+				raise KeyError(f"Key not found: {key_name}")
+
+	return out
+
+def box_required():
 	box_required = False
 	selected_box = None
 
 	boxes = Box.get_boxes()
-	box_type = node.get('extras').get('box_type', None)
-	model = node.get('extras').get('model', None)
+	active_t4s = []
+	halted_t4s = []
+	if boxes:
+		for box in boxes:
+			# if the box is START, PROVISIONING, STAGING, RUNNING
+			if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
+				# can we ping it?
+				response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
 
-	if model and box_type == "t4":
-		active_t4s = []
-		halted_t4s = []
-		if boxes:
-			for box in boxes:
-				# if the box is START, PROVISIONING, STAGING, RUNNING
-				if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
-					# can we ping it?
-					response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
-
-					if response_time and check_webserver_connection(box.get('ip_address'), 9898):
-						print("pinging", box.get('ip_address'), response_time, box.get('status'))
-						# ping worked and the server responded
-						active_t4s.append(box)
-					else:
-						print("box is not running")
-						halted_t4s.append(box)
+				if response_time and check_webserver_connection(box.get('ip_address'), 9898):
+					print("pinging", box.get('ip_address'), response_time, box.get('status'))
+					# ping worked and the server responded
+					active_t4s.append(box)
 				else:
-					# box wasn't RUNNING or at START
+					print("box is not running")
 					halted_t4s.append(box)
+			else:
+				# box wasn't RUNNING or at START
+				halted_t4s.append(box)
 
-		if active_t4s:
-			# If there are active boxes, select one at random
-			selected_box = random.choice(active_t4s)
-			box_required = False
-		else:
-			# pick a random startable box
-			alternate_box = random.choice(halted_t4s)
+	if active_t4s:
+		# If there are active boxes, select one at random
+		selected_box = random.choice(active_t4s)
+		box_required = False
+	else:
+		# pick a random startable box
+		alternate_box = random.choice(halted_t4s)
 
-			# start the box and set the new status
-			if box.get('status') != "START":
-				print("starting box ", box.get('box_id'))
-				box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
-				Box.start_box(alternate_box.get('box_id'), "START") # sets status to 'START'
-			
-			selected_box = None
-			box_required = True
+		# start the box and set the new status
+		if box.get('status') != "START":
+			print("starting box ", box.get('box_id'))
+			box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
+			Box.start_box(alternate_box.get('box_id'), "START") # sets status to 'START'
+		
+		selected_box = None
+		box_required = True
 
 	return box_required, selected_box

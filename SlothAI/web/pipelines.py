@@ -8,8 +8,8 @@ from datetime import datetime
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.tasks import create_task, get_task_schema, Task
-from SlothAI.web.models import Pipeline, Node
+from SlothAI.lib.tasks import create_task, get_task_schema, Task, validate_dict_structure
+from SlothAI.web.models import Pipeline, Node, Template
 from SlothAI.lib.util import random_string
 
 pipeline = Blueprint('pipeline', __name__)
@@ -88,6 +88,8 @@ def pipeline_delete(pipe_id):
 @flask_login.login_required
 def ingest_post(pipeline_id):
 	pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipeline_id)
+	if not pipeline:
+		return jsonify({"response": f"pipeline with id {pipeline_id} not found"}), 404
 
 	task = Task(
 		id=random_string(),
@@ -95,41 +97,25 @@ def ingest_post(pipeline_id):
 		pipe_id=pipeline.get('pipe_id'),
 		nodes_to_visit=pipeline.get('node_ids'),
 		document=dict(),
-		created_at=datetime.utcnow()
+		created_at=datetime.utcnow(),
+		retries=0
 	)
 
-	if pipeline:
-		try:
-			json_data = request.get_json()
-		except Exception as ex:
-			return jsonify({"response": f"Check your JSON! {ex}"}), 400
+	try:
+		json_data = request.get_json()
+	except Exception as ex:
+		return jsonify({"error": f"issue getting request JSON data: {ex}"}), 400
 
-		if not json_data.get('text', None):
-			return jsonify({"response": "'text' field is required"}), 406 # todo get error code
+	node_id = task.next_node() # initial node
+	node = Node.get(uid = task.user_id, node_id = node_id)
+	if not node:
+		return f"response: node with id {node_id} not found", 500 
+	template = Template.get(template_id=node.get('template_id'))
+	if not template:
+		return f"response: template with id {node.get('template_id')} not found", 500 
 
-		# move to data
-		task.document = {"data": json_data}
-		if 'text' in json_data: # TODO: make this configurable by the user
-			text_value = json_data['text']
-			if not isinstance(text_value, list):
-				# If 'text' is not an array, convert it to a single-element list
-				json_data['text'] = [text_value]
-		else:
-			return jsonify({"response": "need 'text' field..."})
+	task.document = json_data
+	task.queue()
 
+	return jsonify(task.to_dict()), 200
 
-		# this populates the model object in the document
-		# map table document to document (includes uid, etc.)
-		task.document['retries'] = 0
-		task.document['openai_token'] = app.config['OPENAI_TOKEN'] # should be a model thing not a app config thing
-
-		# write to the job queue
-		job_id = task.queue()
-		task.document['job_id'] = job_id
-
-		# pop secure info
-		task.document.pop('openai_token')
-
-		return jsonify(task.to_dict()), 200
-	else:
-		return jsonify({"response": f"pipeline with id {pipeline_id} not found"}), 404

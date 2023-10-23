@@ -9,16 +9,16 @@ input_fields = [{'name': "text", 'type': "string"}]
 output_fields = [{'name': "keyterms", 'type': "stringset"}]
 
 {# Define the 'extras' for number of keyterms desired  #}
-extras = [{'num_keyterms': None}, {'openai_token': "[user_extra]"}, {'model': 'gpt-3.5-turbo'}]
+extras = [{'num_keyterms': None, 'openai_token': None, 'model': 'gpt-3.5-turbo'}]
 
 {# Process the inputted array of strings: #}
 # complete dict task
 1. The user has provided the following from an input_field named 'text':
 """
-{{process(task.document.text)}}
+{{ text }}
 """
-2. Quickly build a list of {{task.document.extras[0]['num_keyterms']}} for the user and return them in a JSON dictionary:
-# required fields: '{{task.document.output_fields[0]['name']}}'
+2. Quickly build a list of {{ num_keyterms }} for the user and return them in a JSON dictionary:
+# required fields: keyterms
 
 {# ai_dict = forces the LLM to finish the line, forming a dictionary #}
 ai_dict = 

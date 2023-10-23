@@ -8,7 +8,7 @@ from flask import Blueprint, flash, jsonify, request
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.util import random_name
+from SlothAI.lib.util import random_name, fields_from_template, extras_from_template
 from SlothAI.web.models import Template, Node
 
 template = Blueprint('template', __name__)
@@ -89,35 +89,8 @@ def template_update(template_id):
             if 'template' in json_data and isinstance(json_data['template'], dict):
                 template_data = json_data['template']
 
-                # Initialize empty lists for input_fields and output_fields
-                input_fields = []
-                output_fields = []
-                extras = []
-
-                # Regular expressions to match lines defining input and output fields and extras
-                input_fields_regex = re.compile(r"\s*input_fields\s*=\s*(\[.*\])")
-                output_fields_regex = re.compile(r"\s*output_fields\s*=\s*(\[.*\])")
-                extras_regex = re.compile(r"\s*extras\s*=\s*(\[.*\])")
-
-                # Search for input_fields, output_fields, and extras lines and extract data
-                for line in template_data.get('text').split('\n'):
-                    input_match = input_fields_regex.search(line)
-                    output_match = output_fields_regex.search(line)
-                    extras_match = extras_regex.search(line)
-
-                    if input_match:
-                        # Extract the input_fields list as a string and then safely evaluate it as Python code
-                        input_fields_str = input_match.group(1)
-                        input_fields = ast.literal_eval(input_fields_str)
-                    elif output_match:
-                        # Extract the output_fields list as a string and then safely evaluate it as Python code
-                        output_fields_str = output_match.group(1)
-                        output_fields = ast.literal_eval(output_fields_str)
-                    elif extras_match:
-                        # Extract the extras dictionary as a string and then safely evaluate it as Python code
-                        extras_str = extras_match.group(1)
-                        extras = ast.literal_eval(extras_str)
-
+                input_fields, output_fields = fields_from_template(template_data.get('text'))
+                extras = extras_from_template(template_data.get('text'))
 
                 # Call the update function with the data from 'template' dictionary
                 updated_template = Template.update(
@@ -128,7 +101,7 @@ def template_update(template_id):
                     input_fields=input_fields,
                     output_fields=output_fields,
                     extras=extras,
-                    processor=template_data.get('processor', template.get('processor'))
+                    # processor=template_data.get('processor', template.get('processor'))
                 )
 
                 # find the nodes using this and update the extras
@@ -168,44 +141,8 @@ def template_create():
         if 'template' in json_data and isinstance(json_data['template'], dict):
             template_data = json_data['template']
 
-            # Initialize empty lists for input_fields and output_fields
-            input_fields = []
-            output_fields = []
-            extras = []
-
-            # Regular expressions to match lines defining input and output fields with flexible spacing
-            input_fields_regex = re.compile(r"\s*input_fields\s*=\s*(\[.*\])")
-            output_fields_regex = re.compile(r"\s*output_fields\s*=\s*(\[.*\])")
-            extras_regex = re.compile(r"\s*extras\s*=\s*(\[.*\])")
-
-            # Search for input_fields and output_fields lines and extract data
-            for line in template_data.get('text').split('\n'):
-                input_match = input_fields_regex.search(line)
-                output_match = output_fields_regex.search(line)
-                extras_match = extras_regex.search(line)
-
-                try:
-                    if input_match:
-                        # Extract the input_fields list as a string and then safely evaluate it as Python code
-                        input_fields_str = input_match.group(1)
-                        input_fields = ast.literal_eval(input_fields_str)
-                    elif output_match:
-                        # Extract the output_fields list as a string and then safely evaluate it as Python code
-                        output_fields_str = output_match.group(1)
-                        output_fields = ast.literal_eval(output_fields_str)
-                    elif extras_match:
-                        # Extract the extras dictionary as a string and then safely evaluate it as Python code
-                        extras_str = extras_match.group(1)
-                        extras = ast.literal_eval(extras_str)
-                except Exception as ex:
-                    return jsonify({"error": f"Invalid syntax {ex}", "message": "Syntax error on input, output or extras. Check your syntax."}), 400
-            
-            for extra in extras:
-                if extra.get('processor'):
-                    processor = extra.get('processor')
-                    break
-            else:
-                processor = template_data.get('processor', "jinja2")
+            input_fields, output_fields = fields_from_template(template_data.get('text'))
+            extras = extras_from_template(template_data.get('text'))
 
             created_template = Template.create(
                 name=template_data.get('name'),
@@ -214,7 +151,7 @@ def template_create():
                 input_fields=input_fields,
                 output_fields=output_fields,
                 extras=extras,
-                processor=processor
+                # processor="jinja2"
             )
 
             if created_template:

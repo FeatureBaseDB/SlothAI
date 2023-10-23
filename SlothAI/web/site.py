@@ -11,7 +11,6 @@ from flask_login import current_user
 from SlothAI.lib.tasks import list_tasks
 from SlothAI.lib.util import random_name
 from SlothAI.web.models import Pipeline, Node, Template, Log
-from SlothAI.lib.nodes import initilize_nodes
 
 site = Blueprint('site', __name__)
 
@@ -33,6 +32,7 @@ processors = [
     {"value": "aidict", "label": "Generative Completion Processor"},
     {"value": "aichat", "label": "Generative Chat Processor"},
     {"value": "embedding", "label": "Embedding Vectors Processor"},
+    {"value": "sloth_embedding", "label": "Sloth Text Embedding Processor"},
     {"value": "aivision", "label": "Vision Processor"},
     {"value": "aiaudio", "label": "Audio Processor"}
 ]
@@ -71,20 +71,23 @@ def pipelines():
     nodes = Node.fetch(uid=current_user.uid)
 
     # hide the tokens and passwords
-    for node in nodes:
-        for extra_dict in node['extras']:
-            for key in extra_dict.keys():
-                if 'token' in key or 'password' in key:
-                    extra_dict[key] = '[secret]'
-
+    # for node in nodes:
+    #     extras = node.get('extras', None)
+    #     if extras:
+    #         for extra_dict in extras:
+    #             for key in extra_dict.keys():
+    #                 if 'token' in key or 'password' in key:
+    #                     extra_dict[key] = '[secret]'
+                    
     # add input and output fields, plus template name
     _nodes = []
     for node in nodes:
         template = Template.get(template_id=node.get('template_id'))
-        node['template_name'] = template.get('name')
-        node['input_fields'] = template.get('input_fields')
-        node['output_fields'] = template.get('output_fields')
-        _nodes.append(node)
+        if template:
+            node['template_name'] = template.get('name')
+            node['input_fields'] = template.get('input_fields')
+            node['output_fields'] = template.get('output_fields')
+            _nodes.append(node)
 
     return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
 
@@ -158,11 +161,13 @@ def nodes():
     name_random = random_name(2).split('-')[1]
 
     # hide the tokens and passwords
-    for node in nodes:
-        for extra_dict in node['extras']:
-            for key in extra_dict.keys():
-                if 'token' in key or 'password' in key:
-                    extra_dict[key] = '[secret]'
+    # for node in nodes:
+    #     extras = node.get('extras', None)
+    #     if extras:
+    #         for extra_dict in extras:
+    #             for key in extra_dict.keys():
+    #                 if 'token' in key or 'password' in key:
+    #                     extra_dict[key] = '[secret]'
 
     # update the template names
     _nodes = []

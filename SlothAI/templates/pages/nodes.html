@@ -38,12 +38,16 @@
                         {% endfor %} 
                     </td>
                     <td>
-                        {% for output_field in node.template.output_fields %}
-                            {{ generate_regular_badge(output_field.name, output_field.type) }}
-                        {% endfor %}
+                        {% if node.template.output_fields is not none %}
+                            {% for output_field in node.template.output_fields %}
+                                {{ generate_regular_badge(output_field.name, output_field.type) }}
+                            {% endfor %}
+                        {% endif %}
+                
                     </td>
                     <td>
                         {% if node.extras %}
+                        {% if extra is mapping %}
                         {% for extra in node.extras %}
                             {% for key, value in extra.items() %}
                             <span>
@@ -52,6 +56,7 @@
                             <br>
                             {% endfor %}
                         {% endfor %}
+                        {% endif %}
                         {% endif %}
                     </td>
 
@@ -316,77 +321,77 @@ $(document).ready(function() {
 
     // Event listener for the template selection
     $("#nodeTemplate").on("change", function() {
-        $("#addNodeModalButton").prop("disabled", true);
+        // $("#addNodeModalButton").prop("disabled", true);
         $("#dynamicFieldsContainer").empty();
 
         var selectedTemplateId = $(this).val();
 
-        if (selectedTemplateId !== 'none') {
-            $.ajax({
-                url: '/templates/' + selectedTemplateId + '/detail',
-                type: 'GET',
-                success: function (response) {
-                    if (response.extras && Array.isArray(response.extras)) {
-                        var hasRelevantFields = false;
+        // if (selectedTemplateId !== 'none') {
+        //     $.ajax({
+        //         url: '/templates/' + selectedTemplateId + '/detail',
+        //         type: 'GET',
+        //         success: function (response) {
+        //             if (response.extras && Array.isArray(response.extras)) {
+        //                 var hasRelevantFields = true;
                         
-                        $("#dynamicFieldsContainer").append($("<hr>")).append($("<h5>").text("User Extras"));
+        //                 $("#dynamicFieldsContainer").append($("<hr>")).append($("<h5>").text("User Extras"));
 
-                        for (var key in response.extras) {
-                            if (response.extras.hasOwnProperty(key)) {
-                                var extra = response.extras[key];
+        //                 for (var key in response.extras) {
+        //                     if (response.extras.hasOwnProperty(key)) {
+        //                         var extra = response.extras[key];
 
-                                for (var prop in extra) {
-                                    if (extra.hasOwnProperty(prop)) {
-                                        var extraValue = extra[prop];
-                                        var fieldType = "text";
-                                        if (prop.toLowerCase().includes("token") || prop.toLowerCase().includes("password")) {
-                                            fieldType = "password";
-                                        }
+        //                         for (var prop in extra) {
+        //                             if (extra.hasOwnProperty(prop)) {
+        //                                 var extraValue = extra[prop];
+        //                                 var fieldType = "text";
+        //                                 if (prop.toLowerCase().includes("token") || prop.toLowerCase().includes("password")) {
+        //                                     fieldType = "password";
+        //                                 }
 
-                                        if (
-                                            (typeof extraValue === "string" && extraValue.includes("[user_extra]")) ||
-                                            extraValue === null ||
-                                            extraValue === undefined
-                                        ) {
-                                            var labelText = "<strong>" + prop + "</strong>:";
-                                            var inputField = $("<input>")
-                                                .attr("type", fieldType)
-                                                .addClass("form-control")
-                                                .attr("id", prop);
-                                            var label = $("<label>")
-                                                .attr("for", prop)
-                                                .html(labelText);
+        //                                 if (
+        //                                     (typeof extraValue === "string" && extraValue.includes("[user_extra]")) ||
+        //                                     extraValue === null ||
+        //                                     extraValue === undefined
+        //                                 ) {
+        //                                     var labelText = "<strong>" + prop + "</strong>:";
+        //                                     var inputField = $("<input>")
+        //                                         .attr("type", fieldType)
+        //                                         .addClass("form-control")
+        //                                         .attr("id", prop);
+        //                                     var label = $("<label>")
+        //                                         .attr("for", prop)
+        //                                         .html(labelText);
 
-                                            $("#dynamicFieldsContainer").append(label, inputField);
+        //                                     $("#dynamicFieldsContainer").append(label, inputField);
 
-                                            hasRelevantFields = true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
+        //                                     hasRelevantFields = true;
+        //                                 }
+        //                             }
+        //                         }
+        //                     }
+        //                 }
 
-                        if (hasRelevantFields) {
-                            $("#dynamicFieldsContainer").show();
-                        } else {
-                            $("#dynamicFieldsContainer").hide();
-                        }
-                    }
+        //                 if (hasRelevantFields) {
+        //                     $("#dynamicFieldsContainer").show();
+        //                 } else {
+        //                     $("#dynamicFieldsContainer").hide();
+        //                 }
+        //             }
 
-                    if (response.processor) {
-                        // Set the selected processor in the dropdown
-                        $("#nodeProcessor").val(response.processor);
-                    } else if (response.extras.processor) {
-                        $("#nodeProcessor").val(response.extras.processor);
-                    }
-                    // renable the add button
-                    $("#addNodeModalButton").prop("disabled", false);
-                },
-                error: function (error) {
-                    toastr.error('Error fetching template detail:', error);
-                }
-            });
-        }
+        //             if (response.processor) {
+        //                 // Set the selected processor in the dropdown
+        //                 $("#nodeProcessor").val(response.processor);
+        //             } else if (response.extras.processor) {
+        //                 $("#nodeProcessor").val(response.extras.processor);
+        //             }
+        //             // renable the add button
+        //             $("#addNodeModalButton").prop("disabled", false);
+        //         },
+        //         error: function (error) {
+        //             toastr.error('Error fetching template detail:', error);
+        //         }
+        //     });
+        // }
     });
 
     function validateOpenAIToken(openaiToken, callback) {

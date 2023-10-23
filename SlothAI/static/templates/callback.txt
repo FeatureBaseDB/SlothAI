@@ -2,13 +2,13 @@
 
 {# NOTE: You may remove any template commented lines, such as this one. #}
 
-{# Callback is a passthrough, so no input_fields need to be defined. #}
-input_fields = []
+{# Document should have a words key #}
+input_fields = [{'name': 'words', 'type': 'stringset'}]
 
-{# Callback is a passthrough, so no output_fields need to be defined. #}
-output_fields = []
+{# Specify which keys you want to write to the callback #}
+output_fields = [{'name': 'words', 'type': 'stringset'}]
 
-{# Define the callback URI and any tokens or extra parameters  #}
-extras = [{'callback_uri': "[user_callback]"}, {'callback_token': "[user_token]"}]
+{# Define the callback URI and any tokens or extra parameters - no extras means default callback #}
+{# extras = [{'callback_uri': ""}, {'callback_token': ""}] #}
 
 {# ALL task.document keys and values are sent with a json document by POST to the callback URI. #}

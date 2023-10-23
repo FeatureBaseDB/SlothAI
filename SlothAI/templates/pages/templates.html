@@ -28,23 +28,23 @@
                     <td><button class="btn btn-secondary" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-pen"></i> {{ template.name }}</button></td>
                     
                     <td>
-                        {% for input_field in template.input_fields %}
-                            <span>
+                        {% if template is not none and template.get('input_fields') is not none %}
+                            {% for input_field in template['input_fields'] %}
                                 {{ generate_regular_badge(input_field.name, input_field.type) }}
-                            </span>
-                            <br>
-                        {% endfor %}
+                            {% endfor %}
+                        {% endif %}
                     </td>
                     <td>
-                        {% for output_field in template.output_fields %}
-                            <span>
+                        {% if template is not none and template.get('output_fields') is not none %}
+                            {% for output_field in template.get('output_fields') %}
                                 {{ generate_regular_badge(output_field.name, output_field.type) }}
-                            </span>
-                            <br>
-                        {% endfor %}
+                            {% endfor %}
+                        {% endif %}
                     </td>
+                    
                     <td>
                         {% if template.extras %}
+                        {% if extra is mapping %}
                             {% for extra in template.extras %}
                                 {% for key, value in extra.items() %}
                                     <span>
@@ -53,8 +53,9 @@
                                     <br>
                                 {% endfor %}
                             {% endfor %}
-                        {% endif %}
-                    </td>
+                            {% endif %}
+                            {% endif %}
+                        </td>
                     <td>
                         <button class="delete-button btn btn-danger" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
                         <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">

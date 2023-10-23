@@ -3,7 +3,6 @@ database.py provides function to interact with FeatureBase cloud. It wraps the
 featurebase client library.
 """
 
-import config
 import featurebase
 from urllib.error import HTTPError, URLError, ContentTooShortError
 

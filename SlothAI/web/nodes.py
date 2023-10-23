@@ -112,21 +112,11 @@ def node_create():
 
             template = Template.get(template_id=node_data.get('template_id'))
 
-            # deal with merging extras
-            node_extras = node_data.get('extras')
-            template_extras = template.get('extras')
-
-            dict1 = {key: value for item in template_extras for key, value in item.items()}
-            for item in node_extras:
-                for key, value in item.items():
-                    if key in dict1:
-                        dict1[key] = value
-            node_extras = [{key: value} for key, value in dict1.items()]
 
             created_node = Node.create(
                 name=node_data.get('name'),
                 uid=uid,
-                extras=node_extras,
+                extras=template.get('extras', ''),
                 processor=node_data.get('processor'),
                 template_id=node_data.get('template_id')
             )

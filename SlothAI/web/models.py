@@ -57,7 +57,7 @@ class Template(ndb.Model):
     text = ndb.StringProperty()
     input_fields = ndb.JsonProperty()
     output_fields = ndb.JsonProperty()
-    extras = ndb.JsonProperty()
+    extras = ndb.StringProperty()
     processor = ndb.StringProperty()
     created = ndb.DateTimeProperty()
 
@@ -74,7 +74,7 @@ class Template(ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def create(cls, name, uid, text, input_fields=[], output_fields=[], extras=[], processor="template"):
+    def create(cls, name, uid, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
         current_utc_time = datetime.datetime.utcnow()
         existing_template = cls.query(cls.name == name, cls.uid == uid).get()
 
@@ -98,7 +98,7 @@ class Template(ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def update(cls, template_id, uid, name, text, input_fields=[], output_fields=[], extras=[], processor="template"):
+    def update(cls, template_id, uid, name, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
         template = cls.query(cls.template_id == template_id, cls.uid == uid).get()
         if not template:
             print("didn't find template")
@@ -200,7 +200,7 @@ class Node(ndb.Model):
     created = ndb.DateTimeProperty()
     processor = ndb.StringProperty()
     template_id = ndb.StringProperty()
-    extras = ndb.JsonProperty() # holds model flavor, tokens, etc.
+    extras = ndb.StringProperty() # holds model flavor, tokens, etc.
     
     @classmethod
     @ndb_context_manager
@@ -575,7 +575,7 @@ class User(flask_login.UserMixin, ndb.Model):
 class Log(flask_login.UserMixin, ndb.Model):
     log_id = ndb.StringProperty()
     user_id = ndb.StringProperty()
-    line = ndb.JsonProperty()
+    line = ndb.BlobProperty()
     created = ndb.DateTimeProperty()
 
     @classmethod
@@ -586,15 +586,16 @@ class Log(flask_login.UserMixin, ndb.Model):
             log_id=id,
             user_id=user_id,
             created=datetime.datetime.utcnow(),
-            line=line
+            line=str(line).encode('utf-8')
         )
         log.put()
         return log.to_dict()
 
     @classmethod
     @ndb_context_manager
-    def delete_older_than(cls, threshold_hours=1):
-        threshold = datetime.datetime.utcnow() - timedelta(hours=threshold_hours)
+    def delete_older_than(cls, hours=0, minutes=0, seconds=0):
+        threshold = datetime.datetime.utcnow() - \
+            datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
         entities = cls.query(cls.created < threshold).fetch()
         if entities:
             for entity in entities:
