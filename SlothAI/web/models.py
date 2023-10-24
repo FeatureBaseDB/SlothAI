@@ -57,7 +57,7 @@ class Template(ndb.Model):
     text = ndb.StringProperty()
     input_fields = ndb.JsonProperty()
     output_fields = ndb.JsonProperty()
-    extras = ndb.StringProperty()
+    extras = ndb.JsonProperty()
     processor = ndb.StringProperty()
     created = ndb.DateTimeProperty()
 
@@ -200,7 +200,7 @@ class Node(ndb.Model):
     created = ndb.DateTimeProperty()
     processor = ndb.StringProperty()
     template_id = ndb.StringProperty()
-    extras = ndb.StringProperty() # holds model flavor, tokens, etc.
+    extras = ndb.JsonProperty() # holds model flavor, tokens, etc.
     
     @classmethod
     @ndb_context_manager

@@ -44,18 +44,16 @@
                     
                     <td>
                         {% if template.extras %}
-                        {% if extra is mapping %}
-                            {% for extra in template.extras %}
-                                {% for key, value in extra.items() %}
-                                    <span>
-                                        {{ generate_extra_badge(key, value) }}
-                                    </span>
-                                    <br>
-                                {% endfor %}
+                            {% for key, value in template.extras.items() %}
+                                <span>
+                                    {{ generate_extra_badge(key, value) }}
+                                </span>
+                                <br>
                             {% endfor %}
-                            {% endif %}
-                            {% endif %}
-                        </td>
+                        {% endif %}
+                    </td>
+
+
                     <td>
                         <button class="delete-button btn btn-danger" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
                         <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">

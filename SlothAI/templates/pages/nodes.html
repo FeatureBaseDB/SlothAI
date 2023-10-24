@@ -33,9 +33,11 @@
 
 
                     <td>
-                        {% for input_fields in node.template.input_fields %}
-                            {{ generate_regular_badge(input_fields.name, input_fields.type) }}
-                        {% endfor %} 
+                        {% if node.template.output_fields is not none %}
+                            {% for input_fields in node.template.input_fields %}
+                                {{ generate_regular_badge(input_fields.name, input_fields.type) }}
+                            {% endfor %}
+                        {% endif %}
                     </td>
                     <td>
                         {% if node.template.output_fields is not none %}
@@ -47,16 +49,12 @@
                     </td>
                     <td>
                         {% if node.extras %}
-                        {% if extra is mapping %}
-                        {% for extra in node.extras %}
-                            {% for key, value in extra.items() %}
+                            {% for key, value in node.extras.items() %}
                             <span>
                                 {{ generate_extra_badge(key, value) }}
                             </span>
                             <br>
                             {% endfor %}
-                        {% endfor %}
-                        {% endif %}
                         {% endif %}
                     </td>
 
@@ -75,7 +73,7 @@
         <i class="fas fa-plus"></i> Add Node
     </button>
     {% else %}
-        {% if templates_exist %}
+        {% if templates %}
         <!-- No Nodes Available -->
         <h2 class="page_heading">Node</h2>
         <div class="rounded-lg border p-3">
@@ -243,7 +241,6 @@ $(document).ready(function() {
     }
 
     function getColorFromName(name) {
-        console.log(name);
         name = name.trim(); // Remove leading and trailing spaces
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
@@ -252,7 +249,7 @@ $(document).ready(function() {
         const color = `hsl(${hash % 360}, 70%, 60%)`;
         return color;
     }
-
+    
     $("#addTemplateButton").on("click", function() {
         window.location.href = "/templates/new";
     });
@@ -326,72 +323,73 @@ $(document).ready(function() {
 
         var selectedTemplateId = $(this).val();
 
-        // if (selectedTemplateId !== 'none') {
-        //     $.ajax({
-        //         url: '/templates/' + selectedTemplateId + '/detail',
-        //         type: 'GET',
-        //         success: function (response) {
-        //             if (response.extras && Array.isArray(response.extras)) {
-        //                 var hasRelevantFields = true;
+        if (selectedTemplateId !== 'none') {
+            $.ajax({
+                url: '/templates/' + selectedTemplateId + '/detail',
+                type: 'GET',
+                success: function (response) {
+                    if (response.extras) {
+                        var hasRelevantFields = false; // Change the initial value to false
                         
-        //                 $("#dynamicFieldsContainer").append($("<hr>")).append($("<h5>").text("User Extras"));
+                        $("#dynamicFieldsContainer").empty(); // Clear the container before appending fields
+                        
+                        $("#dynamicFieldsContainer").append($("<hr>")).append($("<h5>").text("User Extras"));
+                        
+                       for (var key in response.extras) {
+                            if (response.extras.hasOwnProperty(key)) {
+                                var extraValue = response.extras[key];
+                                var fieldType = "text";
 
-        //                 for (var key in response.extras) {
-        //                     if (response.extras.hasOwnProperty(key)) {
-        //                         var extra = response.extras[key];
+                                if (key.toLowerCase().includes("token") || key.toLowerCase().includes("password")) {
+                                    fieldType = "password";
+                                }
 
-        //                         for (var prop in extra) {
-        //                             if (extra.hasOwnProperty(prop)) {
-        //                                 var extraValue = extra[prop];
-        //                                 var fieldType = "text";
-        //                                 if (prop.toLowerCase().includes("token") || prop.toLowerCase().includes("password")) {
-        //                                     fieldType = "password";
-        //                                 }
+                                // Check for conditions (string containing [user_extra], null, or undefined)
+                                if (
+                                    (typeof extraValue === "string" && extraValue.includes("[user_extra]")) ||
+                                    extraValue === null ||
+                                    extraValue === undefined
+                                ) {
+                                    var labelText = "<strong>" + key + "</strong>:";
+                                    var inputField = $("<input>")
+                                        .attr("type", fieldType)
+                                        .addClass("form-control")
+                                        .attr("id", key)
+                                        .val(extraValue); // Set the value from the response
+                                    var label = $("<label>")
+                                        .attr("for", key)
+                                        .html(labelText);
 
-        //                                 if (
-        //                                     (typeof extraValue === "string" && extraValue.includes("[user_extra]")) ||
-        //                                     extraValue === null ||
-        //                                     extraValue === undefined
-        //                                 ) {
-        //                                     var labelText = "<strong>" + prop + "</strong>:";
-        //                                     var inputField = $("<input>")
-        //                                         .attr("type", fieldType)
-        //                                         .addClass("form-control")
-        //                                         .attr("id", prop);
-        //                                     var label = $("<label>")
-        //                                         .attr("for", prop)
-        //                                         .html(labelText);
+                                    $("#dynamicFieldsContainer").append(label, inputField);
 
-        //                                     $("#dynamicFieldsContainer").append(label, inputField);
+                                    hasRelevantFields = true;
+                                }
+                            }
+                        }
 
-        //                                     hasRelevantFields = true;
-        //                                 }
-        //                             }
-        //                         }
-        //                     }
-        //                 }
 
-        //                 if (hasRelevantFields) {
-        //                     $("#dynamicFieldsContainer").show();
-        //                 } else {
-        //                     $("#dynamicFieldsContainer").hide();
-        //                 }
-        //             }
+                        if (hasRelevantFields) {
+                            $("#dynamicFieldsContainer").show();
+                        } else {
+                            $("#dynamicFieldsContainer").hide();
+                        }
+                    }
 
-        //             if (response.processor) {
-        //                 // Set the selected processor in the dropdown
-        //                 $("#nodeProcessor").val(response.processor);
-        //             } else if (response.extras.processor) {
-        //                 $("#nodeProcessor").val(response.extras.processor);
-        //             }
-        //             // renable the add button
-        //             $("#addNodeModalButton").prop("disabled", false);
-        //         },
-        //         error: function (error) {
-        //             toastr.error('Error fetching template detail:', error);
-        //         }
-        //     });
-        // }
+
+                    if (response.processor) {
+                        // Set the selected processor in the dropdown
+                        $("#nodeProcessor").val(response.processor);
+                    } else if (response.extras.processor) {
+                        $("#nodeProcessor").val(response.extras.processor);
+                    }
+                    // renable the add button
+                    $("#addNodeModalButton").prop("disabled", false);
+                },
+                error: function (error) {
+                    toastr.error('Error fetching template detail:', error);
+                }
+            });
+        }
     });
 
     function validateOpenAIToken(openaiToken, callback) {
@@ -442,7 +440,7 @@ $(document).ready(function() {
                 name: nodeName,
                 processor: nodeProcessor,
                 template_id: nodeTemplate,
-                extras: []
+                extras: {}
             }
         };
 
@@ -450,32 +448,33 @@ $(document).ready(function() {
             var labelFor = $(this).attr("for");
             var inputValue = $(this).next('input').val();
             var extrasObject = {};
-            extrasObject[labelFor] = inputValue;
-            nodeData.node.extras.push(extrasObject);
+            nodeData.node.extras[labelFor] = inputValue;;
         });
 
         var isValidToken = true;
         var validationPromises = [];
 
-        nodeData.node.extras.forEach(function (extra) {
-            var keys = Object.keys(extra);
-            var values = Object.values(extra);
+        // Iterate through the properties of the `extras` object
+        for (var key in nodeData.node.extras) {
+            if (nodeData.node.extras.hasOwnProperty(key)) {
+                var value = nodeData.node.extras[key];
 
-            if (keys.length > 0 && keys[0] == "openai_token") {
-                var validationPromise = $.Deferred();
+                // Check if the current key is "openai_token"
+                if (key === "openai_token") {
+                    var validationPromise = $.Deferred();
 
-                validateOpenAIToken(values[0], function (isValid) {
-                    if (!isValid) {
-                        toastr.error("Token validation failed");
-                        isValidToken = false;
-                    }
-                    validationPromise.resolve(isValid);
-                });
+                    validateOpenAIToken(value, function (isValid) {
+                        if (!isValid) {
+                            toastr.error("Token validation failed");
+                            isValidToken = false;
+                        }
+                        validationPromise.resolve(isValid);
+                    });
 
-                validationPromises.push(validationPromise.promise());
+                    validationPromises.push(validationPromise.promise());
+                }
             }
-        });
-
+        }
         $.when.apply($, validationPromises).done(function() {
             if (isValidToken) {
                 addNode(nodeData);

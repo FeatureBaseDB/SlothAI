@@ -3,13 +3,27 @@
 {# NOTE: You may remove any template commented lines, such as this one. #}
 
 {# Define the input_fields used in this template: #}
-input_fields = [{'name': "text", 'type': "string"}]
+input_fields = [
+  {
+    'name': "text",
+    'type': "string"
+  }
+]
 
 {# Hints for the output_fields expected from the node processor using this template: #}
-output_fields = [{'name': "keyterms", 'type': "stringset"}]
+output_fields = [
+  {
+    'name': "keyterms",
+    'type': "stringset"
+  }
+]
 
 {# Define the 'extras' for number of keyterms desired  #}
-extras = [{'num_keyterms': None, 'openai_token': None, 'model': 'gpt-3.5-turbo'}]
+extras = {
+  'num_keyterms': None,
+  'openai_token': None,
+  'model': 'gpt-3.5-turbo'
+}
 
 {# Process the inputted array of strings: #}
 # complete dict task
@@ -17,7 +31,7 @@ extras = [{'num_keyterms': None, 'openai_token': None, 'model': 'gpt-3.5-turbo'}
 """
 {{ text }}
 """
-2. Quickly build a list of {{ num_keyterms }} for the user and return them in a JSON dictionary:
+2. Quickly build a list of {{ extras.num_keyterms }} for the user and return them in a JSON dictionary:
 # required fields: keyterms
 
 {# ai_dict = forces the LLM to finish the line, forming a dictionary #}

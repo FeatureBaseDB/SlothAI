@@ -70,24 +70,19 @@ def pipelines():
     pipelines = Pipeline.fetch(uid=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
 
-    # hide the tokens and passwords
-    # for node in nodes:
-    #     extras = node.get('extras', None)
-    #     if extras:
-    #         for extra_dict in extras:
-    #             for key in extra_dict.keys():
-    #                 if 'token' in key or 'password' in key:
-    #                     extra_dict[key] = '[secret]'
-                    
     # add input and output fields, plus template name
     _nodes = []
     for node in nodes:
         template = Template.get(template_id=node.get('template_id'))
-        if template:
-            node['template_name'] = template.get('name')
-            node['input_fields'] = template.get('input_fields')
-            node['output_fields'] = template.get('output_fields')
-            _nodes.append(node)
+        node['template_name'] = template.get('name')
+        node['input_fields'] = template.get('input_fields')
+        node['output_fields'] = template.get('output_fields')
+
+        for key in node.get('extras').keys():
+            if 'token' in key or 'password' in key:
+                node['extras'][key] = '[secret]'
+
+        _nodes.append(node)
 
     return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
 
@@ -116,13 +111,6 @@ def pipeline_view(pipe_id):
 
     nodes = Node.fetch(uid=current_user.uid)
 
-    # hide the tokens and passwords
-    for node in nodes:
-        for extra_dict in node['extras']:
-            for key in extra_dict.keys():
-                if 'token' in key or 'password' in key:
-                    extra_dict[key] = '[secret]'
-
     # add input and output fields, plus template name
     _nodes = []
     for node in nodes:
@@ -130,6 +118,11 @@ def pipeline_view(pipe_id):
         node['template_name'] = template.get('name')
         node['input_fields'] = template.get('input_fields')
         node['output_fields'] = template.get('output_fields')
+
+        for key in node.get('extras').keys():
+            if 'token' in key or 'password' in key:
+                node['extras'][key] = '[secret]'
+
         _nodes.append(node)
 
     if not pipeline:
@@ -151,23 +144,18 @@ def nodes():
     nodes = Node.fetch(uid=current_user.uid)
 
     templates = Template.fetch(uid=current_user.uid)
-    
-    templates_exist = True
-    if not templates:
-        templates_exist = False
 
     template_lookup = {template['template_id']: template['name'] for template in templates}
 
     name_random = random_name(2).split('-')[1]
 
     # hide the tokens and passwords
-    # for node in nodes:
-    #     extras = node.get('extras', None)
-    #     if extras:
-    #         for extra_dict in extras:
-    #             for key in extra_dict.keys():
-    #                 if 'token' in key or 'password' in key:
-    #                     extra_dict[key] = '[secret]'
+    for node in nodes:
+        extras = node.get('extras', None)
+        if extras:
+            for key in extras.keys():
+                if 'token' in key or 'password' in key:
+                    extras[key] = '[secret]'
 
     # update the template names
     _nodes = []
@@ -176,11 +164,11 @@ def nodes():
             template = Template.get(template_id=node.get('template_id'))
             node['template'] = template
         else:
-            node['template'] = {}
+            node['template'] = {} # is this used?
         _nodes.append(node)
 
     return render_template(
-        'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes, name_random=name_random, templates_exist=templates_exist, processors=processors
+        'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes, name_random=name_random, templates=templates, processors=processors
     )
 
 

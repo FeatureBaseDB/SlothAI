@@ -133,6 +133,7 @@
 $(document).ready(function () {
     // grab the nodes from the template and make them available via getNodeInfo
     var nodes = JSON.parse('{{nodes | tojson}}');
+
     function getNodeInfo(nodeId) {
         const node = nodes.find(node => node.node_id === nodeId);
 
@@ -143,6 +144,8 @@ $(document).ready(function () {
             return null;
         }
     }
+    
+    var pipelines = JSON.parse('{{pipelines | tojson}}');
     
     function getRowCount() {
         const tbody = document.querySelector('table tbody');
@@ -176,20 +179,18 @@ $(document).ready(function () {
     // create buttons in the list
     function createButton(name, title, content, extras=false) {
         const container = $('<div>');
-        if (extras && content.length > 0) {
-            content.forEach(extra => {
-                for (const key in extra) {
-                    if (extra.hasOwnProperty(key)) {
-                        const value = extra[key];
-                        const badge = $('<span>', {
-                            class: 'badge badge-secondary',
-                            text: `${key}:${value}`,
-                        });
-                        container.append(badge);
-                    }
+        if (extras && content) {
+            for (const key in content) {
+                if (content.hasOwnProperty(key)) {
+                    const value = content[key];
+                    const badge = $('<span>', {
+                        class: 'badge badge-secondary',
+                        text: `${key}:${value}`,
+                    });
+                    container.append(badge);
                 }
-            });
-        } else if (content.length > 0) {
+            }
+        } else if (content && content.length > 0) {
             content.forEach(entry => {
                 const badge = $('<span>', {
                     class: 'badge badge-primary',
@@ -275,6 +276,7 @@ $(document).ready(function () {
         });
         deleteButton.append($('<i class="fas fa-trash-alt"></i>'));
         
+
         buttonGroup.append(createButton(getNodeInfo(selectedNode).name, "Node Input", getNodeInfo(selectedNode).input_fields));
         buttonGroup.append(createButton(getNodeInfo(selectedNode).template_name, "Template", getNodeInfo(selectedNode).extras, true));
         buttonGroup.append(createButton(getNodeInfo(selectedNode).processor, "Processor Output", getNodeInfo(selectedNode).output_fields));

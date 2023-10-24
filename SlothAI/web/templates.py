@@ -89,9 +89,15 @@ def template_update(template_id):
             if 'template' in json_data and isinstance(json_data['template'], dict):
                 template_data = json_data['template']
 
-                input_fields, output_fields = fields_from_template(template_data.get('text'))
-                extras = extras_from_template(template_data.get('text'))
+                input_fields, output_fields, error = fields_from_template(template_data.get('text'))                
+                if error:
+                    return jsonify({"error": "Invalid JSON", "message": "The 'input_fields' and 'output_fields' definitions must evaluate. Check your syntax."}), 400
 
+                extras, error = extras_from_template(template_data.get('text'))
+                if error:
+                    return jsonify({"error": "Invalid JSON", "message": "The 'extras' definition must evaluate. Check your syntax."}), 400
+
+    
                 # Call the update function with the data from 'template' dictionary
                 updated_template = Template.update(
                     template_id=template_id,
@@ -101,7 +107,7 @@ def template_update(template_id):
                     input_fields=input_fields,
                     output_fields=output_fields,
                     extras=extras,
-                    # processor=template_data.get('processor', template.get('processor'))
+                    processor=template_data.get('processor', template.get('processor'))
                 )
 
                 # find the nodes using this and update the extras
@@ -141,9 +147,16 @@ def template_create():
         if 'template' in json_data and isinstance(json_data['template'], dict):
             template_data = json_data['template']
 
-            input_fields, output_fields = fields_from_template(template_data.get('text'))
-            extras = extras_from_template(template_data.get('text'))
+            input_fields, output_fields, error = fields_from_template(template_data.get('text'))                
+            if error:
+                return jsonify({"error": "Invalid JSON", "message": "The 'input_fields' and 'output_fields' definitions must evaluate. Check your syntax."}), 400
 
+            extras, error = extras_from_template(template_data.get('text'))
+            if error:
+                return jsonify({"error": "Invalid JSON", "message": "The 'extras' definition must evaluate. Check your syntax."}), 400
+
+            processor = extras.get('processor', template_data.get('processor', 'jinja2'))
+                
             created_template = Template.create(
                 name=template_data.get('name'),
                 uid=uid,
@@ -151,7 +164,7 @@ def template_create():
                 input_fields=input_fields,
                 output_fields=output_fields,
                 extras=extras,
-                # processor="jinja2"
+                processor=processor
             )
 
             if created_template:

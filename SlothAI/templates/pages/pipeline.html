@@ -20,8 +20,8 @@
             <h4 class="card-title card-callout">{{ pipeline.name }}</h4>
 
             <p class="card-text">
-                {% for node in nodes %}
-                    {% if node.node_id == node_id %}
+                {% for node in pipeline.node_ids %}
+                    {% if node.node_id in pipeline %}
                         <button class="btn btn-secondary">{{ node.name }}</button>
                     {% endif %}
                 {% endfor %}

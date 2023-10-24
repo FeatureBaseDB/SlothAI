@@ -7,6 +7,8 @@ from flask_login import current_user
 
 from SlothAI.web.models import Node, Pipeline, Template
 
+from SlothAI.lib.util import merge_extras
+
 node = Blueprint('node', __name__)
 
 # API HANDLERS
@@ -37,46 +39,6 @@ def get_node(node_id):
         return jsonify({"error": "Not found", "message": "The requested node was not found."}), 404
 
 
-@node.route('/nodes/<node_id>', methods=['POST'])
-@node.route('/nodes/<node_id>/update', methods=['POST'])
-@flask_login.login_required
-def node_update(node_id):
-    user_id = current_user.uid
-    node = Node.get(uid=current_user.uid, node_id=node_id)
-
-    if node:
-        if request.is_json:
-            json_data = request.get_json()
-
-            template = Template.get(template_id=json_data.get())
-        
-            # Check if 'node' key exists in json_data and use it to update the node
-            if 'node' in json_data and isinstance(json_data['node'], dict):
-                node_data = json_data['node']
-
-                template = Template.get(template_id=node_data.get('template_id'))
-
-                # Call the update function with the data from 'node' dictionary
-                updated_node = Node.update(
-                    node_id=node_id,
-                    name=node_data.get('name', node.get('name')),
-                    extras=node_data.get('extras', node.get('extras')),
-                    processor=node_data.get('processor', node.get('processor')),
-                    template_id=node_data.get('template_id', node.get('template_id'))
-                )
-
-                if updated_node:
-                    return jsonify(updated_node)
-                else:
-                    return jsonify({"error": "Update failed", "message": "Failed to update the node."}), 500
-            else:
-                return jsonify({"error": "Invalid JSON", "message": "'node' key with dictionary data is required in the request JSON."}), 400
-        else:
-            return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
-    else:
-        return jsonify({"error": "Not found", "message": "The requested node was not found."}), 404
-
-
 @node.route('/nodes/validate/openai', methods=['POST'])
 @flask_login.login_required
 def validate_openai():
@@ -97,6 +59,7 @@ def validate_openai():
     
     return jsonify({"result": "Token validated. Adding new node..."}), 200
 
+# TODO ADD NODE UPDATE
 
 @node.route('/nodes', methods=['POST'])
 @node.route('/nodes/create', methods=['POST'])
@@ -109,14 +72,14 @@ def node_create():
 
         if 'node' in json_data and isinstance(json_data['node'], dict):
             node_data = json_data['node']
-
             template = Template.get(template_id=node_data.get('template_id'))
 
-
+            merged_extras = merge_extras(template.get('extras', {}), node_data.get('extras', {}))
+           
             created_node = Node.create(
                 name=node_data.get('name'),
                 uid=uid,
-                extras=template.get('extras', ''),
+                extras=merged_extras,
                 processor=node_data.get('processor'),
                 template_id=node_data.get('template_id')
             )
@@ -139,7 +102,7 @@ def node_delete(node_id):
     if node:
         # Fetch all pipelines
         pipelines = Pipeline.fetch(uid=current_user.uid)
-        print(pipelines)
+
         # Check if the node is in any pipeline
         is_in_pipeline = any(node_id in pipeline.get('node_ids', []) for pipeline in pipelines)
 

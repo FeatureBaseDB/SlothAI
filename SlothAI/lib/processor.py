@@ -262,6 +262,7 @@ def evaluate_extras(node, task) -> Dict[str, any]:
 	template_text = template.get('text')
 	extras = extras_from_template(template_text)
 
+
 	if extras:
 		extras_template = env.from_string(extras)
 		extras = extras_template.render(task.document)
@@ -279,6 +280,7 @@ def clean_extras(extras: Dict[str, any], task: Task):
 			if k in task.document.keys():
 				del task.document[k]
 	return task
+
 
 def ada(ai_model, document):
 	# load openai key then drop it from the document
