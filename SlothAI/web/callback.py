@@ -9,7 +9,6 @@ callback = Blueprint('callback', __name__)
 @callback.route('/<user_name>/callback', methods=['POST'])
 @flask_login.login_required
 def handle_callback(user_name):
-
     log = Log.create(user_id=flask_login.current_user.uid, line=str(request.get_data()))
 
     if log:

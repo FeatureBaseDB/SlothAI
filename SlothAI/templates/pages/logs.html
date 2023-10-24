@@ -1,12 +1,11 @@
 {% extends "pages/page_base.html" %}
 
 {% block title %}
-<title> Tasks | FeatureBase AI</title>
-<meta property='og:title' content='Tasks | FeatureBase AI'/>
+<title> Logs | SlothAI</title>
+<meta property='og:title' content='Tasks | SlothAI'/>
 {% endblock %}
 
 {% block content %}
-<!-- Main Content -->
 <div class="content container mt-5 pt-5">
     <h2 class="page_heading">Logs</h2>
 
@@ -20,13 +19,13 @@
         <tbody>
             {% for log in logs %}
                 <tr>
-                    <td>{{ log.timestamp }}</td>
-                    <td>{{ log.line }}</td>
+                    <td>{{ log.created }}</td>
+                    <td data-log="{{ log.line }}"></td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
-    <button class="reload-button btn btn-success" onclick="location.reload()">
+    <button class="reload-button btn btn-success">
         <i class="fas fa-sync-alt"></i> Reload
     </button>
 </div>
@@ -35,10 +34,31 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-    function reloadPage() {
-        location.reload();
+  // Iterate through table rows
+  $("table tbody tr").each(function() {
+    var tdLog = $(this).find("td[data-log"); // Find the <td> with data-log attribute
+
+    // Extract the log data from the data attribute
+    var rawData = tdLog.data('log');
+
+    // Remove the 'b' prefix and single quotes
+    var cleanedData = rawData.slice(2, -1);
+
+    // Parse the JSON data for the current row
+    var jsonDataObj = JSON.parse(cleanedData);
+
+    // Remove key-value pairs with keys containing 'token'
+    for (var key in jsonDataObj) {
+      if (key.toLowerCase().includes('token')) {
+        delete jsonDataObj[key];
+      }
     }
-    setInterval(reloadPage, 30000);
+
+    // Display the formatted JSON without 'token' entries in the "Log" column
+    tdLog.html('<pre>' + JSON.stringify(jsonDataObj, null, 2) + '</pre>');
+  });
 });
 </script>
 {% endblock %}
+
+

@@ -1,14 +1,22 @@
 import random
 import string
-import requests
-import json
+
 import ast
 import re
+import copy
+
+import requests
+import json
+
 import openai
+
 from typing import Dict
+
 from flask import current_app as app
 from flask import url_for
+
 from jinja2 import Environment
+
 from enum import Enum
 
 # supress OpenAI resource warnings for unclosed sockets
@@ -17,9 +25,10 @@ warnings.filterwarnings("ignore")
 
 from SlothAI.web.custom_commands import random_word, random_sentence
 from SlothAI.web.models import User, Node, Template
+
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
-from SlothAI.lib.util import jinja_from_template, extras_from_template, fields_from_template
+from SlothAI.lib.util import jinja_from_template, extras_from_template, fields_from_template, remove_fields_and_extras
 
 env = Environment()
 env.globals['random_word'] = random_word
@@ -41,6 +50,7 @@ def process(task: Task) -> Task:
 		task.document['error'] = "document did not have the correct input fields"
 		raise Exception("document did not have the correct input fields")
 
+	# template the extras off the node
 	extras = evaluate_extras(node, task)
 	if extras:
 		task.document.update(extras)
@@ -78,11 +88,10 @@ def process(task: Task) -> Task:
 @processer
 def jinja2(node: Dict[str, any], task: Task) -> Task:
 	template = Template.get(template_id=node.get('template_id'))
-	template_text = template.get('text')
-	jinja = jinja_from_template(template_text)
+	template_text = remove_fields_and_extras(template.get('text'))
 
-	if jinja:
-		jinja_template = env.from_string(jinja)
+	if template_text:
+		jinja_template = env.from_string(template_text)
 		jinja = jinja_template.render(task.document)
 		jinja_json = json.loads(jinja)
 		for k,v in jinja_json.items():
@@ -93,20 +102,24 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 @processer
 def callback(node: Dict[str, any], task: Task) -> Task:
 	template = Template.get(template_id=node.get('template_id'))
-	template_text = template.get('text')
+	output_fields = template.get('output_fields')
+
 	user = User.get_by_uid(uid=task.user_id)
 
-	# TODO: currently only handling default callback... check for callback params in document if you want to handle non-default
-	uri = url_for('callback.handle_callback', user_name=user.get('name'), _external=True) + f"?token={user.get('api_token')}"
-	_, output_fields = fields_from_template(template_text)
+	uri = url_for('callback.handle_callback', user_name=user.get('name'), _external=True)
+	auth_uri = f"{uri}?token={node.get('extras').get('callback_token')}"
 
+	# search the document for fields and assemble the data payload
 	data = {}
 	for el in output_fields:
 		for k,v in el.items():
 			if k == 'name':
 				data[v] = task.document.get(v, f'unable to find output key {v} in the document.')
-
-	resp = requests.post(uri, data=json.dumps(data))
+	else:
+		# just use the document
+		data = task.document
+	print(auth_uri)
+	resp = requests.post(auth_uri, data=json.dumps(data))
 	if resp.status_code != 200:
 		raise Exception("callback request failed")
 
@@ -247,6 +260,7 @@ def sloth_processing(node: Dict[str, any], task: Task, type) -> Task:
 
 	return task
 
+
 def validate_document(node, task: Task, validate: DocumentValidator):
 	template = Template.get(template_id=node.get('template_id'))
 	fields = template.get(validate)
@@ -257,22 +271,16 @@ def validate_document(node, task: Task, validate: DocumentValidator):
 	
 	return True
 
+
 def evaluate_extras(node, task) -> Dict[str, any]:
-	template = Template.get(template_id=node.get('template_id'))
-	template_text = template.get('text')
-	extras = extras_from_template(template_text)
+	# get the node's current extras, which may be templated
+	extras = node.get('extras', {})
 
+	extras_template = env.from_string(str(extras))
+	extras_from_template = extras_template.render(extras)
+	extras_eval = ast.literal_eval(extras_from_template)
+	return extras_eval
 
-	if extras:
-		extras_template = env.from_string(extras)
-		extras = extras_template.render(task.document)
-		extras_eval = eval(extras)
-		if len(extras_eval) == 1:
-			return extras_eval[0]
-		else:
-			raise Exception("extras must be a list of one element. that single element must be a json / dict object")
-	
-	return None
 
 def clean_extras(extras: Dict[str, any], task: Task):
 	if extras:

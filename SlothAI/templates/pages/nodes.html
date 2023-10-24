@@ -33,7 +33,7 @@
 
 
                     <td>
-                        {% if node.template.output_fields is not none %}
+                        {% if node.template.input_fields is not none %}
                             {% for input_fields in node.template.input_fields %}
                                 {{ generate_regular_badge(input_fields.name, input_fields.type) }}
                             {% endfor %}

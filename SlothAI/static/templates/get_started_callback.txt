@@ -18,7 +18,7 @@
 {# Processors are the compute side of Nodes. They process input data and then output new data. #}
 {# We may optionally define a processor and any other variables it needs in Extras. #}
 {# Extras which have "generate" or None for their values will be generated or prompted for in node creation. #}
-extras = {'processor': "callback", 'callback_uri': "[user_callback]", 'callback_token': "[user_token]"}
+extras = {'processor': "callback", 'callback_uri': "[user_callback]"}
 
 {# Use the reversed_word filter to transform the data sent to this template. #}
 {# We return the results in a JSON dictionary which will be added to the task document. #}

@@ -112,6 +112,21 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
     return ai_dict
 
 
+def remove_fields_and_extras(template):
+    # Remove extras definition
+    extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)
+    template = extras_pattern.sub('', template)
+
+    # Remove input_fields and output_fields definitions
+    input_pattern = re.compile(r'input_fields\s*=\s*(\[.*?\])', re.DOTALL)
+    output_pattern = re.compile(r'output_fields\s*=\s*(\[.*?\])', re.DOTALL)
+
+    template = input_pattern.sub('', template)
+    template = output_pattern.sub('', template)
+
+    return template
+
+
 def fields_text_from_template(template):
 
     # Regular expressions to find input and output fields in the template
@@ -171,7 +186,7 @@ def merge_extras(template_extras, node_extras):
     predefined_values = {
         "username": current_user.name,
         "callback_token": current_user.api_token,
-        "callback_uri": protocol + "://" + request.host+"/"+current_user.name+"/callback?token={{extras.api_token}}"
+        "callback_uri": protocol + "://" + request.host+"/"+current_user.name+"/callback?token={{callback_token}}"
     }
 
     for key, value in merged_extras.items():
