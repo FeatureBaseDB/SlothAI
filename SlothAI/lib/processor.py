@@ -149,9 +149,12 @@ def read_featurebase(node: Dict[str, any], task: Task) -> Task:
 			data[fields[i]].append(value)
 
 	template = Template.get(template_id=node.get('template_id'))
-	_, output_fields = fields_from_template(template.get('text'))
-
-	task.document.update(transform_data(output_fields, data))
+	_keys = template.get('output_fields') # must be input fields but not enforced
+	if _keys:
+		keys = [n['name'] for n in _keys]
+		task.document.update(transform_data(keys, data))
+	else:
+		task.document.update(data)
 
 	return task
 
