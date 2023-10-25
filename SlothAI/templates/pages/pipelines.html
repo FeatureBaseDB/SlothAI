@@ -33,7 +33,7 @@
                             {% for node_id in pipeline.node_ids %}
                                 {% for node in nodes %}
                                     {% if node.node_id == node_id %}
-                                        <button class="btn btn-secondary">{{ node.name }}</button>
+                                        <button data-node_id="{{node_id}}" class="btn btn-secondary">{{ node.name }}</button>
                                     {% endif %}
                                 {% endfor %}
                             {% endfor %}
@@ -178,6 +178,7 @@ $(document).ready(function () {
 
     // create buttons in the list
     function createButton(name, title, content, extras=false) {
+        console.log(content);
         const container = $('<div>');
         if (extras && Object.keys(content).length) {
             for (const key in content) {
@@ -225,7 +226,60 @@ $(document).ready(function () {
         return button;
     }
 
+    var node_buttons = $('button[data-node_id]');
+    
+    // Loop through the buttons
+    node_buttons.each(function() {
+        var nodeButton = $(this);
+        var nodeID = nodeButton.data('node_id');
+        var nodeInfo = getNodeInfo(nodeID);
 
+        var container = $('<div>');
+
+        if (nodeInfo) {
+            var inputFields = nodeInfo.input_fields || [];
+            var outputFields = nodeInfo.output_fields || [];
+
+            // Process inputs (green)
+            inputFields.forEach(function(field) {
+                var badgeText = "input:" + field.name;
+                var badge = $('<span>', {
+                    class: 'badge badge-success',
+                    text: badgeText,
+                });
+
+                container.append(badge);
+                container.append('<br>');
+            });
+
+            // Process outputs (blue)
+            outputFields.forEach(function(field) {
+                var badgeText = 'output:' + field.name;
+                var badge = $('<span>', {
+                    class: 'badge badge-primary',
+                    text: badgeText,
+                });
+
+                container.append(badge);
+                container.append('<br>');
+            });
+        } else {
+            var badge = $('<span>', {
+                class: 'badge badge-success',
+                text: 'passthrough',
+            });
+            container.append(badge);
+        }
+
+        nodeButton.popover({
+            content: container.html(),
+            trigger: 'focus',
+            html: true,
+            placement: 'top',
+        });
+    });
+
+    // adding nodes to a new pipeline
     var selectedNodes = [];
     $('#addNodeToList').click(function () {
         const selectedNode = $('#selectedNode').find(':selected').attr('value');
@@ -288,8 +342,6 @@ $(document).ready(function () {
         $("#selectedNodesContainer").append(listItem);
         $('#selectedNodesContainer').show();
     });
-
-
 
     $("#createPipeline").on("click", function() {
         if ($("#nodePulldown").find('option').length > 1) {

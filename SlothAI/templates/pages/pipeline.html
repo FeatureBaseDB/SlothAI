@@ -17,7 +17,7 @@
             {% for node_id in pipeline.node_ids %}
                 {% for node in nodes %}
                     {% if node.node_id == node_id %}
-                        <button class="btn btn-secondary">{{ node.name }}</button>
+                        <button data-node_id="{{node_id}}" class="btn btn-secondary">{{ node.name }}</button>
                     {% endif %}
                 {% endfor %}
             {% endfor %}
@@ -38,6 +38,92 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
+    // grab the nodes from the template and make them available via getNodeInfo
+    var nodes = JSON.parse('{{nodes | tojson}}');
+
+    function getColorFromName(name) {
+        name = name.trim(); // Remove leading and trailing spaces
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const color = `hsl(${hash % 360}, 70%, 60%)`;
+        return color;
+    }
+
+    const buttons = document.querySelectorAll(".btn-group .btn");
+    buttons.forEach(button => {
+        const name = button.innerText;
+        const color = getColorFromName(name);
+        button.style.backgroundColor = color;
+        button.style.borderColor = color;
+
+    });
+
+    function getNodeInfo(nodeId) {
+        const node = nodes.find(node => node.node_id === nodeId);
+
+        if (node) {
+            const { name, template_name, processor, input_fields, output_fields, extras } = node;
+            return { name, template_name, processor, input_fields, output_fields, extras };
+        } else {
+            return null;
+        }
+    }
+
+    var node_buttons = $('button[data-node_id]');
+    
+    // Loop through the buttons
+    node_buttons.each(function() {
+        var nodeButton = $(this);
+        var nodeID = nodeButton.data('node_id');
+        var nodeInfo = getNodeInfo(nodeID);
+
+        var container = $('<div>');
+
+        if (nodeInfo) {
+            var inputFields = nodeInfo.input_fields || [];
+            var outputFields = nodeInfo.output_fields || [];
+
+            // Process inputs (green)
+            inputFields.forEach(function(field) {
+                var badgeText = "input:" + field.name;
+                var badge = $('<span>', {
+                    class: 'badge badge-success',
+                    text: badgeText,
+                });
+
+                container.append(badge);
+                container.append('<br>');
+            });
+
+            // Process outputs (blue)
+            outputFields.forEach(function(field) {
+                var badgeText = 'output:' + field.name;
+                var badge = $('<span>', {
+                    class: 'badge badge-primary',
+                    text: badgeText,
+                });
+
+                container.append(badge);
+                container.append('<br>');
+            });
+        } else {
+            var badge = $('<span>', {
+                class: 'badge badge-success',
+                text: 'passthrough',
+            });
+            container.append(badge);
+        }
+
+        nodeButton.popover({
+            content: container.html(),
+            trigger: 'focus',
+            html: true,
+            placement: 'top',
+        });
+    });
+
     // delete button
     $(".delete-button").on("click", function () {
         var pipelineId = $(this).data("pipeline-id");
