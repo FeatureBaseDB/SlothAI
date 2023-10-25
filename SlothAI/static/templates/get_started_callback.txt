@@ -4,7 +4,7 @@
 
 {# Next Tasks #}
 {# 1. Review this callback template then click on the 'Save' button. #}
-{# 2. Next, create a new template and then click the `Choose Template` pulldown to select the `Generate random words' template. #}
+{# 2. Create a new template, then click the `Choose Template` pulldown and select `Generate random words'. #}
 
 {# Extras that have [user_callback] or [user_token] will be auto populated. #}
 extras = {'processor': "callback", 'callback_uri': "[user_callback]", 'callback_token': "[user_token]"}

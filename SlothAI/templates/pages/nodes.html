@@ -318,7 +318,7 @@ $(document).ready(function() {
 
     // Event listener for the template selection
     $("#nodeTemplate").on("change", function() {
-        // $("#addNodeModalButton").prop("disabled", true);
+        $("#addNodeModalButton").prop("disabled", true);
         $("#dynamicFieldsContainer").empty();
 
         var selectedTemplateId = $(this).val();

@@ -1,14 +1,13 @@
 {# Welcome to the SlothAI Templating System. #}
-{# This template tutorial creates a random word generator. #}
+{# This template tutorial creates a random word generator and POSTs it to the log tab. #}
 
 {# Next Tasks #}
 {# 1. Review this jinja processor template then click on the 'Save' button. #}
-{# 2. Next, click the `Nodes` link in the side navigation and add a node using this template and the callback template. #}
+{# 2. Click `Nodes` and add a node using this template and then do the same for the callback template. #}
+{# 3. Click `Pipelines` and add the random word (jinja) node and the callback template to the pipeline, in that order. #}
+{# 4. Finish adding the Pipeline by giving it a name and clicking the add button. #}
 
-{# Nodes #}
-{# Nodes are created from templates and may be added to a pipeline. #}
-{# Nodes tie templates and processors together #}
-
+{# extras = {} #}
 {# The extras definition is required in all templates. #}
 extras = {"processor": "jinja2"}
 
@@ -21,7 +20,7 @@ output_fields = [{'name': "words", 'type': "stringset"}]
 {# Create a dictionary that contains the 'words' stringset: #}
 {
     "words": [
-        {% for _ in range( num_words ) %}
+        {% for _ in range( num_words | default(5) ) %}
             "{{ random_word() }}"{% if not loop.last %},{% endif %}
         {% endfor %}
     ]

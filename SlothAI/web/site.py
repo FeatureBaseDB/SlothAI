@@ -31,6 +31,7 @@ processors = [
     {"value": "write_featurebase", "label": "Write Processor (FeatureBase)"},
     {"value": "aidict", "label": "Generative Completion Processor"},
     {"value": "aichat", "label": "Generative Chat Processor"},
+    {"value": "aiimage", "label": "Generative Image Processor"},
     {"value": "embedding", "label": "Embedding Vectors Processor"},
     {"value": "sloth_embedding", "label": "Sloth Text Embedding Processor"},
     {"value": "aivision", "label": "Vision Processor"},
@@ -39,7 +40,7 @@ processors = [
 
 # template examples
 template_examples = [
-    {"name": "Get started with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
+    {"name": "Start with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
     {"name": "Generate random words", "template_name": "get_started_random_word", "processor_type": "jinja2"},
     {"name": "Read PDF and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
     {"name": "Read image and convert objects to labels", "template_name": "image_to_labels", "processor_type": "read_file"},
@@ -51,6 +52,7 @@ template_examples = [
     {"name": "Analyze text sentiment", "template_name": "text_to_sentiment", "processor_type": "aidict"},
     {"name": "Generate answers from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aidict"},
     {"name": "Converse and answer questions from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aichat"},
+    {"name": "Generate an image from text", "template_name": "text_to_image", "processor_type": "aiimage"},
     {"name": "Convert text to vector", "template_name": "text_to_vector", "processor_type": "embedding"},
     {"name": "Convert text to an OpenAI ada-similarity vector", "template_name": "text_to_ada_vector", "processor_type": "embedding"},
     {"name": "Convert text and keyterms to vector", "template_name": "text_keyterms_to_vector", "processor_type": "embedding"},

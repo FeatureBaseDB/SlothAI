@@ -34,8 +34,12 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-  // Iterate through table rows
-  $("table tbody tr").each(function() {
+    $('.reload-button').on('click', function() {
+      window.location.reload();
+    });
+    
+    // Iterate through table rows
+    $("table tbody tr").each(function() {
     var tdLog = $(this).find("td[data-log"); // Find the <td> with data-log attribute
 
     // Extract the log data from the data attribute
@@ -54,9 +58,37 @@ $(document).ready(function() {
       }
     }
 
+    // is it a travesty that I didn't write any of this?
+    let inactivityTimer; // Initialize a timer variable
+
+    // Function to reload the page
+    function reloadPage() {
+      window.location.reload();
+    }
+
+    // Function to start the inactivity timer
+    function startInactivityTimer() {
+      inactivityTimer = setTimeout(reloadPage, 30000); // Reload the page after 1 minute (60000 milliseconds)
+    }
+
+    // Function to reset the inactivity timer
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer); // Clear the previous timer
+      startInactivityTimer(); // Start a new timer
+    }
+
+    // Event listeners for mouse and keyboard activity
+    document.addEventListener('mousemove', resetInactivityTimer); // Mouse activity
+    document.addEventListener('keydown', resetInactivityTimer); // Keyboard activity
+
+    // Start the initial timer
+    startInactivityTimer();
+    // Probably not.
+
+
     // Display the formatted JSON without 'token' entries in the "Log" column
     tdLog.html('<pre>' + JSON.stringify(jsonDataObj, null, 2) + '</pre>');
-  });
+    });
 });
 </script>
 {% endblock %}

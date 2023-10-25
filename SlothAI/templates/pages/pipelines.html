@@ -179,7 +179,7 @@ $(document).ready(function () {
     // create buttons in the list
     function createButton(name, title, content, extras=false) {
         const container = $('<div>');
-        if (extras && content) {
+        if (extras && Object.keys(content).length) {
             for (const key in content) {
                 if (content.hasOwnProperty(key)) {
                     const value = content[key];
@@ -188,6 +188,7 @@ $(document).ready(function () {
                         text: `${key}:${value}`,
                     });
                     container.append(badge);
+                    container.append('<br>');
                 }
             }
         } else if (content && content.length > 0) {
@@ -198,6 +199,7 @@ $(document).ready(function () {
                     type: entry.type
                 });
                 container.append(badge);
+                container.append('<br>');
             });
         } else {
             const badge = $('<span>', {
@@ -223,23 +225,21 @@ $(document).ready(function () {
         return button;
     }
 
-    $("#createPipeline").on("click", function() {
-        if ($("#nodePulldown").find('option').length > 1) {
-            $("#nodeFormModal").modal("show");
-        } else {
-            toastr.error("No nodes. Add a node first before adding a pipeline.");
-        }
-    });
 
-    const selectedNodes = [];
+    var selectedNodes = [];
     $('#addNodeToList').click(function () {
         const selectedNode = $('#selectedNode').find(':selected').attr('value');
 
         // add the node if it's not None
-        if ( selectedNode == "None" || !selectedNode ) {
+        if (selectedNode == "None" || !selectedNode) {
             toastr.error("Select a valid node to add to the pipeline.");
             return;
-        } else if ( selectedNodes.includes(selectedNode) ) {
+        }
+
+        const selectedProcessor = getNodeInfo(selectedNode).processor;
+        
+        // If the selected processor is not a Callback Processor, check for duplicates
+        if (selectedProcessor !== "callback" && selectedNodes.includes(selectedNode)) {
             toastr.error("Node is already in the pipeline.");
             return;
         }
@@ -249,6 +249,10 @@ $(document).ready(function () {
         const buttonGroup = $('<div></div>', {
             class: 'btn-group btn-group-toggle',
             'data-toggle': 'buttons',
+        });
+
+        const listItem = $('<div></div>', {
+            class: 'selected-node',
         });
 
         const deleteButton = $('<a></a>', {
@@ -261,13 +265,11 @@ $(document).ready(function () {
                 if (indexToRemove !== -1) {
                     selectedNodes.splice(indexToRemove, 1);
                 }
+
                 listItem.remove();
 
-                // set the dropdown to None 
-                $("#selectedNodesContainer").val("None");
-
-                // hide or show the container
-                if ($('#selectedNodes').length == 0) {
+                // hide or show the container based on the selectedNodes array
+                if (selectedNodes.length === 0) {
                     $('#selectedNodesContainer').hide();
                 } else {
                     $('#selectedNodesContainer').show();
@@ -275,22 +277,29 @@ $(document).ready(function () {
             }
         });
         deleteButton.append($('<i class="fas fa-trash-alt"></i>'));
-        
 
         buttonGroup.append(createButton(getNodeInfo(selectedNode).name, "Node Input", getNodeInfo(selectedNode).input_fields));
         buttonGroup.append(createButton(getNodeInfo(selectedNode).template_name, "Template", getNodeInfo(selectedNode).extras, true));
         buttonGroup.append(createButton(getNodeInfo(selectedNode).processor, "Processor Output", getNodeInfo(selectedNode).output_fields));
         buttonGroup.append(deleteButton);
 
-        const listItem = $('<div></div>', {
-            class: 'selected-node',
-        });
-
         // append to the existing list
         listItem.append(buttonGroup);
-
         $("#selectedNodesContainer").append(listItem);
         $('#selectedNodesContainer').show();
+    });
+
+
+
+    $("#createPipeline").on("click", function() {
+        if ($("#nodePulldown").find('option').length > 1) {
+            $("#nodeFormModal").modal("show");
+            $("#selectedNodesContainer").hide();
+            $("#selectedNodesContainer").empty();
+            selectedNodes = [];
+        } else {
+            toastr.error("No nodes. Add a node first before adding a pipeline.");
+        }
     });
 
     // Attach a click event handler to the delete buttons

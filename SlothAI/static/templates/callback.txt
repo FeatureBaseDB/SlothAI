@@ -1,14 +1,7 @@
-{# Use this template to callback a URI #}
+{# Use this template to callback to a URI #}
 
-{# NOTE: You may remove any template commented lines, such as this one. #}
-
-{# Document should have a words key #}
-input_fields = [{'name': 'words', 'type': 'stringset'}]
-
-{# Specify which keys you want to write to the callback #}
+{# Specify which keys you want to written to the callback. All fields will be written if this is empty. #}
 output_fields = [{'name': 'words', 'type': 'stringset'}]
 
-{# Define the callback URI and any tokens or extra parameters - no extras means default callback #}
-{# extras = [{'callback_uri': ""}, {'callback_token': ""}] #}
-
-{# ALL task.document keys and values are sent with a json document by POST to the callback URI. #}
+{# Define the callback URI and any tokens or extra parameters #}
+extras = [{'callback_uri': "https://yoursite.com/callback?token={{callback_token}}"}, {'callback_token': "SECRET"}]
