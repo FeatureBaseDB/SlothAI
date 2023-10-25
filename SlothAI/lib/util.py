@@ -69,6 +69,33 @@ def load_template(name="default"):
     return template
 
 
+
+def gpt_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo"):
+    # Load OpenAI key
+    try:
+        openai.api_key = app.config['OPENAI_TOKEN']
+    except:
+        openai.api_key = alt_token
+
+    try:
+        template = load_template(template)
+        prompt = template.substitute(document)
+    except Exception as ex:
+        print(ex)
+        return None
+
+    completion = openai.ChatCompletion.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": "You do what you are told, step by step."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    answer = completion.choices[0].message.content
+    return answer
+
+
 # called only by our stuff
 def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo", alt_token=""):
     

@@ -24,9 +24,9 @@
         </div>
         <p>The pipeline is used by POST'ing data to the ingestion endpoint:</p>
         <code>curl -X POST \
+"http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}" \
 -H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."]}' \
-"http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}"
+-d {{example_d}}
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
     </div>

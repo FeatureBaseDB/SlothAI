@@ -9,7 +9,7 @@ import flask_login
 from flask_login import current_user
 
 from SlothAI.lib.tasks import list_tasks
-from SlothAI.lib.util import random_name
+from SlothAI.lib.util import random_name, gpt_completion
 from SlothAI.web.models import Pipeline, Node, Template, Log
 
 site = Blueprint('site', __name__)
@@ -109,12 +109,17 @@ def pipeline_view(pipe_id):
     hostname = request.host
 
     pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
-    nodes = Node.fetch(uid=current_user.uid)
 
     # add input and output fields, plus template name
     _nodes = []
-    for node in nodes:
+    head_input_fields = []
+    for node_id in pipeline.get('node_ids'):
+        node = Node.get(node_id=node_id)
         template = Template.get(template_id=node.get('template_id'))
+        if not head_input_fields:
+            head_input_fields = template.get('input_fields', [])
+            head_processor = node.get('processor')
+
         node['template_name'] = template.get('name')
         node['input_fields'] = template.get('input_fields')
         node['output_fields'] = template.get('output_fields')
@@ -128,10 +133,16 @@ def pipeline_view(pipe_id):
     if not pipeline:
         return redirect(url_for('site.pipelines'))
 
-    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=nodes)
+    if head_input_fields:
+        document = {"head_input_fields": head_input_fields, "pipe_id": pipe_id, "head_processor": head_processor, "user_api_token": token}
+        example_d = gpt_completion(document, "form_example")
+        if not example_d:
+            example_d = """'{"text": ["The AI failed us again. Insert bad example here."]}'"""
+    else:
+        example_d = """'{"text": ["There was a knock at the door and then, silence."]}'"""
 
+    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=_nodes, head_input_fields=head_input_fields, example_d=example_d)
 
-# @site.route('/callback/<user_id>', methods=['POST'])
 
 @site.route('/nodes', methods=['GET'])
 @flask_login.login_required
