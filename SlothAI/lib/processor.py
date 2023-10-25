@@ -125,6 +125,10 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 	else:
 		data = document
 
+	# must add node_id and pipe_id
+	data['node_id'] = node.get('node_id')
+	data['pipe_id'] = task.pipe_id
+
 	resp = requests.post(auth_uri, data=json.dumps(data))
 	if resp.status_code != 200:
 		raise Exception("callback request failed")

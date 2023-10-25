@@ -575,16 +575,20 @@ class User(flask_login.UserMixin, ndb.Model):
 class Log(flask_login.UserMixin, ndb.Model):
     log_id = ndb.StringProperty()
     user_id = ndb.StringProperty()
+    node_id = ndb.StringProperty()
+    pipe_id = ndb.StringProperty()
     line = ndb.BlobProperty()
     created = ndb.DateTimeProperty()
 
     @classmethod
     @ndb_context_manager
-    def create(cls, user_id, line):
+    def create(cls, user_id, node_id, pipe_id, line):
         id = random_string(size=17)
         log = cls(
             log_id=id,
             user_id=user_id,
+            node_id=node_id,
+            pipe_id=pipe_id,
             created=datetime.datetime.utcnow(),
             line=str(line).encode('utf-8')
         )
@@ -610,6 +614,10 @@ class Log(flask_login.UserMixin, ndb.Model):
             query_conditions.append(cls.log_id == kwargs['log_id'])
         if 'uid' in kwargs:
             query_conditions.append(cls.user_id == kwargs['uid'])
+        if 'node_id' in kwargs:
+            query_conditions.append(cls.user_id == kwargs['node_id'])
+        if 'pipe_id' in kwargs:
+            query_conditions.append(cls.user_id == kwargs['pipe_id'])
 
         if query_conditions:
             query = ndb.AND(*query_conditions)
