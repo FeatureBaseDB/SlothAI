@@ -4,6 +4,7 @@ import string
 import secrets
 import socket
 import ast
+import copy
 
 import openai
 
@@ -24,9 +25,11 @@ def random_string(size=6, chars=string.ascii_letters + string.digits):
 def random_name(size=3):
     return generate_slug(size)
 
+
 def generate_token(size=30):
     # generate a secrets token, less the dashes for better copy pasta
     return secrets.token_urlsafe(size).replace('-','')
+
 
 def handle_quotes(object):
     if isinstance(object, str):
@@ -36,6 +39,7 @@ def handle_quotes(object):
         for i, _ in enumerate(object):
             object[i] = handle_quotes(object[i])
     return object
+
 
 def check_webserver_connection(host, port):
     try:
@@ -102,7 +106,6 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
     ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
     ai_dict_str = ai_dict_str.strip('python_dict = ')
 
-    print(ai_dict_str)
     try:
         ai_dict = eval(ai_dict_str)
     except (ValueError, SyntaxError):
@@ -110,6 +113,25 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
         ai_dict = {}
 
     return ai_dict
+
+
+def strip_secure_fields(document):
+    document_copy = copy.deepcopy(document)  # Make a deep copy of the dictionary
+    keys_to_remove = []
+
+    for key in document_copy.keys():
+        if "token" in key.lower() or "password" in key.lower() or "X-API-KEY" in key or "DATABASE_ID" in key:
+            keys_to_remove.append(key)
+
+    for key in keys_to_remove:
+        document_copy.pop(key)
+
+    return document_copy
+
+
+def filter_document(document, keys_to_keep):
+    print("keeping", keys_to_keep)
+    return {key: value for key, value in document.items() if key in keys_to_keep}
 
 
 def remove_fields_and_extras(template):
@@ -128,7 +150,6 @@ def remove_fields_and_extras(template):
 
 
 def fields_text_from_template(template):
-
     # Regular expressions to find input and output fields in the template
     input_pattern = re.compile(r'input_fields\s*=\s*(\[.*?\])', re.DOTALL)
     output_pattern = re.compile(r'output_fields\s*=\s*(\[.*?\])', re.DOTALL)
@@ -159,16 +180,15 @@ def fields_from_template(template):
 
 def extras_from_template(template):
     extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)
-    extras_match = extras_pattern.search(template)
+    extras_matches = extras_pattern.findall(template)
 
-    if extras_match:
-        try:
-            extras_content = ast.literal_eval("{" + extras_match.group(1) + "}")
-            return extras_content, False
-        except Exception as ex:
-            return None, {"error": f"{ex}", "message": "Evaluation of extras failed."}
-    else:
-        return None, {"message": f"No extras found."}
+    try:
+        extras_content = ast.literal_eval("{" + extras_matches[0] + "}")
+        if not isinstance(extras_content, dict):
+            return None, {"error": "Extras is not a dictionary", "message": "Evaluation of extras failed."}
+        return extras_content, False
+    except Exception as ex:
+        return None, {"error": f"{ex}", "message": "Evaluation of extras failed."}
 
 
 # handles merging the extras in from template, user and system definitions
@@ -207,6 +227,7 @@ def merge_extras(template_extras, node_extras):
     return merged_extras
 
 
+# maybe not used due to remove_fields_and_extras
 def jinja_from_template(template):
     if not isinstance(template, str):
         return ""

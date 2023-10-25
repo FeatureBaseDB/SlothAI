@@ -8,85 +8,30 @@
 {% block content %}
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">
-    {% for message in get_flashed_messages() %}
-        <div id="tempNotice" class="alert alert-info d-none" role="alert">{{ message }}</div>
-    {% endfor %}
-    
     <h2 class="page_heading">Pipeline Details</h2>
 
-    <!-- Display Pipeline Details -->
-    <div class="card rounded-lg">
-        <div class="card-body">
-            <h4 class="card-title card-callout">{{ pipeline.name }}</h4>
-
-            <p class="card-text">
-                {% for node in pipeline.node_ids %}
-                    {% if node.node_id in pipeline %}
+    <div class="rounded-lg border p-3">
+        <h4 class="mb-3">{{pipeline.name}}</h4>
+        <p>The pipeline '{{pipeline.name}}' contains the following nodes:</p>
+        <div class="btn-group">
+            {% for node_id in pipeline.node_ids %}
+                {% for node in nodes %}
+                    {% if node.node_id == node_id %}
                         <button class="btn btn-secondary">{{ node.name }}</button>
                     {% endif %}
                 {% endfor %}
-            </p>
-
-            <p class="card-text">This is the ingestion endpoint for your pipeline:</p>
-
-			<code>http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{ pipeline.pipe_id }}/ingest<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
-
-            <p class="card-text">
-                <strong>Task:</strong> Send data to the <strong>{{pipeline.name}}</strong> pipeline to create a <strong>{{pipeline.name}}</strong> table in your FeatureBase.
-            </p>
-            <p class="card-text">
-            	Using curl, initialize the pipeline's table by ingesting some data:
-            </p>
-
-<code>curl -X POST \
+            {% endfor %}
+        </div>
+        <p>The pipeline is used by POST'ing data to the ingestion endpoint:</p>
+        <code>curl -X POST \
 -H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."], "attributes": [["frontdoor", "sound", "person"]]}' \
+-d '{"text":["There was a knock at the door, then silence."]}' \
 "http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}"
 <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
 
-<p class="card-text"><strong>Graph Layout</strong></p>
-<div class="mermaid">
-{{mermaid_string}}
-</div>
-
-<p class="card-text">Sample response:</p>
-<code>{
-  "data": {
-    "attributes": [
-      "frontdoor",
-      "sound",
-      "person"
-    ],
-    "text": [
-      "There was a knock at the door, then silence."
-    ]
-  },
-  "job_id": "2578086926602701263",
-  "models": {
-    {% for node in pipeline.get('node_ids') %} "{{ node }}"{% if not loop.last %},{% endif %}{% endfor %}
-  },
-  "name": "{{pipeline.name}}",
-  "tid": "{{pipeline.pipe_id}}"
-}</code>
-            <p class="card-text">Once the pipeline task has run, check your <a href="https://cloud.featurebase.com/">FeatureBase Cloud</a> account for data:</p>
-<code>SELECT _id, keyterms, text, embedding FROM {{ pipeline.name }};
-
-+---------+------------+-------------------+------------+
-|   _id   |  keyterms  |       text        |  embedding |
-+---------+------------+-------------------+------------+
-| Oqhff1  |['knock','do| There was a knock | [0.02333,0.|
-+---------+------------+-------------------+------------+
-</code>
-            <p class="card-text">
-                The ingestion endpoint always requires a <strong>'text'</strong> key and you may enter other keys in your POST object to have those fields automatically detected and created.
-            </p>
-			<p class="card-text"></p>
-			<p class="card-text">
-                <button class="btn btn-danger delete-button" data-pipeline-id="{{ pipeline.pipe_id }}">Delete {{pipeline.pipe_id}}</button>
-        	</p>
-        </div>
     </div>
-
+    <p></p>
+    <button class="btn btn-danger delete-button" data-pipeline-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i> Delete</button>
 </div>
 {% endblock %}
 

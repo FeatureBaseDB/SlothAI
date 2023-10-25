@@ -1,26 +1,14 @@
 {# Welcome to the SlothAI Templating System. #}
 
-{# This tutorial creates a pipeline that generates random words and makes a callback to a URI. #}
 {# This template will be used to create a callback node. #}
 
 {# Next Tasks #}
 {# 1. Review this callback template then click on the 'Save' button. #}
-{# 2. Next, click the `Choose Template` pulldown and select the `Generate random words' template. #}
+{# 2. Next, create a new template and then click the `Choose Template` pulldown to select the `Generate random words' template. #}
 
-{# Comments #}
-{# Comments like these are provided for your reference and can be safely removed from this Template. #}
+{# Extras that have [user_callback] or [user_token] will be auto populated. #}
+extras = {'processor': "callback", 'callback_uri': "[user_callback]", 'callback_token': "[user_token]"}
 
-{# Templates #}
-{# Templates are the control side of Nodes, essential for managing the flow of data in the pipeline. #}
-{# There are other example templates in the 'Choose Template' pulldown below. #}
-
-{# Processors #}
-{# Processors are the compute side of Nodes. They process input data and then output new data. #}
-{# We may optionally define a processor and any other variables it needs in Extras. #}
-{# Extras which have "generate" or None for their values will be generated or prompted for in node creation. #}
-extras = {'processor': "callback", 'callback_uri': "[user_callback]"}
-
-{# Use the reversed_word filter to transform the data sent to this template. #}
-{# We return the results in a JSON dictionary which will be added to the task document. #}
-
-{'processed_text': {{task.document.text|reversed_word}}
+{# Any output fields we define will be passed to the callback endpoint. #}
+{# If output fields is empty, all data will be sent to the callback endpoint. #}
+output_fields = [{'name': "words", 'type': "stringset"}]

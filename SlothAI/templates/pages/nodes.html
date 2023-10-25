@@ -28,7 +28,7 @@
             <tbody id="nodeTable">
                 {% for node in nodes %}
                 <tr>
-                    <td><button type="button" class="btn btn-secondary" disabled><i class="fas fa-coffee"></i> {{ node.name }}</button></td>
+                    <td><button type="button" class="btn btn-secondary" disabled><i class="fas fa-cube"></i> {{ node.name }}</button></td>
                     <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors" title="{{ node.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i> {{ node.processor }}</a></td>
 
 

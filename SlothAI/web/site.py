@@ -59,6 +59,17 @@ template_examples = [
     {"name": "Write to table", "template_name": "write_table", "processor_type": "write_featurebase"},
 ]
 
+@site.route('/logs', methods=['GET'])
+@flask_login.login_required
+def logs():
+    # get the user and their tables
+    username = current_user.name
+    hostname = request.host
+
+    logs = Log.fetch(uid=current_user.uid)
+
+    return render_template('pages/logs.html', username=username, hostname=hostname, logs=logs)
+
 
 @site.route('/', methods=['GET'])
 @site.route('/pipelines', methods=['GET'])
@@ -87,18 +98,6 @@ def pipelines():
     return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
 
 
-@site.route('/logs', methods=['GET'])
-@flask_login.login_required
-def logs():
-    # get the user and their tables
-    username = current_user.name
-    hostname = request.host
-
-    logs = Log.fetch(uid=current_user.uid)
-
-    return render_template('pages/logs.html', username=username, hostname=hostname, logs=logs)
-
-
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
 def pipeline_view(pipe_id):
@@ -108,7 +107,6 @@ def pipeline_view(pipe_id):
     hostname = request.host
 
     pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
-
     nodes = Node.fetch(uid=current_user.uid)
 
     # add input and output fields, plus template name
@@ -128,7 +126,7 @@ def pipeline_view(pipe_id):
     if not pipeline:
         return redirect(url_for('site.pipelines'))
 
-    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline)
+    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=nodes)
 
 
 # @site.route('/callback/<user_id>', methods=['POST'])
@@ -138,9 +136,6 @@ def pipeline_view(pipe_id):
 def nodes():
     # get the user and their tables
     username = current_user.name
-
-    api_token = current_user.api_token
-    dbid = current_user.dbid
     nodes = Node.fetch(uid=current_user.uid)
 
     templates = Template.fetch(uid=current_user.uid)
@@ -168,7 +163,7 @@ def nodes():
         _nodes.append(node)
 
     return render_template(
-        'pages/nodes.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, nodes=_nodes, name_random=name_random, templates=templates, processors=processors
+        'pages/nodes.html', username=username, dev=app.config['DEV'], nodes=_nodes, name_random=name_random, templates=templates, processors=processors
     )
 
 

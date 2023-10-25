@@ -7,8 +7,12 @@
 
 {# Nodes #}
 {# Nodes are created from templates and may be added to a pipeline. #}
+{# Nodes tie templates and processors together #}
 
-{# No input_fields are used in this template because it generates text randomly. #}
+{# The extras definition is required in all templates. #}
+extras = {"processor": "jinja2"}
+
+{# Input field definition to take in the number of words to generate. #}
 input_fields = [{'name': 'num_words', 'type': 'int'}]
 
 {# Define the output_fields expected from the node: #}

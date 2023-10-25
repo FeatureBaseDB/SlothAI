@@ -25,9 +25,10 @@
     </div>
 
     <!-- Cancel Button -->
-    <a href="/templates" class="btn btn-danger">
+    <button id="goBack" class="btn btn-danger">
         <i class="fas fa-arrow-left"></i> Back
-    </a>
+    </button>
+
 
     <!-- Save Button -->
     <a id="saveButton" href class="btn btn-primary">
@@ -175,6 +176,13 @@ $(document).ready(function() {
             $("#saveButton").click(); // Simulate a click on the "Save" button
         }
     });
+
+    // Add a click event handler to the button
+    $('#goBack').on('click', function() {
+        // Go back to the previous URL
+        window.history.back();
+    });
+
 
     // Attach a click event handler to the "Generate Name" button
     $("#generateButton").on("click", function() {

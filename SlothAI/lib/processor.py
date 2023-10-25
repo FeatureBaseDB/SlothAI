@@ -28,7 +28,7 @@ from SlothAI.web.models import User, Node, Template
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
-from SlothAI.lib.util import jinja_from_template, extras_from_template, fields_from_template, remove_fields_and_extras
+from SlothAI.lib.util import extras_from_template, fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document
 
 env = Environment()
 env.globals['random_word'] = random_word
@@ -109,16 +109,22 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 	uri = url_for('callback.handle_callback', user_name=user.get('name'), _external=True)
 	auth_uri = f"{uri}?token={node.get('extras').get('callback_token')}"
 
-	# search the document for fields and assemble the data payload
-	data = {}
-	for el in output_fields:
-		for k,v in el.items():
-			if k == 'name':
-				data[v] = task.document.get(v, f'unable to find output key {v} in the document.')
+	# strip secure stuff out of the document
+	document = strip_secure_fields(task.document) # returns document
+
+	keys_to_keep = []
+	for field in output_fields:
+		for key, value in field.items():
+			if key == 'name':
+				keys_to_keep.append(value)
+
+	if keys_to_keep:
+		data = filter_document(document, keys_to_keep)
+		if not data:
+			data = document
 	else:
-		# just use the document
-		data = task.document
-	print(auth_uri)
+		data = document
+
 	resp = requests.post(auth_uri, data=json.dumps(data))
 	if resp.status_code != 200:
 		raise Exception("callback request failed")
