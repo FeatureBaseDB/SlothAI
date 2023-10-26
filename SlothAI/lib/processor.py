@@ -4,11 +4,14 @@ import string
 import ast
 import re
 import copy
+import hashlib
 
 import requests
 import json
 
 import openai
+
+from google.cloud import vision, storage
 
 from typing import Dict
 
@@ -28,7 +31,7 @@ from SlothAI.web.models import User, Node, Template
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
-from SlothAI.lib.util import extras_from_template, fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document
+from SlothAI.lib.util import extras_from_template, fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document, load_from_storage
 
 env = Environment()
 env.globals['random_word'] = random_word
@@ -59,7 +62,9 @@ def process(task: Task) -> Task:
 	# securely. For now, use app config openai_token when the extras value
 	# openai_token is present in a node.
 	# if "openai_token" in node.get('extras'):
-	task.document['OPENAI_TOKEN'] = app.config['OPENAI_TOKEN']
+	# task.document['OPENAI_TOKEN'] = app.config['OPENAI_TOKEN']
+	if "openai_token" in node.get('extras'):
+		task.document['OPENAI_TOKEN'] = extras.get('openai_token')
 
 	user = User.get_by_uid(uid=task.user_id)
 	# if "x-api-key" in node.get('extras'):
@@ -69,6 +74,10 @@ def process(task: Task) -> Task:
 
 	# processer methods are responsible for adding errors to documents
 	task = processers[node.get('processor')](node, task)
+
+	# TODO, decide what to do with errors and maybe truncate pipeline
+	if task.document.get('error'):
+		return task
 
 	if "OPENAI_TOKEN" in task.document.keys():
 		task.document.pop('OPENAI_TOKEN', None)
@@ -94,10 +103,192 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 		jinja_template = env.from_string(template_text)
 		jinja = jinja_template.render(task.document)
 		jinja_json = json.loads(jinja)
+
 		for k,v in jinja_json.items():
 			task.document[k] = v
 
 	return task
+
+
+@processer
+def embedding(node: Dict[str, any], task: Task) -> Task:
+	# load openai key then drop it from the document
+	if "text-embedding-ada-002" in task.document.get('model'):
+		openai.api_key = task.document.get('openai_token')
+
+	# output and input fields
+	template = Template.get(template_id=node.get('template_id'))
+	output_fields = template.get('output_fields')
+	output_field = output_fields[0].get('name')
+	
+	input_fields = template.get('input_fields')
+	input_field = input_fields[0].get('name')
+
+	if "text-embedding-ada-002" in task.document.get('model'):
+		try:
+			embedding_results = openai.Embedding.create(input=task.document.get(input_field), model=task.document.get('model'))
+		except Exception as ex:
+			print(ex)
+			task.document['error'] = f"exception talking to OpenAI ada embedding: {ex}"
+			task.document[output_field] = []
+			return task
+
+		task.document[output_field] = [_object.get('embedding') for _object in embedding_results.get('data')]
+	else:
+		task.document[output_field] = []
+ 
+	return task
+
+
+@processer
+def aidict(node: Dict[str, any], task: Task) -> Task:
+	# output and input fields
+	template = Template.get(template_id=node.get('template_id'))
+	output_fields = template.get('output_fields')
+	output_field = output_fields[0].get('name')
+	
+	input_fields = template.get('input_fields')
+	input_field = input_fields[0].get('name')
+
+	if "gpt" in task.document.get('model'):
+		openai.api_key = task.document.get('openai_token')
+
+	template_text = remove_fields_and_extras(template.get('text'))
+
+	if template_text:
+		jinja_template = env.from_string(template_text)
+		prompt = jinja_template.render(task.document)
+	
+	completion = openai.ChatCompletion.create(
+		model = task.document.get('model'),
+		messages = [
+			{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."},
+			{"role": "user", "content": prompt}
+		]
+	)
+
+	answer = completion.choices[0].message
+
+	ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
+	ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
+	ai_dict_str = ai_dict_str.strip('python_dict = ')
+
+	try:
+		ai_dict = eval(ai_dict_str)
+	except (ValueError, SyntaxError):
+		task.document['error'] = f"exception talking to OpenAI dict create: {ex}"
+		ai_dict = {}
+
+	task.document.update(ai_dict)
+	
+	return task
+
+
+@processer
+def aiimage(node: Dict[str, any], task: Task) -> Task:
+	# output and input fields
+	template = Template.get(template_id=node.get('template_id'))
+	output_fields = template.get('output_fields')
+	output_field = output_fields[0].get('name')
+	
+	input_fields = template.get('input_fields')
+	input_field = input_fields[0].get('name')
+
+	if "dall-e" in task.document.get('model'):
+		openai.api_key = task.document.get('openai_token')
+
+		try:
+			response = openai.Image.create(
+			  prompt=task.document.get('prompt'),
+			  n=int(task.document.get('num_images')),
+			  size="1024x1024"
+			)
+			urls = []
+
+			# Loop over the 'data' list and extract the 'url' from each item
+			for item in response['data']:
+				if 'url' in item:
+					urls.append(item['url'])
+
+			task.document[output_field] = urls
+		
+		except Exception as ex:
+			print(ex)
+			task.document['error'] = f"exception talking to OpenAI image create: {ex}"
+			task.document[output_field] = []
+			return task
+	else:
+		task.document[output_field] = []
+ 
+	return task
+
+
+@processer
+def read_file(node: Dict[str, any], task: Task) -> Task:
+	template = Template.get(template_id=node.get('template_id'))
+	output_fields = template.get('output_fields')
+	
+	user = User.get_by_uid(uid=task.user_id)
+	uid = user.get('uid')
+	filename = task.document.get('filename')
+	sha256_hash = hashlib.sha256(filename.encode()).hexdigest()
+	directory_name = sha256_hash[:8]
+
+	mime_type = task.document.get('content_type')
+
+	if mime_type == "application/pdf":
+		file_bucket_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
+		output_bucket_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{directory_name}/"
+
+		client = vision.ImageAnnotatorClient()
+		feature = vision.Feature(type_=vision.Feature.Type.DOCUMENT_TEXT_DETECTION)
+
+		gcs_source = vision.GcsSource(uri=file_bucket_uri)
+		input_config = vision.InputConfig(gcs_source=gcs_source, mime_type=mime_type)
+
+		gcs_destination = vision.GcsDestination(uri=output_bucket_uri)
+		output_config = vision.OutputConfig(
+			gcs_destination=gcs_destination, batch_size=1
+		)
+
+		async_request = vision.AsyncAnnotateFileRequest(
+			features=[feature], input_config=input_config, output_config=output_config
+		)
+
+		# blocks on waiting for processing
+		operation = client.async_batch_annotate_files(requests=[async_request])
+		operation.result(timeout=720) # 12 minutes limit
+
+		storage_client = storage.Client()
+
+		bucket = storage_client.get_bucket(app.config['CLOUD_STORAGE_BUCKET'])
+
+		# List objects with the given prefix, filtering out folders.
+		blob_list = [
+			blob
+			for blob in list(bucket.list_blobs(prefix=f"{uid}/{directory_name}"))
+			if not blob.name.endswith("/")
+		]
+
+		texts = []
+		num_pages = len(blob_list)
+
+		for blob in blob_list:
+			json_string = blob.download_as_bytes().decode("utf-8")
+			response = json.loads(json_string)
+
+			first_page_response = response["responses"][0]
+			annotation = first_page_response["fullTextAnnotation"]
+
+			texts.append(annotation["text"].replace("'", " ").replace('"', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' '))
+
+	else:
+		task.document.update({"error": "This processor only supports PDFs. Upload with type set to `application/pdf`."})
+		return task
+
+	task.document.update({"texts": texts, "num_pages": num_pages})
+	return task
+
 
 @processer
 def callback(node: Dict[str, any], task: Task) -> Task:
@@ -135,15 +326,21 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 
 	return task
 
+
 @processer
-def read_featurebase(node: Dict[str, any], task: Task) -> Task:
+def read_fb(node: Dict[str, any], task: Task) -> Task:
 	user = User.get_by_uid(task.user_id)
 	doc = {"dbid": user.get('dbid'), "db_token": user.get('db_token')}
 	doc['sql'] = task.document['sql']
-	resp, _ = featurebase_query(document=doc)
+	resp, err = featurebase_query(document=doc)
+	if err:
+		task.document['error'] = err
+		return task
 
+	# response data
 	fields = []
 	data = {}
+
 	for field in resp.schema['fields']:
 		fields.append(field['name'])
 		data[field['name']] = []
@@ -162,9 +359,10 @@ def read_featurebase(node: Dict[str, any], task: Task) -> Task:
 
 	return task
 
+
 from SlothAI.lib.schemar import Schemar
 @processer
-def write_featurebase(node: Dict[str, any], task: Task) -> Task:
+def write_fb(node: Dict[str, any], task: Task) -> Task:
 
 	auth = {"dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']}
 
@@ -302,25 +500,6 @@ def clean_extras(extras: Dict[str, any], task: Task):
 				del task.document[k]
 	return task
 
-
-def ada(ai_model, document):
-	# load openai key then drop it from the document
-	openai.api_key = document.get('openai_token')
-
-	texts = []
-	for _text in document.get('data').get('text'): 
-		texts.append(_text.replace("\n", " "))
-
-	try:
-		embedding_results = openai.Embedding.create(input=texts, model=ai_model.get('name'))['data']
-	except Exception as ex:
-		print(ex)
-		document['error'] = f"exception talking to OpenAI ada embedding: {ex}"
-		embedding_results = []
-
-	document['data']['embedding'] = [_object.get("embedding") for _object in embedding_results]
-
-	return document
 
 def gpt_keyterms(ai_model, document):
 	# load openai key then drop it from the document

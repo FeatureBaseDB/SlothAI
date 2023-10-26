@@ -1,22 +1,13 @@
-{# Use this template to drive an OpenAI embedding node processor! #}
-
-{# NOTE: You may remove any template commented lines, such as this one. #}
+{# Use this template to drive a Insructor XL embedding node processor! #}
 
 {# Define the input_fields used in this template: #}
-input_fields = [{'name': "texts", 'type': "stringset"}]
+input_fields = [{'name': "texts", 'type': "strings"}]
 
-{# Hints for the output_fields expected from the node processor using this template: #}
-output_fields = [{'name': "text_embedding", 'type': "vector"}]
+{# Output Fields #}
+output_fields = [{'name': "embeds", 'type': "vectors"}]
 
-{# 1. Define the 'extras' for embedding vector size and model flavor #}
-{# 2. For Instructor embeddings use, see the `Convert text to vector` template #}
-{# 3. Do not set the openai_token field in this template. It will be removed if you do so. #}
-{# 4. Setting the openai_token to "[user_extra]" will cause the create node modal to prompt for the token. #}
-extras = [{'vector_size': 1536}, {'model': 'text-embedding-ada-002'}, {'openai_token': "[user_extra]"}]  
+{# 1. Define the 'extras' for embedding vector size and model flavor - use instructor_xl for free #}
+{# 2. For OpenAI atext-embedding-ada-002 embeddings, see the `Convert text to an OpenAI vector` template #}
+extras = {'vector_size': 1536, 'model': 'text-embedding-ada-002', 'processor': 'embedding', 'openai_token': None}
 
-{# Convert the inputted array of strings to vectors: #}
-{
-	'texts': {{task.document.texts}}
-}
-
-{# The vector value is returned as 'text_embedding' and handled by the next node in the pipeline... #}
+{# The input for the vector engine is auto-created here from 'texts' sent to the pipeline. #}

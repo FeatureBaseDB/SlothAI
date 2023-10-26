@@ -7,6 +7,8 @@ flask-talisman==1.1.0
 Flask-Login==0.6.2
 google-cloud-ndb==2.2.0
 google-cloud-tasks==2.14.1
+google-cloud-storage==2.12.0
+google-cloud-vision==3.4.5
 coolname==2.2.0
 openai==0.28.0
 psutil==5.9.5

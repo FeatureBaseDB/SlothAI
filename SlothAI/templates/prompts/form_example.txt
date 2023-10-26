@@ -20,7 +20,7 @@ curl -X POST \
 $head_input_fields
 """
 
-4. Finish the sample below by providing the string passed to -d. Do not restate or show anything but the string surrounded by single quotes ('):
+4. Doing nothing else, finish the sample below by providing the string passed to -d:
 curl -X POST \
 "http://localhost:8080/pipeline/$pipe_id/task?token=$user_api_token" \
 -H "Content-Type: application/json" \

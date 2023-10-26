@@ -150,7 +150,6 @@ $(document).ready(function() {
                 contentType: 'application/json',
                 data: JSON.stringify(data),
                 success: function(response) {
-                    window.location.href = "/templates";
                     toastr.info("Template saved.");
                 },
                 error: function(error) {

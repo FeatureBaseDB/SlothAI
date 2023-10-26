@@ -1,9 +1,9 @@
-{# Use this template to build a write to FeatureBase processor! #}
+{# Use this template to write to FeatureBase #}
 
-{# Write processors for FeatureBase need a table name. #}
-extras = [{'table': '[user_extra]'}]
+{# Input Fields #}
+{# We're looking for keys to save to the database. #}
+input_fields = [{"name": "texts", "type": "strings"}]
 
-{# Send the entire document to the 'steve' table: #}
-{{task.document}}
-
-{# Unless they are the last node, write processors will pass task.document to the next node in the pipeline... #}
+{# Extras Fields #}
+{# Leave table as None so that it will populate during node creation. #}
+extras = {"table": None, "processor": "write_fb"}

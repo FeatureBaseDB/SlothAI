@@ -31,7 +31,10 @@ button {
 }
 
 .btn {
-    margin-bottom: 12px;
+  margin-bottom: 12px;
+}
+#templateName {
+  margin-bottom: 12px;
 }
 
 /* Link styles */

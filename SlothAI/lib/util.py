@@ -5,6 +5,7 @@ import secrets
 import socket
 import ast
 import copy
+import io
 
 import openai
 
@@ -13,6 +14,8 @@ from coolname import generate_slug
 from flask import current_app as app
 from flask import request
 from flask_login import current_user
+
+from google.cloud import storage
 
 def random_number(size=6, chars=string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
@@ -50,6 +53,37 @@ def check_webserver_connection(host, port):
         return True
     except Exception as e:
         return False
+
+
+def upload_to_storage(uid, filename, uploaded_file):
+    # set up bucket on google cloud
+    gcs = storage.Client()
+    bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+    blob = bucket.blob("%s/%s" % (uid, filename))
+    
+    # load content type
+    content_type = uploaded_file.content_type
+
+    # upload file to storage
+    uploaded_file.stream.seek(0)
+    blob.upload_from_file(uploaded_file.stream, content_type=content_type)
+
+    # Construct and return the full bucket URI
+    bucket_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
+    return bucket_uri
+
+
+def load_from_storage(uid, filename):
+    # set up bucket on google cloud
+    gcs = storage.Client()
+    bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+    blob = bucket.blob("%s/%s" % (uid, filename))
+    
+    buffer = io.BytesIO()
+    blob.download_to_file(buffer)
+    buffer.seek(0)
+
+    return buffer
 
 
 # load template
@@ -115,7 +149,6 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
     try:
         template = load_template(template)
         prompt = template.substitute(document)
-        print(prompt)
     except Exception as ex:
         print(ex)
         return document
@@ -157,7 +190,6 @@ def strip_secure_fields(document):
 
 
 def filter_document(document, keys_to_keep):
-    print("keeping", keys_to_keep)
     return {key: value for key, value in document.items() if key in keys_to_keep}
 
 
@@ -199,7 +231,7 @@ def fields_from_template(template):
     try:
         input_fields = ast.literal_eval(input_content) if input_content else None
         output_fields = ast.literal_eval(output_content) if output_content else None
-    except:
+    except Exception as ex:
         return None, None, {"error": f"{ex}", "message": "Evaluation of inputs/outputs failed."}
 
     return input_fields, output_fields, False
@@ -238,11 +270,11 @@ def merge_extras(template_extras, node_extras):
 
     for key, value in merged_extras.items():
         if value:
-            if "[" in value and "]" in value:
-                try:
+            try:
+                if "[" in value and "]" in value:
                     merged_extras[key] = predefined_values[key]
-                except:
-                    pass
+            except:
+                pass
 
     if node_extras:
         for key, value in node_extras.items():

@@ -1,0 +1,9 @@
+{# Use this template to read from FeatureBase with SQL #}
+
+{# Input Fields #}
+{# We're looking for the 'sql' key's value to run against the database. #}
+input_fields = [{"name": "sql", "type": "string"}]
+
+{# Extras Fields #}
+{# Leave table as None so that it will populate during node creation. #}
+extras = {"table": None, processor": "read_fb"}

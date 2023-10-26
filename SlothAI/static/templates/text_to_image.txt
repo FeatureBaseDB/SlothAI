@@ -1,6 +1,4 @@
-{# Use this template to drive an OpenAI keyterm processor! #}
-
-{# NOTE: You may remove any template commented lines, such as this one. #}
+{# Use this template to drive a generative image processor. #}
 
 {# Define the input_fields used in this template: #}
 input_fields = [

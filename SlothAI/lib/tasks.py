@@ -67,7 +67,6 @@ class Task:
 		Convert a Task object to a JSON string.
 		"""
 		task_dict = self.to_dict()
-		print(task_dict)
 		return json.dumps(task_dict, indent=4)
 
 	@classmethod
