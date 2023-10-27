@@ -22,3 +22,4 @@ pytest-cov==4.1.0
 ping3==4.0.4
 apscheduler==3.10.4
 Faker==19.11.0
+PyPDF2==3.0.1

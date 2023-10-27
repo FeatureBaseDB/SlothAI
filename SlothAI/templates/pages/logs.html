@@ -7,8 +7,8 @@
 
 {% block content %}
 <div class="content container mt-5 pt-5">
-    <h2 class="page_heading">Logs</h2>
-
+    <h2 class="page_heading">Callback Logs</h2>
+    <p>When you use the default callback, logs of the document at that point in the pipeline will be shown here. Logs expire after 1 hour.</p>
     <table class="table table-striped">
         <thead>
             <tr>
@@ -37,7 +37,46 @@ $(document).ready(function() {
     $('.reload-button').on('click', function() {
       window.location.reload();
     });
-    
+
+    $("table tbody tr").each(function() {
+        var tdLog = $(this).find("td[data-log");
+        var rawData = tdLog.data('log');
+        var cleanedData = rawData.slice(2, -1);
+        var jsonDataObj;
+        console.log(cleanedData)
+
+        try {
+            jsonDataObj = JSON.parse(cleanedData);
+            for (var key in jsonDataObj) {
+                if (key.toLowerCase().includes('token')) {
+                    delete jsonDataObj[key];
+                }
+            }
+        } catch (error) {
+            console.log("error")
+            jsonDataObj = { "ParsingError": "Error parsing JSON" };
+        }
+
+        var preContent = JSON.stringify(jsonDataObj, null, 2);
+        tdLog.html('<pre style="font-size: 10px;">' + preContent + '</pre>');
+
+        if (!jsonDataObj || jsonDataObj.ParsingError) {
+            tdLog.find('pre').text(cleanedData);
+        }
+
+        let inactivityTimer;
+        function reloadPage() { window.location.reload(); }
+        function startInactivityTimer() { inactivityTimer = setTimeout(reloadPage, 60000); }
+        function resetInactivityTimer() { clearTimeout(inactivityTimer); startInactivityTimer(); }
+
+        document.addEventListener('mousemove', resetInactivityTimer);
+        document.addEventListener('keydown', resetInactivityTimer);
+
+        startInactivityTimer();
+    });
+
+
+
     // Iterate through table rows
     $("table tbody tr").each(function() {
         var tdLog = $(this).find("td[data-log"); // Find the <td> with data-log attribute

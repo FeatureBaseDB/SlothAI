@@ -1,4 +1,4 @@
-{# Use this template to drive a Insructor XL embedding node processor! #}
+{# Use this template to drive an OpenAI embedding node processor! #}
 
 {# Define the input_fields used in this template: #}
 input_fields = [{'name': "texts", 'type': "strings"}]

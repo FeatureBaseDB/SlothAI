@@ -1,7 +1,7 @@
 {% extends "pages/page_base.html" %}
 
 {% block title %}
-<title>{{template.name}} | Templates | FeatureBase AI</title>
+<title>{% if template.name %}{{template.name}}{% else %}New{% endif %} | Templates | FeatureBase AI</title>
 <meta property='og:title' content='{{template.name}} | Templates | FeatureBase AI'/>
 {% endblock %}
 

@@ -6,14 +6,19 @@ import re
 import copy
 import hashlib
 
+from io import BytesIO
+
 import requests
 import json
 
 import openai
 
-from google.cloud import vision, storage
+from google.cloud import vision, storage, documentai
+from google.api_core.client_options import ClientOptions
 
 from typing import Dict
+
+import PyPDF2
 
 from flask import current_app as app
 from flask import url_for
@@ -31,7 +36,7 @@ from SlothAI.web.models import User, Node, Template, Pipeline
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
-from SlothAI.lib.util import extras_from_template, fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document, load_from_storage
+from SlothAI.lib.util import extras_from_template, fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document, load_from_storage, random_string
 
 env = Environment()
 env.globals['random_word'] = random_word
@@ -238,66 +243,69 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
-	
+	output_field = output_fields[0].get('name')
+
 	user = User.get_by_uid(uid=task.user_id)
 	uid = user.get('uid')
 	filename = task.document.get('filename')
-	sha256_hash = hashlib.sha256(filename.encode()).hexdigest()
-	directory_name = sha256_hash[:8]
-
 	mime_type = task.document.get('content_type')
 
 	if mime_type == "application/pdf":
-		file_bucket_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
-		output_bucket_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{directory_name}/"
+		# Get the document
+		gcs = storage.Client()
+		bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+		blob = bucket.blob(f"{uid}/{filename}")
+		image_content = blob.download_as_bytes()
 
-		client = vision.ImageAnnotatorClient()
-		feature = vision.Feature(type_=vision.Feature.Type.DOCUMENT_TEXT_DETECTION)
+		# Create a BytesIO object for the PDF content
+		pdf_content_stream = BytesIO(image_content)
+		pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
+		num_pages = len(pdf_reader.pages)
 
-		gcs_source = vision.GcsSource(uri=file_bucket_uri)
-		input_config = vision.InputConfig(gcs_source=gcs_source, mime_type=mime_type)
+		# processor for document ai
+		opts = ClientOptions(api_endpoint=f"us-documentai.googleapis.com")
+		client = documentai.DocumentProcessorServiceClient(client_options=opts)
+		parent = client.common_location_path(app.config['PROJECT_ID'], "us")
+		processor_list = client.list_processors(parent=parent)
+		for processor in processor_list:
+			name = processor.name
+			break # stupid google objects
 
-		gcs_destination = vision.GcsDestination(uri=output_bucket_uri)
-		output_config = vision.OutputConfig(
-			gcs_destination=gcs_destination, batch_size=1
-		)
-
-		async_request = vision.AsyncAnnotateFileRequest(
-			features=[feature], input_config=input_config, output_config=output_config
-		)
-
-		# blocks on waiting for processing
-		operation = client.async_batch_annotate_files(requests=[async_request])
-		operation.result(timeout=720) # 12 minutes limit
-
-		storage_client = storage.Client()
-
-		bucket = storage_client.get_bucket(app.config['CLOUD_STORAGE_BUCKET'])
-
-		# List objects with the given prefix, filtering out folders.
-		blob_list = [
-			blob
-			for blob in list(bucket.list_blobs(prefix=f"{uid}/{directory_name}"))
-			if not blob.name.endswith("/")
-		]
+		pdf_processor = client.get_processor(name=name)
 
 		texts = []
-		num_pages = len(blob_list)
 
-		for blob in blob_list:
-			json_string = blob.download_as_bytes().decode("utf-8")
-			response = json.loads(json_string)
+		# build seperate pages and process each, adding text to texts
+		for page_num in range(num_pages):
+			pdf_writer = PyPDF2.PdfWriter()
+			pdf_writer.add_page(pdf_reader.pages[page_num])
+			page_stream = BytesIO()
+			pdf_writer.write(page_stream)
 
-			first_page_response = response["responses"][0]
-			annotation = first_page_response["fullTextAnnotation"]
+			# Get the content of the current page as bytes
+			page_content = page_stream.getvalue()
 
-			texts.append(annotation["text"].replace("'", " ").replace('"', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' '))
+			# load data
+			raw_document = documentai.RawDocument(content=page_content, mime_type="application/pdf")
+
+			# make request
+			request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
+			result = client.process_document(request=request)
+			document = result.document
+
+			# move to texts
+			texts.append(document.text.replace("'s","`s").replace("'", " ").replace('"', ' ').replace("\n"," ").replace("\r"," ").replace("\t"," "))
+
+			# Close the page stream
+			page_stream.close()
 
 	else:
 		task.document.update({"error": "This processor only supports PDFs. Upload with type set to `application/pdf`."})
 		return task
 
-	task.document.update({"texts": texts, "num_pages": num_pages})
+	# update the document
+	task.document[output_field] = texts
+	
 	return task
 
 
