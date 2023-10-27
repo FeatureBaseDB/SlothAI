@@ -27,9 +27,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from SlothAI.web.custom_commands import random_word, random_sentence
-from SlothAI.web.models import User, Node, Template
+from SlothAI.web.models import User, Node, Template, Pipeline
 
-from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure
+from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
 from SlothAI.lib.util import extras_from_template, fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document, load_from_storage
 
@@ -41,17 +41,28 @@ class DocumentValidator(Enum):
 	INPUT_FIELDS = 'input_fields'
 	OUTPUT_FIELDS = 'output_fields'
 
+retriable_status_codes = [408, 409, 425, 429, 500, 503, 504]
+
 processers = {}
 processer = lambda f: processers.setdefault(f.__name__, f)
 
 def process(task: Task) -> Task:
+	user = User.get_by_uid(task.user_id)
+	if not user:
+		raise UserNotFoundError(task.user_id)
+	
+	pipeline = Pipeline.get(uid=task.user_id, pipe_id=task.pipe_id)
+	if not pipeline:
+		raise PipelineNotFoundError(pipeline_id=task.pipe_id)
+	
 	node_id = task.next_node()
 	node = Node.get(uid=task.user_id, node_id=node_id)
+	if not node:
+		raise NodeNotFoundError(node_id=node_id)
 
-	valid = validate_document(node, task, DocumentValidator.INPUT_FIELDS)
-	if not valid:
-		task.document['error'] = "document did not have the correct input fields"
-		raise Exception("document did not have the correct input fields")
+	missing_field = validate_document(node, task, DocumentValidator.INPUT_FIELDS)
+	if missing_field:
+		raise MissingInputFieldError(missing_field, node.get('name'))
 
 	# template the extras off the node
 	extras = evaluate_extras(node, task)
@@ -86,10 +97,9 @@ def process(task: Task) -> Task:
 
 	# strip out the sensitive extras
 	clean_extras(extras, task)
-	valid = validate_document(node, task, DocumentValidator.OUTPUT_FIELDS)
-	if not valid:
-		task.document['error'] = "document did not have the correct output fields"
-		raise Exception("document did not have the correct output fields")
+	missing_field = validate_document(node, task, DocumentValidator.OUTPUT_FIELDS)
+	if missing_field:
+		raise MissingOutputFieldError(missing_field, node.get('name'))
 
 	return task
 
@@ -225,6 +235,8 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 @processer
 def read_file(node: Dict[str, any], task: Task) -> Task:
 	template = Template.get(template_id=node.get('template_id'))
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
 	
 	user = User.get_by_uid(uid=task.user_id)
@@ -292,9 +304,12 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 @processer
 def callback(node: Dict[str, any], task: Task) -> Task:
 	template = Template.get(template_id=node.get('template_id'))
-	output_fields = template.get('output_fields')
-
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
+	
 	user = User.get_by_uid(uid=task.user_id)
+	if not user:
+		raise UserNotFoundError(user_id=task.user_id)
 
 	uri = url_for('callback.handle_callback', user_name=user.get('name'), _external=True)
 	auth_uri = f"{uri}?token={node.get('extras').get('callback_token')}"
@@ -303,25 +318,39 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 	document = strip_secure_fields(task.document) # returns document
 
 	keys_to_keep = []
-	for field in output_fields:
+	for field in template.get('output_fields', []):
 		for key, value in field.items():
 			if key == 'name':
 				keys_to_keep.append(value)
 
-	if keys_to_keep:
-		data = filter_document(document, keys_to_keep)
-		if not data:
-			data = document
-	else:
+	if len(keys_to_keep) == 0:
 		data = document
+	else:
+		data = filter_document(document, keys_to_keep)
 
 	# must add node_id and pipe_id
 	data['node_id'] = node.get('node_id')
 	data['pipe_id'] = task.pipe_id
 
-	resp = requests.post(auth_uri, data=json.dumps(data))
-	if resp.status_code != 200:
-		raise Exception("callback request failed")
+	try:
+		resp = requests.post(auth_uri, data=json.dumps(data))
+		if resp.status_code != 200:
+			message = f'got status code {resp.status_code} from callback'
+			if resp.status_code in retriable_status_codes:
+				raise RetriableError(message)
+			else:
+				raise NonRetriableError(message)
+		
+	except (
+		requests.ConnectionError,
+		requests.HTTPError,
+		requests.Timeout,
+		requests.TooManyRedirects,
+		requests.ConnectTimeout,
+	) as exception:
+		raise RetriableError(exception)
+	except Exception:
+		raise NonRetriableError(exception)
 
 	return task
 
@@ -329,12 +358,19 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 @processer
 def read_fb(node: Dict[str, any], task: Task) -> Task:
 	user = User.get_by_uid(task.user_id)
-	doc = {"dbid": user.get('dbid'), "db_token": user.get('db_token')}
-	doc['sql'] = task.document['sql']
+	doc = {
+		"dbid": user.get('dbid'),
+		"db_token": user.get('db_token'),
+		"sql": task.document['sql']
+		}
+
 	resp, err = featurebase_query(document=doc)
 	if err:
-		task.document['error'] = err
-		return task
+		if "exception" in err:
+			raise RetriableError(err)
+		else:
+			# good response from the server but query error
+			raise NonRetriableError(err)
 
 	# response data
 	fields = []
@@ -349,7 +385,10 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
 			data[fields[i]].append(value)
 
 	template = Template.get(template_id=node.get('template_id'))
-	_keys = template.get('output_fields') # must be input fields but not enforced
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
+	
+	_keys = template.get('output_fields')
 	if _keys:
 		keys = [n['name'] for n in _keys]
 		task.document.update(transform_data(keys, data))
@@ -371,17 +410,21 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 	data = get_values_by_json_paths(keys, task.document)
 
 	table = task.document['table']
-	tbl_exists, task.document['error'] = table_exists(table, auth)
-	if task.document.get("error", None):
-		raise Exception("unable to check for table in FeatureBase cloud")
+	tbl_exists, err = table_exists(table, auth)
+	if err:
+		raise RetriableError("issue checking for table in featurebase")
 	
 	# if it doesn't exists, create it
 	if not tbl_exists:
 		create_schema = Schemar(data=data).infer_create_table_schema() # check data.. must be lists
-		task.document['error'] = create_table(table, create_schema, auth)
-		if task.document.get('error'):
-			raise Exception("unable to create table in FeatureBase cloud")
-
+		err = create_table(table, create_schema, auth)
+		if err:
+			if "exception" in err:
+				raise RetriableError(err)
+			else:
+				# good response from the server but query error
+				raise NonRetriableError(err)
+			
 	# get columns from the table
 	column_type_map, task.document['error'] = get_columns(table, auth)
 	if task.document.get("error", None):
@@ -394,23 +437,27 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 		if key not in columns:
 			if not task.document.get("schema", None):
 				task.document['schema'] = Schemar(data=data).infer_schema()
-				if task.document.get("error", None):
-					raise Exception("unable to infer schema from data.")
 
-			task.document['error'] = add_column(table, {'name': key, 'type': task.document["schema"][key]}, auth)
-			if task.document['error']:
-				raise Exception("unable to add column to table in FeatureBase cloud.")
+			err = add_column(table, {'name': key, 'type': task.document["schema"][key]}, auth)
+			if err:
+				if "exception" in err:
+					raise RetriableError(err)
+				else:
+					# good response from the server but query error
+					raise NonRetriableError(err)
 
 			column_type_map[key] = task.document["schema"][key]
-
 
 	columns, records = process_data_dict_for_insert(data, column_type_map, table)
 
 	sql = f"INSERT INTO {table} ({','.join(columns)}) VALUES {','.join(records)};"
-	print(sql[:200])
-	_, task.document['error'] = featurebase_query({"sql": sql, "dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']})
-	if task.document.get("error", None):
-		raise Exception("unable to insert data into featurebase")
+	_, err = featurebase_query({"sql": sql, "dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']})
+	if err:
+		if "exception" in err:
+			raise RetriableError(err)
+		else:
+			# good response from the server but query error
+			raise NonRetriableError(err)
 	
 	return task
 
@@ -483,9 +530,9 @@ def validate_document(node, task: Task, validate: DocumentValidator):
 	if fields:
 		missing_key = validate_dict_structure(template.get('input_fields'), task.document)
 		if missing_key:
-			return False
+			return missing_key
 	
-	return True
+	return None
 
 
 def evaluate_extras(node, task) -> Dict[str, any]:

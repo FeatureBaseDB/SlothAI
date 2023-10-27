@@ -19,15 +19,24 @@ from SlothAI.lib.schemar import string_to_datetime, datetime_to_string, FBTypes
 
 from flask import current_app as app
 
+from enum import Enum
+
+class TaskState(Enum):
+	RUNNING = 'running'
+	COMPLETED = 'completed'
+	FAILDED = 'failed'
+
 class Task:
-	def __init__(self, id: str, user_id: str, pipe_id: str, nodes_to_visit: List[str], document: dict, created_at: datetime, retries: int):
+	def __init__(self, id: str, user_id: str, pipe_id: str, nodes: List[str], document: dict, created_at: datetime, retries: int, error: str, state: TaskState):
 		self.id = id
 		self.user_id = user_id
 		self.pipe_id = pipe_id
-		self.nodes_to_visit = nodes_to_visit
+		self.nodes = nodes
 		self.document = document
 		self._created_at = created_at
 		self.retries = retries
+		self.error = error
+		self.state = state
 
 	@property
 	def created_at(self):
@@ -41,10 +50,12 @@ class Task:
 			"id": self.id,
 			"user_id": self.user_id,
 			"pipe_id": self.pipe_id,
-			"nodes_to_visit": self.nodes_to_visit,
+			"nodes": self.nodes,
 			"document": self.document,
 			"created_at": self.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
-			"retries": self.retries
+			"retries": self.retries,
+			"error": self.error,
+			"state": str(self.state),
 		}
 
 	@classmethod
@@ -56,10 +67,12 @@ class Task:
 			id=task_dict["id"],
 			user_id=task_dict["user_id"],
 			pipe_id=task_dict["pipe_id"],
-			nodes_to_visit=task_dict["nodes_to_visit"],
+			nodes=task_dict["nodes"],
 			document=task_dict["document"],
 			created_at= datetime.strptime(task_dict["created_at"], '%Y-%m-%dT%H:%M:%SZ'),
-			retries=task_dict['retries']
+			retries=task_dict['retries'],
+			error=task_dict['error'],
+			state=task_dict['state']
 		)
 
 	def to_json(self) -> str:
@@ -122,18 +135,38 @@ class Task:
 		# Send the task to the Cloud Tasks queue
 		response = client.create_task(parent=queue, task=task)
 
-		self.id = response.name.split('/')[-1]
+		# self.id = response.name.split('/')[-1]
 
 	def next_node(self):
-		return self.nodes_to_visit[0]
+		if len(self.nodes) == 0:
+			return None
+		return self.nodes[0]
 	
 	def remove_node(self):
-		if len(self.nodes_to_visit) > 1:
-			self.nodes_to_visit = self.nodes_to_visit[1:]
+		if len(self.nodes) > 1:
+			node = self.nodes[0]
+			self.nodes = self.nodes[1:]
+			return node
+		else:
+			node = self.nodes[0]
+			self.nodes = []
+			return node
+
+	def retry(self):
+		if self.retriable():
+			self.retries += 1
+			self.queue()
 			return True
 		else:
-			self.nodes_to_visit = []
+			self.drop()
+
+	def drop(self):
+		pass
+
+	def retriable(self):
+		if self.retries >= 5:
 			return False
+		return True
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
@@ -423,6 +456,7 @@ def transform_data(output_keys, data):
 	return out
 
 def box_required():
+
 	box_required = False
 	selected_box = None
 
@@ -465,3 +499,39 @@ def box_required():
 		box_required = True
 
 	return box_required, selected_box
+
+
+class RetriableError(Exception):
+	def __init__(self, message):
+		super().__init__(message)
+class NonRetriableError(Exception):
+	def __init__(self, message):
+		super().__init__(message)
+class ResourceNotFoundError(NonRetriableError):
+	def __init__(self, message):
+		super().__init__(message)
+class PipelineNotFoundError(ResourceNotFoundError):
+	def __init__(self, pipeline_id):
+		super().__init__(f"pipeline with id {pipeline_id} not found.")
+class UserNotFoundError(ResourceNotFoundError):
+	def __init__(self, user_id):
+		super().__init__(f"user with id {user_id} not found.")
+
+class NodeNotFoundError(ResourceNotFoundError):
+	def __init__(self, node_id):
+		super().__init__(f"node with id {node_id} not found")
+
+class TemplateNotFoundError(ResourceNotFoundError):
+	def __init__(self, template_id):
+		super().__init__(f"node with id {template_id} not found")
+
+class MissingFieldError(NonRetriableError):
+	def __init__(self, message):
+		super().__init__(message)
+class MissingInputFieldError(MissingFieldError):
+	def __init__(self, field, node):
+		super.__init__(f"task document is missing required input field {field} for node {node}")
+
+class MissingOutputFieldError(MissingFieldError):
+	def __init__(self, field, node):
+		super.__init__(f"task document is missing required output field {field} for node {node}")

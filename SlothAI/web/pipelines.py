@@ -5,7 +5,7 @@ from datetime import datetime
 
 from google.cloud import ndb
 
-from flask import Blueprint, flash, jsonify, request
+from flask import Blueprint, jsonify, request
 from flask import current_app as app
 
 import flask_login
@@ -13,8 +13,10 @@ from flask_login import current_user
 
 from werkzeug.utils import secure_filename
 
-from SlothAI.lib.tasks import create_task, get_task_schema, Task, validate_dict_structure
-from SlothAI.web.models import Pipeline, Node, Template
+from werkzeug.utils import secure_filename
+
+from SlothAI.lib.tasks import Task, TaskState
+from SlothAI.web.models import Pipeline, Node
 from SlothAI.lib.util import random_string, upload_to_storage
 
 pipeline = Blueprint('pipeline', __name__)
@@ -130,22 +132,13 @@ def ingest_post(pipeline_id):
         id=random_string(),
         user_id=current_user.uid,
         pipe_id=pipeline.get('pipe_id'),
-        nodes_to_visit=pipeline.get('node_ids'),
+        nodes=pipeline.get('node_ids'),
         document=dict(),
         created_at=datetime.utcnow(),
-        retries=0
+        retries=0,
+		error=None,
+		state=TaskState.RUNNING,
     )
-
-    # check the next node exists
-    node_id = task.next_node() # initial node
-    node = Node.get(uid = task.user_id, node_id = node_id)
-    if not node:
-        return f"response: node with id {node_id} not found", 500
-
-    # check the template exists
-    template = Template.get(template_id=node.get('template_id'))
-    if not template:
-        return f"response: template with id {node.get('template_id')} not found", 500 
 
     task.document = json_data_dict
     task.queue()

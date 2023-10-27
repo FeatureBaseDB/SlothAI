@@ -53,10 +53,8 @@ def featurebase_query(document, debug=False):
 					partial_query = sql				
 				return None, f"featurebase_query: {partial_query}... :{resp.error}"
 		return resp, None
-	except (HTTPError, URLError, ContentTooShortError)  as err:
-		return None, f"featurebase_query: {err.reason}"
-	except Exception as e:
-		return None, f"featurebase_query: unhandled excpetion while running query: {e}"
+	except (HTTPError, URLError, ContentTooShortError, Exception)  as err:
+		return None, f"featurebase_query: exception: {err.reason}"
 
 
 def featurebase_querybatch(document, debug=False):
@@ -129,11 +127,6 @@ def create_table(name, schema, auth):
 			"db_token": f"{auth.get('db_token')}" 
 		}
 	)
-
-	if err:
-		print(f"Error creating table named {name}: {err}")
-	else:
-		print(f"Successfully created table `{name}` on FeatureBase Cloud.")
 		
 	return err
 
