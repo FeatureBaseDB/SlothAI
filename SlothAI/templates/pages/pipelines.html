@@ -13,7 +13,10 @@
     {% if pipelines %}
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Pipelines</h4>
-        <p>Clicking on the pipeline's nodes shows input and output field requirements. Clicking on the pipeline name gives detailed information about the flow of data through the pipeline.</p>
+        <p>The following pipeline are available for use. Click on a pipeline to see its endpoint for ingestion.</p>
+        <button id="createPipeline" type="button" class="btn btn-success">
+            <i class="fas fa-plus"></i> Create Pipeline
+        </button>
         <table id="pipelineTable" class="table table-striped">
             <thead>
                 <tr>
@@ -40,6 +43,7 @@
                         </div>
                     </td>
                     <td>
+                        <button class="downoad-button btn btn-primary" data-pipe-id="{{ pipeline.pipe_id }}"><i class="fas fa-download"></i></button>
                         <button class="delete-button btn btn-danger" data-pipe-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
                         <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">
                             <span class="sr-only"></span>
@@ -50,10 +54,6 @@
             </tbody>
         </table>
     </div>
-    <p></p>
-    <button id="createPipeline" type="button" class="btn btn-success">
-        <i class="fas fa-plus"></i> Create Pipeline
-    </button>
 
     {% else %}
 
@@ -170,6 +170,9 @@ $(document).ready(function () {
     const buttons = document.querySelectorAll("#pipelineTable .btn");
     buttons.forEach(button => {
         const name = button.innerText;
+        if (name == "") {
+            return
+        }
         const color = getColorFromName(name);
         button.style.backgroundColor = color;
         button.style.borderColor = color;

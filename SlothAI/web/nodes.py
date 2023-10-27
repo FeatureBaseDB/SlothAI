@@ -70,7 +70,7 @@ def node_create():
     if request.is_json:
         json_data = request.get_json()
 
-        if 'node' in json_data and isinstance(json_data['node'], dict):
+        if 'node' in json_data and isinstance(json_data['node'], dict) and json_data['node'].get('template_id', '').lower() != 'none':
             node_data = json_data['node']
             template = Template.get(template_id=node_data.get('template_id'))
 

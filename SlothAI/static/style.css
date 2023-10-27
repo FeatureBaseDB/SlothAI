@@ -30,11 +30,8 @@ button {
   border-radius: 0;
 }
 
-.btn {
-  margin-bottom: 12px;
-}
-#templateName {
-  margin-bottom: 12px;
+table {
+  margin-top: 14px;
 }
 
 /* Link styles */

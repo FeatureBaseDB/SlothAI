@@ -85,14 +85,17 @@ def pipelines():
     hostname = request.host
     pipelines = Pipeline.fetch(uid=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
+    templates = Template.fetch(uid=current_user.uid)
 
-    # add input and output fields, plus template name
+    # add input and output fields, plus templates
     _nodes = []
     for node in nodes:
-        template = Template.get(template_id=node.get('template_id'))
-        node['template_name'] = template.get('name')
-        node['input_fields'] = template.get('input_fields')
-        node['output_fields'] = template.get('output_fields')
+        for template in templates:
+            if template.get('template_id') == node.get('template_id'):
+                node['template_name'] = template.get('name')
+                node['input_fields'] = template.get('input_fields')
+                node['output_fields'] = template.get('output_fields')
+                break
 
         for key in node.get('extras').keys():
             if 'token' in key or 'password' in key:
@@ -110,28 +113,35 @@ def pipeline_view(pipe_id):
     username = current_user.name
     token = current_user.api_token
     hostname = request.host
+    templates = Template.fetch(uid=current_user.uid)
+    nodes = Node.fetch(uid=current_user.uid)
 
     pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
-
+    
     # add input and output fields, plus template name
     _nodes = []
     head_input_fields = []
     for node_id in pipeline.get('node_ids'):
-        node = Node.get(node_id=node_id)
-        template = Template.get(template_id=node.get('template_id'))
-        if not head_input_fields:
-            head_input_fields = template.get('input_fields', [])
-            head_processor = node.get('processor')
+        for node in nodes:
+            if node.get('node_id') == node_id:
 
-        node['template_name'] = template.get('name')
-        node['input_fields'] = template.get('input_fields')
-        node['output_fields'] = template.get('output_fields')
+                for template in templates:
+                    if template.get('template_id') == node.get('template_id'):
+                        if not head_input_fields:
+                            head_input_fields = template.get('input_fields', [])
+                            head_processor = node.get('processor')
 
-        for key in node.get('extras').keys():
-            if 'token' in key or 'password' in key:
-                node['extras'][key] = '[secret]'
+                        node['template_name'] = template.get('name')
+                        node['input_fields'] = template.get('input_fields')
+                        node['output_fields'] = template.get('output_fields')
+                        break
 
-        _nodes.append(node)
+                for key in node.get('extras').keys():
+                    if 'token' in key or 'password' in key:
+                        node['extras'][key] = '[secret]'
+
+                _nodes.append(node)
+                break
 
     if not pipeline:
         return redirect(url_for('site.pipelines'))
@@ -172,10 +182,11 @@ def nodes():
     _nodes = []
     for node in nodes:
         if node.get('template_id'):
-            template = Template.get(template_id=node.get('template_id'))
-            node['template'] = template
-        else:
-            node['template'] = {} # is this used?
+            for template in templates:
+                if template.get('template_id') == node.get('template_id'):
+                    node['template'] = template
+                    break
+
         _nodes.append(node)
 
     return render_template(

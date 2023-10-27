@@ -14,6 +14,7 @@
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Nodes</h4>
         <p>The following nodes are available for use in your pipelines. Nodes may only be deleted if they are NOT being used by a pipeline.</p>
+        <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal"><i class="fas fa-plus"></i> Add Node</button>
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -68,10 +69,6 @@
             </tbody>
         </table>
     </div>
-    <p></p>
-    <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal">
-        <i class="fas fa-plus"></i> Add Node
-    </button>
     {% else %}
         {% if templates %}
         <!-- No Nodes Available -->
@@ -255,6 +252,8 @@ $(document).ready(function() {
     });
 
     $("#addNodeButton").on("click", function() {
+        $("#addNodeModalButton").prop("disabled", true);
+        
         var templateSelect = $('#nodeTemplate');
 
         // empty the node pulldown and any extras
@@ -367,14 +366,12 @@ $(document).ready(function() {
                             }
                         }
 
-
                         if (hasRelevantFields) {
                             $("#dynamicFieldsContainer").show();
                         } else {
                             $("#dynamicFieldsContainer").hide();
                         }
                     }
-
 
                     if (response.processor) {
                         // Set the selected processor in the dropdown
@@ -412,6 +409,8 @@ $(document).ready(function() {
     }
 
     $("#addNodeModalButton").on("click", function() {
+        $("#addNodeModalButton").prop("disabled", true);
+        
         // Get the data from the modal fields
         var nodeName = $("#nodeName").val();
         var nodeProcessor = $("#nodeProcessor").val();

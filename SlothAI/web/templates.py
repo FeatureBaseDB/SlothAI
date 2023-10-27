@@ -96,7 +96,11 @@ def template_update(template_id):
 @template.route('/templates/generate_name', methods=['GET'])
 @flask_login.login_required
 def generate_name():
-    return jsonify({"name": random_name(2)})
+    while True:
+        name = random_name(2)
+        if len(name) < 13:
+            break
+    return jsonify({"name": name})
 
 
 @template.route('/templates', methods=['POST'])

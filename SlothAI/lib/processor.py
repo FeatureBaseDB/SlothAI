@@ -58,15 +58,13 @@ def process(task: Task) -> Task:
 	if extras:
 		task.document.update(extras)
 
-	# TODO: nodes should own access tokens but we need to be able to store them
-	# securely. For now, use app config openai_token when the extras value
-	# openai_token is present in a node.
-	# if "openai_token" in node.get('extras'):
-	# task.document['OPENAI_TOKEN'] = app.config['OPENAI_TOKEN']
+	# grab the available token for the node
 	if "openai_token" in node.get('extras'):
 		task.document['OPENAI_TOKEN'] = extras.get('openai_token')
 
+	# get the user
 	user = User.get_by_uid(uid=task.user_id)
+
 	# if "x-api-key" in node.get('extras'):
 	task.document['X-API-KEY'] = user.get('db_token')
 	# if "database_id" in node.get('extras'):
@@ -86,6 +84,7 @@ def process(task: Task) -> Task:
 	if "DATABASE_ID" in task.document.keys():
 		task.document.pop('DATABASE_ID', None)
 
+	# strip out the sensitive extras
 	clean_extras(extras, task)
 	valid = validate_document(node, task, DocumentValidator.OUTPUT_FIELDS)
 	if not valid:
@@ -203,12 +202,12 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 			  n=int(task.document.get('num_images')),
 			  size="1024x1024"
 			)
-			urls = []
+			urls = [[]]
 
 			# Loop over the 'data' list and extract the 'url' from each item
 			for item in response['data']:
 				if 'url' in item:
-					urls.append(item['url'])
+					urls[0].append(item['url'])
 
 			task.document[output_field] = urls
 		
@@ -415,6 +414,9 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 	
 	return task
 
+# remove these
+# ============
+
 @processer
 def sloth_embedding(node: Dict[str, any], task: Task) -> Task:
 	return sloth_processing(node, task, "embedding")
@@ -472,6 +474,9 @@ def sloth_processing(node: Dict[str, any], task: Task, type) -> Task:
 	return task
 
 
+# helper functions
+# ================
+
 def validate_document(node, task: Task, validate: DocumentValidator):
 	template = Template.get(template_id=node.get('template_id'))
 	fields = template.get(validate)
@@ -501,122 +506,6 @@ def clean_extras(extras: Dict[str, any], task: Task):
 	return task
 
 
-def gpt_keyterms(ai_model, document):
-	# load openai key then drop it from the document
-	openai.api_key = document.get('openai_token')
-
-	for _text in document.get('data').get('text'):
-
-		# substitute things
-		try:
-			template = load_template("form_keyterms")
-			prompt = template.substitute({"text": _text})
-		except Exception as ex:
-			print(ex)
-			document['error'] = "template wouldn't load"
-			return document
-
-		# get the template's dict
-		ai_dict = gpt_dict_completion(prompt, ai_model.get('name'))
-
-		# extract the keyterms and stuff into the document
-		if document.get('data', None):
-			if document.get('data').get('keyterms', None):
-				document['data']['keyterms'].append(ai_dict.get('keyterms'))
-			else:
-				document['data']['keyterms'] = [ai_dict.get('keyterms')]
-
-	return document
-
-
-# # handle old name
-# @model
-# def chatgpt_extract_keyterms(ai_model, document):
-# 	return  gpt_keyterms(ai_model, document)
-
-
-# # get a question	
-# @model
-# def gpt_question(ai_model, document):
-# 	# load openai key then drop it from the document
-# 	openai.api_key = document.get('openai_token')
-
-# 	for _text in document.get('data').get('text'):
-
-# 		# substitute things
-# 		try:
-# 			template = load_template("form_question")
-# 			prompt = template.substitute({"text": _text})
-# 		except Exception as ex:
-# 			print(ex)
-# 			document['error'] = "template wouldn't load"
-# 			return document
-
-# 		# get the template's dict
-# 		ai_dict = gpt_dict_completion(prompt, ai_model.get('name'))
-
-# 		# extract the question and stuff into the document
-# 		if document.get('data', None):
-# 			if document.get('data').get('questions', None):
-# 				document['data']['questions'].append(ai_dict.get('question'))
-# 			else:
-# 				document['data']['questions'] = [ai_dict.get('question')]
-
-# 	return document
-
-
-# @processer
-# def query_analyze(ai_model, document):
-# 	# load openai key then drop it from the document
-# 	openai.api_key = app.config['OPENAI_TOKEN']
-
-# 	# substitute things
-# 	try:
-# 		template = load_template("query_analyze")
-# 		prompt = template.substitute(document)
-# 	except Exception as ex:
-# 		print(ex)
-# 		document['error'] = "template wouldn't load"
-# 		return document
-
-# 	# get the template's dict
-# 	ai_dict = gpt_dict_completion(prompt, ai_model)
-
-# 	# extract the keyterms and stuff into the document
-# 	document['sql'] = ai_dict.get('sql')
-# 	document['explain'] = ai_dict.get('explain')
-# 	document['rewrite'] = ai_dict.get('rewrite')
-# 	return document
-
-# # rewrite the query object
-# @model
-# def query_rewrite(ai_model, document):
-# 	# load openai key then drop it from the document
-# 	openai.api_key = app.config['OPENAI_TOKEN']
-
-# 	# substitute things
-# 	try:
-# 		template = load_template("query_rewrite")
-# 		prompt = template.substitute(document)
-# 	except Exception as ex:
-# 		print(ex)
-# 		document['error'] = "template wouldn't load"
-# 		return document
-
-# 	# get the template's dict
-# 	ai_dict = gpt_dict_completion(prompt, ai_model)
-
-# 	# extract the keyterms and stuff into the document
-# 	document['sql'] = ai_dict.get('sql')
-# 	document['explain'] = ai_dict.get('explain')
-# 	return document
-
-
-
-
-# helper functions
-# ================
-
 # load template
 def load_template(name="default"):
 	# file path
@@ -632,27 +521,3 @@ def load_template(name="default"):
 
 	return template
 
-
-# complete a dict from template
-def gpt_dict_completion(prompt, model):
-
-	completion = openai.ChatCompletion.create(
-		model = model,
-		messages = [
-		{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, or any text other than the output requested."},
-		{"role": "user", "content": prompt}
-		]
-	)
-
-	answer = completion.choices[0].message
-
-	ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
-	ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
-
-	try:
-		ai_dict = ast.literal_eval(ai_dict_str)
-	except (ValueError, SyntaxError):
-		print("Error: Invalid JSON format in ai_dict_str.")
-		ai_dict = {}
-
-	return ai_dict

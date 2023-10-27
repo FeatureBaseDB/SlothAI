@@ -40,54 +40,53 @@ $(document).ready(function() {
     
     // Iterate through table rows
     $("table tbody tr").each(function() {
-    var tdLog = $(this).find("td[data-log"); // Find the <td> with data-log attribute
+        var tdLog = $(this).find("td[data-log"); // Find the <td> with data-log attribute
 
-    // Extract the log data from the data attribute
-    var rawData = tdLog.data('log');
+        // Extract the log data from the data attribute
+        var rawData = tdLog.data('log');
 
-    // Remove the 'b' prefix and single quotes
-    var cleanedData = rawData.slice(2, -1);
+        // Remove the 'b' prefix and single quotes
+        var cleanedData = rawData.slice(2, -1);
 
-    // Parse the JSON data for the current row
-    var jsonDataObj = JSON.parse(cleanedData);
+        // Parse the JSON data for the current row
+        var jsonDataObj = JSON.parse(cleanedData);
 
-    // Remove key-value pairs with keys containing 'token'
-    for (var key in jsonDataObj) {
-      if (key.toLowerCase().includes('token')) {
-        delete jsonDataObj[key];
-      }
-    }
+        // Remove key-value pairs with keys containing 'token'
+        for (var key in jsonDataObj) {
+          if (key.toLowerCase().includes('token')) {
+            delete jsonDataObj[key];
+          }
+        }
 
-    // is it a travesty that I didn't write any of this?
-    let inactivityTimer; // Initialize a timer variable
+        // is it a travesty that I didn't write any of this?
+        let inactivityTimer; // Initialize a timer variable
 
-    // Function to reload the page
-    function reloadPage() {
-      window.location.reload();
-    }
+        // Function to reload the page
+        function reloadPage() {
+          window.location.reload();
+        }
 
-    // Function to start the inactivity timer
-    function startInactivityTimer() {
-      inactivityTimer = setTimeout(reloadPage, 30000); // Reload the page after 1 minute (60000 milliseconds)
-    }
+        // Function to start the inactivity timer
+        function startInactivityTimer() {
+          inactivityTimer = setTimeout(reloadPage, 30000); // Reload the page after 1 minute (60000 milliseconds)
+        }
 
-    // Function to reset the inactivity timer
-    function resetInactivityTimer() {
-      clearTimeout(inactivityTimer); // Clear the previous timer
-      startInactivityTimer(); // Start a new timer
-    }
+        // Function to reset the inactivity timer
+        function resetInactivityTimer() {
+          clearTimeout(inactivityTimer); // Clear the previous timer
+          startInactivityTimer(); // Start a new timer
+        }
 
-    // Event listeners for mouse and keyboard activity
-    document.addEventListener('mousemove', resetInactivityTimer); // Mouse activity
-    document.addEventListener('keydown', resetInactivityTimer); // Keyboard activity
+        // Event listeners for mouse and keyboard activity
+        document.addEventListener('mousemove', resetInactivityTimer); // Mouse activity
+        document.addEventListener('keydown', resetInactivityTimer); // Keyboard activity
 
-    // Start the initial timer
-    startInactivityTimer();
-    // Probably not.
+        // Start the initial timer
+        startInactivityTimer();
+        // Probably not.
 
-
-    // Display the formatted JSON without 'token' entries in the "Log" column
-    tdLog.html('<pre>' + JSON.stringify(jsonDataObj, null, 2) + '</pre>');
+        // Display the formatted JSON without 'token' entries in the "Log" column
+        tdLog.html('<pre style="font-size: 10px;">' + JSON.stringify(jsonDataObj, null, 2) + '</pre>');
     });
 });
 </script>
