@@ -31,7 +31,7 @@ from enum import Enum
 import warnings
 warnings.filterwarnings("ignore")
 
-from SlothAI.web.custom_commands import random_word, random_sentence
+from SlothAI.web.custom_commands import random_word, random_sentence, process_and_segment_texts_with_overlap
 from SlothAI.web.models import User, Node, Template, Pipeline
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
@@ -41,6 +41,7 @@ from SlothAI.lib.util import extras_from_template, fields_from_template, remove_
 env = Environment()
 env.globals['random_word'] = random_word
 env.globals['random_sentence'] = random_sentence
+env.globals['process_and_segment_texts_with_overlap'] = process_and_segment_texts_with_overlap
 
 class DocumentValidator(Enum):
 	INPUT_FIELDS = 'input_fields'
@@ -116,6 +117,7 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 	if template_text:
 		jinja_template = env.from_string(template_text)
 		jinja = jinja_template.render(task.document)
+
 		jinja_json = json.loads(jinja)
 
 		for k,v in jinja_json.items():
@@ -294,7 +296,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 			document = result.document
 
 			# move to texts
-			texts.append(document.text.replace("'s","`s").replace("'", " ").replace('"', ' ').replace("\n"," ").replace("\r"," ").replace("\t"," "))
+			texts.append(document.text.replace("'","`").replace('"', '``').replace("\n"," ").replace("\r"," ").replace("\t"," "))
 
 			# Close the page stream
 			page_stream.close()

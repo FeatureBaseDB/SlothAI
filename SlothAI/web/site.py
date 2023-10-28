@@ -46,6 +46,7 @@ template_examples = [
     {"name": "Write to table", "template_name": "write_table", "processor_type": "write_fb"},
     {"name": "Read from table", "template_name": "read_table", "processor_type": "read_fb"},
     {"name": "Read PDF and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
+    {"name": "Convert texts pages into chunks", "template_name": "text_pages_to_chunks", "processor_type": "jinja2"},
     {"name": "Read image and convert objects to labels", "template_name": "image_to_labels", "processor_type": "read_file"},
     {"name": "Read from a URI and convert to text", "template_name": "uri_to_text", "processor_type": "read_uri"},
     {"name": "Extract keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
