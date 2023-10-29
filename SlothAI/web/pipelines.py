@@ -16,8 +16,8 @@ from werkzeug.utils import secure_filename
 from werkzeug.utils import secure_filename
 
 from SlothAI.lib.tasks import Task, TaskState
-from SlothAI.web.models import Pipeline, Node
-from SlothAI.lib.util import random_string, upload_to_storage
+from SlothAI.web.models import Pipeline, Node, Template
+from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub
 
 pipeline = Blueprint('pipeline', __name__)
 
@@ -34,6 +34,55 @@ def pipelines_list():
     pipelines = Pipeline.fetch(uid=current_user.uid)
 
     return jsonify(pipelines)
+
+
+# API HANDLERS
+@pipeline.route('/pipelines/<pipe_id>/download', methods=['GET'])
+@flask_login.login_required
+def pipelines_download(pipe_id):
+    # Get the user and their tables
+    username = current_user.name
+
+    # Retrieve the pipeline by pipe_id (you need to implement your Pipeline class)
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+
+    if pipeline is None:
+        return jsonify({"error": "Pipeline not found"})
+
+    # Retrieve nodes for the pipeline (you need to implement your Nodes class)
+    node_ids = pipeline.get('node_ids')  # Assuming 'nodes' is a list of node IDs
+
+    nodes = []
+    for node_id in node_ids:
+        node = Node.get(uid=current_user.uid, node_id=node_id)
+
+        # Retrieve the template for each node
+        template_id = node.get('template_id')
+        template = Template.get(uid=current_user.uid, template_id=template_id)
+
+        # Append the node and its associated template to the nodes list
+        nodes.append({
+            "node": node,
+            "template": template,
+        })
+
+    # Create a dictionary containing pipeline information, including pipe_id
+    pipeline_data = {
+        "pipe_id": pipe_id,
+        "name": pipeline.get('name'),
+        "nodes": nodes,
+    }
+
+    deep_scrub(pipeline_data)
+
+    # Create a JSON response
+    response = jsonify(pipeline_data)
+
+    # Set the headers to force a file download
+    response.headers["Content-Disposition"] = f"attachment; filename=pipeline_{pipeline.get('name')}.json"
+    response.headers["Content-Type"] = "application/json"
+
+    return response
 
 
 @pipeline.route('/pipeline', methods=['POST'])
@@ -108,24 +157,31 @@ def ingest_post(pipeline_id):
         bucket_uri = upload_to_storage(current_user.uid, filename, uploaded_file)
         break
 
-    # if we do have a file upload, the json data needs to be in 'json' to get at it
+    # Check if we have a file upload
     if file_field_names:
         try:
             json_data = request.form.get('json')
             if not json_data:
                 return jsonify({"error": "When using mixed mode POSTs, you must supply a 'json' key with a JSON object."}), 400
             json_data_dict = json.loads(json_data)
+
+            if not isinstance(json_data_dict, dict):
+                return jsonify({"error": "The 'json' data is not a dictionary"}), 400
+
             json_data_dict['filename'] = filename
             json_data_dict['content_type'] = uploaded_file.content_type
-
         except Exception as ex:
             return jsonify({"error": f"Error getting JSON data: {ex}"}), 400
     else:
-        # otherwise, we just do a normal read of it
+        # If it's not a file upload, try to read JSON data
         try:
             json_data_dict = request.get_json()
+
+            if not isinstance(json_data_dict, dict):
+                return jsonify({"error": "The JSON data is not a dictionary"}), 400
         except Exception as ex:
             return jsonify({"error": f"Error getting JSON data: {ex}"}), 400
+
 
     # now we create the task
     task = Task(

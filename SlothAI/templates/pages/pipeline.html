@@ -11,7 +11,7 @@
     <h2 class="page_heading">Pipeline Details</h2>
 
     <div class="rounded-lg border p-3">
-        <h4 class="mb-3">{{pipeline.name}}</h4>
+        <h3 class="mb-3">{{pipeline.name}}</h3>
         <p>The pipeline '{{pipeline.name}}' contains the following nodes:</p>
         <div class="btn-group">
             {% for node_id in pipeline.node_ids %}
@@ -21,20 +21,67 @@
                     {% endif %}
                 {% endfor %}
             {% endfor %}
+            <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary ignore-color"><i class="fas fa-download"></i></button>
+            <button class="btn btn-danger delete-button" data-pipe-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
         </div>
-        <p></p>
-        <p>The pipeline is used by POST'ing data to the ingestion endpoint:</p>
-        <code>curl -X POST \
-"http{% if "localhost" not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}" \
+        <hr/>
+        <h4>Send Data</h4>
+        <p>The pipeline is used by POST'ing data to the task ingestion endpoint:</p>
+        
+        <ul class="nav nav-tabs" id="codeTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="curl-tab" data-toggle="tab" href="#curl" role="tab" aria-controls="curl" aria-selected="true">cURL</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="python-tab" data-toggle="tab" href="#python" role="tab" aria-controls="python" aria-selected="false">Python</a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="codeTabContent">
+            <div class="tab-pane fade show active" id="curl" role="tabpanel" aria-labelledby="curl-tab">
+<code>curl -X POST "http{% if 'localhost' not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}" \
 -H "Content-Type: application/json" \
--d {{example_d}}
-        <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></code>
-        <button class="btn btn-danger delete-button" data-pipeline-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i> Delete</button>
+-d {{example_d}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
+    </div>
+    <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab">
+<code># POST to SlothAI
+import requests
+
+url = "http{% if 'localhost' not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}"
+headers = {"Content-Type": "application/json"}
+data = {{ example_d|replace("'", '') }}
+
+response = requests.post(url, headers=headers, json=data)
+
+if response.status_code == 200:
+    print(response.text)
+else:
+    print(response.text)<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
+            </div>
+        </div>
+
+        <hr/>
+        <h4>Graph Layout</h4>
+        <div class="mermaid" style="display: none;">
+            {{mermaid_string}}
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block javascript %}
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+    // Initialize Mermaid when the page is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        mermaid.initialize({ startOnLoad: true });
+
+    });
+    const mermaidDiv = document.querySelector('.mermaid');
+    mermaidDiv.style.display = 'block';
+
+</script>
 <script type="text/javascript">
 $(document).ready(function() {
     // grab the nodes from the template and make them available via getNodeInfo
@@ -50,7 +97,7 @@ $(document).ready(function() {
         return color;
     }
 
-    const buttons = document.querySelectorAll(".btn-group .btn");
+    const buttons = document.querySelectorAll(".btn-group .btn:not(.ignore-color)");
     buttons.forEach(button => {
         const name = button.innerText;
         const color = getColorFromName(name);
@@ -125,7 +172,7 @@ $(document).ready(function() {
 
     // delete button
     $(".delete-button").on("click", function () {
-        var pipelineId = $(this).data("pipeline-id");
+        var pipelineId = $(this).data("pipe-id");
         var $this = $(this);
         $this.addClass("flash");
 
@@ -141,6 +188,33 @@ $(document).ready(function() {
                 console.error("Error deleting pipeline:", error);
             }
         });
+    });
+
+    // Listen for the click event on the download button
+    $('#DownloadPipeline').on('click', function() {
+        $(this).prop('disabled', true);
+        toastr.info("Download request sent. Standby...");
+
+        // Get the pipe_id from the data attribute
+        var pipe_id = $(this).data('pipe_id');
+        var name = $(this).data('name')
+
+        // Construct the URL for the download endpoint (replace with your actual endpoint URL)
+        var downloadURL = '/pipelines/' + pipe_id + '/download';
+
+        // Create a hidden anchor element to trigger the download
+        var link = document.createElement('a');
+        link.href = downloadURL;
+        link.target = '_blank'; // Open in a new tab
+        link.download = 'pipeline_' + name + '.json'; // Set the filename
+
+        // Trigger a click event on the hidden anchor element
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(function() {
+            $('#DownloadPipeline').prop('disabled', false);
+        }, 10000);
     });
 
     // copy things

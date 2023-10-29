@@ -14,7 +14,10 @@
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Nodes</h4>
         <p>The following nodes are available for use in your pipelines. Nodes may only be deleted if they are NOT being used by a pipeline.</p>
-        <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal"><i class="fas fa-plus"></i> Add Node</button>
+        <div class="text-right">
+            <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal"><i class="fas fa-plus"></i> Create Node</button>
+        </div>
+
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -31,7 +34,6 @@
                 <tr>
                     <td><button type="button" class="btn btn-secondary" disabled><i class="fas fa-cube"></i> {{ node.name }}</button></td>
                     <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors" title="{{ node.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i> {{ node.processor }}</a></td>
-
 
                     <td>
                         {% if node.template.input_fields is not none %}
@@ -74,11 +76,11 @@
         <!-- No Nodes Available -->
         <h2 class="page_heading">Node</h2>
         <div class="rounded-lg border p-3">
-            <h4 class="mb-3">Create a New Node</h4>
+            <h4 class="mb-3">Create a Node</h4>
             <p>You have no nodes defined. Click the "Add Node" button below to create your first node from one of your templates. </p>
             <p>Templates use variables and those variables may be set in the template itself. If a variable's value is set to <strong>"generate"</strong> or <strong>None</strong>, you will be prompted for the variable's value when you create the node. </p>
             <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal">
-                <i class="fas fa-plus"></i> Add Node
+                <i class="fas fa-plus"></i> Create Node
             </button>
         </div>
         {% else %}
@@ -89,10 +91,10 @@
             <p>You don't have any templates. You will need to create a template before you can create a node.</p>
             <p>Once you create a new node, you can add it to a pipeline.</p>
             <p></p>
-            <h5 class="mb-3">Task: Create a New Template First</h5>
-            <p>Click the "Add Template" button below to create your first template. </p>
+            <h5 class="mb-3">Task: Create a New Template</h5>
+            <p>Click the "Create Template" button below to create your first template. </p>
             <button type="button" id="addTemplateButton" class="btn btn-success" data-toggle="modal">
-                <i class="fas fa-plus"></i> Add Template
+                <i class="fas fa-plus"></i> Create Template
             </button>
         </div>
         {% endif %}
@@ -104,7 +106,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Add Node</h5>
+                    <h5 class="modal-title" id="exampleModalLabel">Create Node</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -138,7 +140,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" id="addNodeModalButton"><i class="fas fa-plus"></i> Add Node</button>
+                    <button type="button" class="btn btn-success" id="addNodeModalButton"><i class="fas fa-plus"></i> Create Node</button>
                 </div>
             </div>
         </div>

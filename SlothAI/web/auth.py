@@ -1,6 +1,6 @@
 from google.cloud import ndb
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 from flask import current_app as app
 from flask_login import login_user, login_manager, logout_user, login_required, current_user
 import flask_login
@@ -25,112 +25,132 @@ auth = Blueprint('auth', __name__)
 # logout
 @auth.route('/logout')
 def logout():
-	logout_user()
-	flash("You are logged out.")
-	return redirect(url_for('site.pipelines'))
+    logout_user()
+    flash("You are logged out.")
+    return redirect(url_for('site.pipelines'))
+
 
 @auth.route('/remove_all_caution')
 @login_required
 def remove():
-	uid = current_user.uid
-	logout_user()
-	User.remove_by_uid(uid)
-	Pipeline.delete(uid=uid)
-	flash("Account information deleted.")
-	return redirect(url_for('auth.login'))
+    uid = current_user.uid
+    logout_user()
+    User.remove_by_uid(uid)
+    Pipeline.delete(uid=uid)
+    flash("Account information deleted.")
+    return redirect(url_for('auth.login'))
+
+
+@auth.route('/token_reset', methods=['POST'])
+@login_required
+def token_reset():
+    data = request.get_json()
+    uid = current_user.uid
+    user = User.reset_token(uid)
+
+    if user:
+        if data.get('prompt') == "please":
+            status = {'status': "You are welcome."};
+        else:
+            status = {'status': "Solve this puzzle."};
+    else:
+        status = {'status': "Please enter the token."};
+
+    return jsonify(status), 200
+
 
 # LOGIN GET
 @auth.route('/login', methods=['GET'])
 def login():
-	try:
-		if current_user.email:
-			session = True
-		else:
-			session = False
-	except Exception as ex:
-		session = False
+    try:
+        if current_user.email:
+            session = True
+        else:
+            session = False
+    except Exception as ex:
+        session = False
 
-	next_url = request.args.get("next")
+    next_url = request.args.get("next")
 
-	if not next_url:
-		next_url = request.form.get('next')
+    if not next_url:
+        next_url = request.form.get('next')
 
-	# if we have no connection to the DB, this will handle it
-	try:
-		# secure transaction to POST
-		transaction_id = random_string(13)
-		_ = Transaction.create(uid="anonymous", tid=transaction_id)
+    # if we have no connection to the DB, this will handle it
+    try:
+        # secure transaction to POST
+        transaction_id = random_string(13)
+        _ = Transaction.create(uid="anonymous", tid=transaction_id)
 
-		return render_template(
-			'pages/login.html',
-			config=app.config,
-			session=session,
-			app_id = random_string(9),
-			transaction_id = transaction_id,
-			next=next_url
-		)
-	except Exception:
-		return redirect(url_for('site.pipelines'))
+        return render_template(
+            'pages/login.html',
+            config=app.config,
+            session=session,
+            app_id = random_string(9),
+            transaction_id = transaction_id,
+            next=next_url
+        )
+    except Exception:
+        return redirect(url_for('site.pipelines'))
 
 
 # LOGIN POST
 @auth.route('/login', methods=['POST'])
 def login_post():
-	# bots / there are no passwords, but there are hacker fucks
-	if request.form.get('password'):
-		return "( ︶︿︶)_╭∩╮ PASSWORD REQUIRED!\nALSO, GET OFF MY LAWN.", 500
+    # bots / there are no passwords, but there are hacker fucks
+    if request.form.get('password'):
+        return "( ︶︿︶)_╭∩╮ PASSWORD REQUIRED!\nALSO, GET OFF MY LAWN.", 500
 
-	dbid = request.form.get('dbid')
-	db_token = request.form.get('db_token')
+    dbid = request.form.get('dbid')
+    db_token = request.form.get('db_token')
 
-	# handle bots filling out forms
-	transaction_id = request.form.get('transaction_id')
+    # handle bots filling out forms
+    transaction_id = request.form.get('transaction_id')
 
-	# only allow posts with transaction IDs
-	if transaction_id:
-		with client.context():
-			transaction = Transaction.query().filter(Transaction.tid==transaction_id).get()
+    # only allow posts with transaction IDs
+    if transaction_id:
+        with client.context():
+            transaction = Transaction.query().filter(Transaction.tid==transaction_id).get()
 
-			# if we find it, delete it and proceed
-			if transaction:
-				transaction.key.delete()
-			else:
-				return redirect(url_for('auth.login'))
-	else:
-		return redirect(url_for('auth.login'))
-	# check for access to FeatureBase database
-	resp, err = featurebase_query(
-		{
-			"sql": f"SHOW TABLES;",
-			"dbid": f"{dbid}",
-			"db_token": f"{db_token}" 
-		}
-	)
+            # if we find it, delete it and proceed
+            if transaction:
+                transaction.key.delete()
+            else:
+                return redirect(url_for('auth.login'))
+    else:
+        return redirect(url_for('auth.login'))
 
-	print(err)
+    # check for access to FeatureBase database
+    resp, err = featurebase_query(
+        {
+            "sql": f"SHOW TABLES;",
+            "dbid": f"{dbid}",
+            "db_token": f"{db_token}" 
+        }
+    )
 
-	if err:
-		if "Unauthorized" in err:
-			flash("Error authenticating. Enter your credentials again.")
-		else:
-			flash(f"Unhandled error while authenticating: {err}. Try again.")
+    if err:
+        if "Unauthorized" in err:
+            flash("Error authenticating. Enter your credentials again.")
+        else:
+            flash(f"Unhandled error while authenticating: {err}. Try again.")
 
-		return redirect(url_for('auth.login'))
-	
-	if not resp.execution_time:
-		return redirect(url_for('auth.login'))
+        return redirect(url_for('auth.login'))
+    
+    if not resp.execution_time:
+        return redirect(url_for('auth.login'))
 
-	# look the user up (here we know they are telling the truth)
-	user = User.get_by_dbid(dbid)
+    # look the user up (here we know they are telling the truth)
+    user = User.get_by_dbid(dbid)
 
-	if not user:
-		# no user, create user and set both dbid and token
-		user = User.create(dbid=dbid, db_token=db_token)
+    if not user:
+        # no user, create user and set both dbid and token
+        user = User.create(dbid=dbid, db_token=db_token)
 
-	# just log them in
-	_user = User.authenticate(user.get('uid'))
-	login_user(_user)
+    # just log them in
+    _user = User.authenticate(user.get('uid'))
+    login_user(_user)
 
-	flash("You've been logged in.")
+    flash("You've been logged in.")
 
-	return redirect(url_for('site.pipelines'))
+    return redirect(url_for('site.pipelines'))
+

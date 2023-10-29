@@ -18,50 +18,37 @@
         </div>
 
         <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
+
     </form>
-
-    <div class="form-group mt-3">
-        <textarea class="form-control" id="templateText" rows="4">{% if template %}{{ template.text }}{% endif %}</textarea>
-    </div>
-
-    <!-- Cancel Button -->
-    <button id="goBack" class="btn btn-danger">
-        <i class="fas fa-arrow-left"></i> Back
-    </button>
-
-
-    <!-- Save Button -->
-    <a id="saveButton" href class="btn btn-primary">
-        <i class="fas fa-save"></i> Save
-    </a>
-
-    <!-- Download Button -->
-    <a id="downloadButton" href class="btn btn-success" download="template.txt">
-        <i class="fas fa-download"></i> Download
-    </a>
-
-    <!-- Load Button -->
-    <input type="file" id="fileInput" style="display: none;" accept=".txt">
-    <button id="loadButton" class="btn btn-info">
-        <i class="fas fa-upload"></i> Upload
-    </button>
-
-    <div class="dropdown d-inline">
-    <div class="dropdown d-inline">
-        <button class="btn btn-warning dropdown-toggle" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="fas fa-cogs"></i> Choose Template
-        </button>
-        <div class="dropdown-menu" aria-labelledby="generateTemplateDropdown">
-            {% for item in template_examples %}
-                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generativeTemplateModal" data-template-name="{{ item.template_name }}" data-processor-type="{{ item.processor_type }}">{{ item.name }}</a>
-                {% if not loop.last and item.processor_type != template_examples[loop.index].processor_type %}
-                    <div class="dropdown-divider"></div>
-                {% endif %}
-            {% endfor %}
+    <p></p>
+    <div class="container">
+        <div class="row">
+            <div class="text-left">
+                <button id="goBack" class="btn btn-danger"><i class="fas fa-arrow-left"></i> Back</button>
+                <a id="saveButton" href class="btn btn-success"><i class="fas fa-save"></i> Save</a>
+                <a id="downloadButton" href class="btn btn-info" download="template.txt"><i class="fas fa-download"></i> Download</a>
+                <input type="file" id="fileInput" style="display: none;" accept=".txt">
+                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+                <div class="dropdown d-inline">
+                    <button class="btn btn-warning dropdown-toggle" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-cogs"></i> Choose Template
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="generateTemplateDropdown">
+                        {% for item in template_examples %}
+                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generativeTemplateModal" data-template-name="{{ item.template_name }}" data-processor-type="{{ item.processor_type }}">{{ item.name }}</a>
+                            {% if not loop.last and item.processor_type != template_examples[loop.index].processor_type %}
+                                <div class="dropdown-divider"></div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>  
+            </div>
         </div>
     </div>
 
-
+    <div class="form-group mt-3">
+        <textarea class="form-control" id="templateText" rows="4">{% if template %}{{ template.text }}{% else %}{{empty_template}}{% endif %}</textarea>
+    </div>
 </div>
 {% endblock %}
 
@@ -155,6 +142,11 @@ $(document).ready(function() {
                 error: function(error) {
                     toastr.error(error.responseJSON.message);
                     console.log(error.responseJSON.error);
+                },
+                complete: function(response) {
+                    if (window.location.pathname === '/templates/new') {
+                        window.location.href = '/templates/'+response.responseJSON.template_id;
+                    }
                 }
             });
 
@@ -162,8 +154,6 @@ $(document).ready(function() {
             toastrWarningCount++;
             if (toastrWarningCount < maxToastrWarnings) {
                 toastr.warning("Edit the template before saving it.");
-            } else {
-                toastr.warning("Ok, I get it.");
             }
         }
     

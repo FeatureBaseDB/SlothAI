@@ -193,6 +193,19 @@ def filter_document(document, keys_to_keep):
     return {key: value for key, value in document.items() if key in keys_to_keep}
 
 
+# Define the deep_scrub function
+def deep_scrub(data):
+    if isinstance(data, dict):
+        for key in list(data.keys()):
+            if any(word in key.lower() for word in ['secret', 'password', 'token']):
+                data[key] = "REDACTED"
+            else:
+                deep_scrub(data[key])
+    elif isinstance(data, list):
+        for item in data:
+            deep_scrub(item)
+
+
 def remove_fields_and_extras(template):
     # Remove extras definition
     extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)

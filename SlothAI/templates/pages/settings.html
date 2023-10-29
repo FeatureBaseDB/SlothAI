@@ -11,11 +11,13 @@
     <h2 class="page_heading">Settings</h2>
 
     <div class="rounded-lg border p-3">
-        <h4 class="mb-3">Welcome, {{ username }}</h4>
+        <h4 class="mb-3">Salutations, {{ username }}!</h4>
 
 		<p>This is your API Token:</p>
         <p><pre><span></span>{{api_token}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre></p>
-        <p>If you delete your account, any secure tokens you have given us will be permanently deleted. This process is irrevokable.</p>
+        <button id="resetToken" class="btn btn-warning"><i class="fas fa-recycle"></i> Reset</button>
+        <hr/>
+        <p>The process of deleting your login is irreversible. We'd hate to see you go.</p>
         
         <button class="btn btn-danger delete-button" data-table-id="{{ dbid }}">Delete Login</button>
         <p></p>
@@ -42,11 +44,28 @@ $(document).ready(function() {
 			$('span.command-copy').removeClass('flash');
 		}, 500);
 	});
+
    $(".delete-button").click(function() {
-        if (confirm("Are you sure you want to delete your account? This action is irreversible.")) {
+        if (confirm("Are you sure you want to delete your login? This action is irreversible...")) {
             // If confirmed, navigate to the /remove_all_caution path
             window.location.href = "/remove_all_caution";
         }
+    });
+
+    $("#resetToken").click(function() {
+    	console.log("here")
+        $.ajax({
+            url: '/token_reset',
+            type: 'POST',
+            data: JSON.stringify({ prompt: 'please' }),
+            contentType: 'application/json',
+            success: function(data) {
+                location.reload();
+            },
+            error: function() {
+                toastr.error("Error resetting token. Very strange.");
+            }
+        });
     });
 });
 </script>

@@ -571,6 +571,15 @@ class User(flask_login.UserMixin, ndb.Model):
         result = cls.query(cls.api_token == api_token).get()
         return result.to_dict() if result else None
 
+    @classmethod
+    @ndb_context_manager
+    def reset_token(cls, uid):
+        user = cls.query(cls.uid == uid).get()
+        user.api_token = generate_token()
+        user.put()
+        
+        return user.to_dict() if user else None
+
 
 class Log(flask_login.UserMixin, ndb.Model):
     log_id = ndb.StringProperty()

@@ -13,10 +13,16 @@
     {% if pipelines %}
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Pipelines</h4>
-        <p>The following pipeline are available for use. Click on a pipeline to see its endpoint for ingestion.</p>
-        <button id="createPipeline" type="button" class="btn btn-success">
-            <i class="fas fa-plus"></i> Create Pipeline
-        </button>
+        <p>Pipelines process your data and are built from nodes. Click for more information.</p>
+        <div class="text-right">
+            <button id="uploadPipeline" type="button" class="btn btn-info">
+                <i class="fas fa-upload"></i> Upload
+            </button>
+            <button id="createPipeline" type="button" class="btn btn-success">
+                <i class="fas fa-plus"></i> Add Pipeline
+            </button>
+        </div>
+
         <table id="pipelineTable" class="table table-striped">
             <thead>
                 <tr>
@@ -43,8 +49,8 @@
                         </div>
                     </td>
                     <td>
-                        <button class="downoad-button btn btn-primary" data-pipe-id="{{ pipeline.pipe_id }}"><i class="fas fa-download"></i></button>
-                        <button class="delete-button btn btn-danger" data-pipe-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
+                        <button data-toggle="tooltip" data-placement="top" title="Download {{ pipeline.name }}" class="download-button btn btn-primary" data-pipe_name="{{ pipeline.name }}" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-download"></i></button>
+                        <button class="delete-button btn btn-danger" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
                         <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">
                             <span class="sr-only"></span>
                         </div>
@@ -167,6 +173,10 @@ $(document).ready(function () {
         return color;
     }
 
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    })
+
     const buttons = document.querySelectorAll("#pipelineTable .btn");
     buttons.forEach(button => {
         const name = button.innerText;
@@ -228,6 +238,33 @@ $(document).ready(function () {
         button.popover({trigger: 'focus'});
         return button;
     }
+
+    // Listen for the click event on the download button
+    $('.download-button').on('click', function() {
+        $('.download-button').prop('disabled', true);
+        toastr.info("Download request sent. Standby...");
+
+        // Get the pipe_id from the data attribute
+        var pipe_id = $(this).data('pipe_id');
+        var name = $(this).data('name')
+
+        // Construct the URL for the download endpoint (replace with your actual endpoint URL)
+        var downloadURL = '/pipelines/' + pipe_id + '/download';
+
+        // Create a hidden anchor element to trigger the download
+        var link = document.createElement('a');
+        link.href = downloadURL;
+        link.target = '_blank'; // Open in a new tab
+        link.download = 'pipeline_' + name + '.json'; // Set the filename
+
+        // Trigger a click event on the hidden anchor element
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(function() {
+            $('.download-button').prop('disabled', false);
+        }, 10000);
+    });
 
     var node_buttons = $('button[data-node_id]');
     

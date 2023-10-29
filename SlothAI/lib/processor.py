@@ -144,7 +144,6 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 		try:
 			embedding_results = openai.Embedding.create(input=task.document.get(input_field), model=task.document.get('model'))
 		except Exception as ex:
-			print(ex)
 			task.document['error'] = f"exception talking to OpenAI ada embedding: {ex}"
 			task.document[output_field] = []
 			return task

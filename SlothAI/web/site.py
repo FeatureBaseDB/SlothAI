@@ -144,6 +144,22 @@ def pipeline_view(pipe_id):
                 _nodes.append(node)
                 break
 
+    mermaid_string = """
+    graph TD
+    A[User Code] -->|JSON\nFile| B[Task POST]
+    B -->|Task Response| A
+    B -->|JSON\ninput:file| J[sambar\nread_file]
+    TA[[rugged-hoatzin\ntemplate]] --> |processor:read_file|J
+    TB[[determined-alpaca\ntemplate]] --> F
+    TC[[happy-swift\ntemplate]] --> |model:ada-002-simiilarity|G
+    TD[[impossible-caribou\ntemplate]] --> |table:doctor|H
+    J -->|page_texts:strings| F[dolphin\njinja2]
+    F -->|chunks:strings\npage_nums:ints\nchunk_nums:ints| G[mamba\nembedding]
+    F -->|split task| G
+    G -->|embeds:vectors| H[chowchow\nwrite_fb]
+    H --> I[(doctor)]
+    """
+
     if not pipeline:
         return redirect(url_for('site.pipelines'))
 
@@ -155,7 +171,7 @@ def pipeline_view(pipe_id):
     else:
         example_d = """'{"text": ["There was a knock at the door and then, silence."]}'"""
 
-    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=_nodes, head_input_fields=head_input_fields, example_d=example_d)
+    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=_nodes, head_input_fields=head_input_fields, example_d=example_d, mermaid_string=mermaid_string)
 
 
 @site.route('/nodes', methods=['GET'])
@@ -230,8 +246,10 @@ def template_detail(template_id="new"):
 
     name_random = random_name(2)
 
+    empty_template = "{# New Template #}\n\n{# Extras are required. #}\nextras = {'key': 'value'}"
+
     return render_template(
-        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random,  template_examples=template_examples
+        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random, template_examples=template_examples, empty_template=empty_template
     )
 
 

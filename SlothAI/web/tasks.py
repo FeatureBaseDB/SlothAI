@@ -20,6 +20,7 @@ def process_tasks(cron_key):
 		task = Task.from_json(request.get_data(as_text=True))
 
 		task = process(task)
+
 		node = task.remove_node()
 		if len(task.nodes) > 0:
 			task.queue()
