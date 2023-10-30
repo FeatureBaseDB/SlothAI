@@ -331,7 +331,7 @@ def build_mermaid(pipeline, nodes):
         previous_output_list = ""
     
     previous_node_name = nodes[0].get('name')
-    previous_node_template = nodes[0].get('')
+    previous_node_template = nodes[0].get('template_name')
 
     excluded_keys = ["token", "secret", "password"]
 
@@ -364,7 +364,7 @@ def build_mermaid(pipeline, nodes):
             if node.get('processor') == "read_fb":
                 mermaid_string = mermaid_string + f"FB[({node.get('extras').get('table')}\nFeatureBase)] --> {node.get('name')}\n"
 
-        mermaid_string = mermaid_string + f"{node.get('template_name')}[[{node.get('template_name')}\ntemplate]] --> |{previous_extras_list}|{previous_node_name}\n"
+        mermaid_string = mermaid_string + f"{node.get('template_name')}[[{previous_node_template}\ntemplate]] --> |{previous_extras_list}|{previous_node_name}\n"
 
         link_list = ""
         if node.get('output_fields'):
@@ -384,6 +384,8 @@ def build_mermaid(pipeline, nodes):
 
         else:
             previous_extras_list = "none"
+
+    mermaid_string = mermaid_string + f"{previous_node_template}a[[{previous_node_template}\ntemplate]] --> |{previous_extras_list}|{previous_node_name}\n"
 
     return mermaid_string
 
