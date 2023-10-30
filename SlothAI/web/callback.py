@@ -11,6 +11,7 @@ callback = Blueprint('callback', __name__)
 @flask_login.login_required
 def handle_callback(user_name):
     data = request.get_data()
+    
     try:
         data = json.loads(data)
         node_id = data['node_id']

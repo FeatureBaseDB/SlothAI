@@ -8,9 +8,9 @@ from flask import current_app as app
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.tasks import list_tasks
 from SlothAI.lib.util import random_name, gpt_completion
 from SlothAI.web.models import Pipeline, Node, Template, Log
+from SlothAI.lib.tasks import Task
 
 site = Blueprint('site', __name__)
 
@@ -256,7 +256,7 @@ def template_detail(template_id="new"):
 @site.route('/tasks')
 @flask_login.login_required
 def tasks():
-    tasks = list_tasks(current_user.uid)
+    tasks = Task.tasks_by_user(current_user.uid)
     username = current_user.name
     return render_template(
         'pages/tasks.html', tasks=tasks, username=username

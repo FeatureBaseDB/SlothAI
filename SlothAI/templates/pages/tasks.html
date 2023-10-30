@@ -8,33 +8,33 @@
 {% block content %}
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">
-    <h2 class="page_heading">Active Tasks</h2>
+    <h2 class="page_heading">Tasks</h2>
 
     {% if tasks %}
     <table class="table table-striped">
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Run #</th>
-                <th>Next Run</th>
-                <th>Log</th>
+                <th>User ID</th>
+                <th>Pipeline ID</th>
+                <th>Current Node ID</th>
+                <th>Created At</th>
+                <th>State</th>
+                <th>Error</th>
+                <th>Retries</th>
             </tr>
         </thead>
         <tbody>
             {% for task in tasks %}
                 <tr>
-                    <td>{{ task.name }}</td>
-                    <td>{{ task.dispatch_count }}</td>
-                    <td>{{ task.schedule_time }}</td>
-                    <td>
-                        {% if "418" in task.log %}
-                            Server start issued.
-                        {% elif "429" in task.log %}
-                            Too many requests to OpenAI.
-                        {% else %}
-                            {{ task.log }}
-                        {% endif %}
-                    </td>
+                    <td>{{ task.task_id }}</td>
+                    <td>{{ task.user_id }}</td>
+                    <td>{{ task.pipe_id }}</td>
+                    <td>{{ task.current_node_id }}</td>
+                    <td>{{ task.created_at }}</td>
+                    <td>{{ task.state }}</td>
+                    <td>{{ task.error }}</td>
+                    <td>{{ task.retries }}</td>
                 </tr>
             {% endfor %}
         </tbody>

@@ -14,6 +14,7 @@ from google.protobuf import timestamp_pb2
 
 from SlothAI.lib.gcloud import box_start
 from SlothAI.web.models import Box
+from SlothAI.web.models import Task as TaskModel
 from SlothAI.lib.util import random_string, handle_quotes
 from SlothAI.lib.schemar import string_to_datetime, datetime_to_string, FBTypes
 
@@ -25,6 +26,17 @@ class TaskState(Enum):
 	RUNNING = 'running'
 	COMPLETED = 'completed'
 	FAILDED = 'failed'
+
+	@classmethod
+	def state_from_string(self, state_as_string):
+		if state_as_string == "running":
+			return self.RUNNING
+		elif state_as_string == "complete":
+			return self.COMPLETED
+		elif state_as_string == "failed":
+			return self.FAILDED
+		else:
+			raise Exception("invalid state_as_string")
 
 class Task:
 	def __init__(self, id: str, user_id: str, pipe_id: str, nodes: List[str], document: dict, created_at: datetime, retries: int, error: str, state: TaskState):
@@ -55,7 +67,7 @@ class Task:
 			"created_at": self.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
 			"retries": self.retries,
 			"error": self.error,
-			"state": str(self.state),
+			"state": self.state.value,
 		}
 
 	@classmethod
@@ -72,7 +84,7 @@ class Task:
 			created_at= datetime.strptime(task_dict["created_at"], '%Y-%m-%dT%H:%M:%SZ'),
 			retries=task_dict['retries'],
 			error=task_dict['error'],
-			state=task_dict['state']
+			state=TaskState.state_from_string(task_dict['state']),
 		)
 
 	def to_json(self) -> str:
@@ -137,6 +149,15 @@ class Task:
 
 		# self.id = response.name.split('/')[-1]
 
+		# todo so error handling
+		_ = self.update_store(
+			state=self.state,
+			retries=self.retries,
+			error=self.error,
+			current_node_id=self.next_node()
+		)
+
+
 	def next_node(self):
 		if len(self.nodes) == 0:
 			return None
@@ -161,12 +182,46 @@ class Task:
 			self.drop()
 
 	def drop(self):
-		pass
+		self.update_store(error=self.error, retries=self.retries, current_node_id=self.next_node(), state=TaskState.FAILDED)
 
 	def retriable(self):
 		if self.retries >= 5:
 			return False
 		return True
+
+	def store(self):
+		task = TaskModel.create(
+			task_id=self.id,
+			user_id=self.user_id,
+			current_node_id=self.next_node(),
+			pipe_id=self.pipe_id,
+			created_at=self._created_at,
+			state=self.state,
+			error=self.error,
+			retries=self.retries,
+		)
+
+		return task
+
+	def update_store(self, state=None, retries=None, error=None, current_node_id=None):
+		update_args = {}
+
+		if state is not None:
+			update_args['state'] = state
+		if retries is not None:
+			update_args['retries'] = retries
+		if error is not None:
+			update_args['error'] = error
+		if current_node_id is not None:
+			update_args['current_node_id'] = current_node_id
+
+		task = TaskModel.update(self.id, **update_args)
+
+		return task
+
+	@classmethod
+	def tasks_by_user(self, user_id):
+		return TaskModel.fetch(user_id=user_id)
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
@@ -234,94 +289,6 @@ def box_required(pipeline_models):
 
 	return _box_required, selected_box
 
-def list_tasks(uid):
-	# Set your Google Cloud Project ID
-	project_id = app.config['PROJECT_ID']
-	
-	# Create a Cloud Tasks client
-	client = tasks_v2.CloudTasksClient()
-
-	# Define the queue name
-	queue_name = client.queue_path(project_id, "us-east1", app.config['SLOTH_QUEUE'])
-
-	# List tasks in the specified queue
-	tasks = client.list_tasks(parent=queue_name)
-
-	_tasks = []
-	# Iterate through the tasks and print task information
-	for task in tasks:
-		if app.config['DEV'] == "True":
-			url = task.http_request.url
-		else:
-			url = task.app_engine_http_request.relative_uri
-		
-		task_uid = url.split('/')[-1]
-		
-		_task = {
-			"name": task.name.split('/')[-1],
-			"dispatch_count": task.dispatch_count,
-			"schedule_time": task.schedule_time.strftime("%d/%m/%Y %H:%M:%SZ"),
-			"log": task.last_attempt.response_status.message
-		}
-		if uid == task_uid:
-			_tasks.append(_task)
-			
-	return _tasks
-
-def create_task(document):
-
-	# Set your Google Cloud Project ID
-	project_id = app.config['PROJECT_ID']
-
-	# Create a Cloud Tasks client
-	client = tasks_v2.CloudTasksClient()
-
-	# Create a task
-	parent = client.queue_path(project_id, "us-east1", app.config['SLOTH_QUEUE'])
-	converted_payload = json.dumps(document).encode()
-
-	if app.config['DEV'] == "True":
-		task = {
-			"http_request": {
-				"url": f"{app.config['NGROK_URL']}/tasks/process/{app.config['CRON_KEY']}/{document.get('uid')}",
-				"headers": {"Content-type": "application/json"},
-				"http_method": tasks_v2.HttpMethod.POST
-			}
-		}
-		task["http_request"]["body"] = converted_payload
-	else:
-		task = {
-			"app_engine_http_request": {
-				"http_method": tasks_v2.HttpMethod.POST,
-				"app_engine_routing": {"version": os.environ['GAE_VERSION']},
-				"relative_uri": f"/tasks/process/{app.config['CRON_KEY']}/{document.get('uid')}",
-				"headers": {"Content-type": "application/json"}
-			}
-		}
-		task["app_engine_http_request"]["body"] = converted_payload
-
-	# Create a timestamp
-	timestamp = timestamp_pb2.Timestamp()
-
-	# Calculate the time 15 seconds from now
-	if document.get('run_in', None):
-		future_time = datetime.utcnow() + timedelta(seconds=int(document.get('run_in')))
-	else:
-		delay = random.randint(500, 3000)
-		future_time = datetime.utcnow() + timedelta(milliseconds=delay)
-
-	# Set the timestamp using the calculated future time
-	timestamp.FromDatetime(future_time)
-
-	task["schedule_time"] = timestamp
-
-	# Send the task to the Cloud Tasks queue
-	response = client.create_task(parent=parent, task=task)
-	task_id = response.name.split('/')[-1] if not document.get('task_id', None) else document['task_id']
-
-	# return the task ID
-	return task_id
-
 def get_task_schema(data: Dict[str, any]) -> Tuple[Dict[str, str], str]:
 	'''
 	Populate with schema dict
@@ -355,16 +322,6 @@ def get_values_by_json_paths(json_paths, document):
             results[path_components[-1]] = current_location
     
     return results
-
-def retry_task(document):
-	document['retries'] += 1
-	if document['retries'] > 4:
-		print(f"ERROR: {document['error']}. {document['retries']} total retries. dropping.")
-		return
-	
-	print(f"ERROR: {document['error']}. {document['retries']} total retries. retrying.")
-	del document['error']
-	create_task(document)
 
 def process_data_dict_for_insert(data, column_type_map, table):
 	"""

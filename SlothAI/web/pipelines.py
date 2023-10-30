@@ -13,8 +13,6 @@ from flask_login import current_user
 
 from werkzeug.utils import secure_filename
 
-from werkzeug.utils import secure_filename
-
 from SlothAI.lib.tasks import Task, TaskState
 from SlothAI.web.models import Pipeline, Node, Template
 from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub
@@ -196,6 +194,7 @@ def ingest_post(pipeline_id):
 		state=TaskState.RUNNING,
     )
 
+    task.store()
     task.document = json_data_dict
     task.queue()
 

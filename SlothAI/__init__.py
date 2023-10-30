@@ -17,7 +17,7 @@ from SlothAI.web.templates import template
 from SlothAI.web.custom_commands import custom_commands
 from SlothAI.web.callback import callback
 
-from SlothAI.web.models import User, Log
+from SlothAI.web.models import User, Log, Task
 
 import config as config 
 
@@ -45,10 +45,16 @@ def create_app(conf='dev'):
 
     def clean_logs():
         Log.delete_older_than(hours=1)
-        app.logger.info('ran background process to delete old callback logs')
+        # app.logger.info('ran background process to delete old callback logs')
+
+    def clean_tasks():
+        Task.delete_older_than(hours=1)
+        # app.logger.info('ran background process to delete old tasks')
     
     scheduler = BackgroundScheduler()
     _ = scheduler.add_job(clean_logs, 'interval', minutes=5)
+    _ = scheduler.add_job(clean_tasks, 'interval', minutes=5)
+
     scheduler.start()
 
 
