@@ -8,7 +8,7 @@ from flask import current_app as app
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.util import random_name, gpt_completion
+from SlothAI.lib.util import random_name, gpt_completion, build_mermaid
 from SlothAI.web.models import Pipeline, Node, Template, Log
 from SlothAI.lib.tasks import Task
 
@@ -144,21 +144,7 @@ def pipeline_view(pipe_id):
                 _nodes.append(node)
                 break
 
-    mermaid_string = """
-    graph TD
-    A[User Code] -->|JSON\nFile| B[Task POST]
-    B -->|Task Response| A
-    B -->|JSON\ninput:file| J[sambar\nread_file]
-    TA[[rugged-hoatzin\ntemplate]] --> |processor:read_file|J
-    TB[[determined-alpaca\ntemplate]] --> F
-    TC[[happy-swift\ntemplate]] --> |model:ada-002-simiilarity|G
-    TD[[impossible-caribou\ntemplate]] --> |table:doctor|H
-    J -->|page_texts:strings| F[dolphin\njinja2]
-    F -->|chunks:strings\npage_nums:ints\nchunk_nums:ints| G[mamba\nembedding]
-    F -->|split task| G
-    G -->|embeds:vectors| H[chowchow\nwrite_fb]
-    H --> I[(doctor)]
-    """
+    mermaid_string = build_mermaid(pipeline, _nodes)
 
     if not pipeline:
         return redirect(url_for('site.pipelines'))
