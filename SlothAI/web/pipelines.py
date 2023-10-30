@@ -194,9 +194,9 @@ def ingest_post(pipeline_id):
 		state=TaskState.RUNNING,
     )
 
-    task.store()
+    # store and queue
     task.document = json_data_dict
-    task.queue()
+    task.create()
 
     return jsonify(task.to_dict()), 200
 

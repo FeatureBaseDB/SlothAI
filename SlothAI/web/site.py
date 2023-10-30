@@ -28,6 +28,7 @@ processors = [
     {"value": "read_file", "label": "Read Processor (File)"},
     {"value": "read_uri", "label": "Read Processor (URI)"},
     {"value": "read_fb", "label": "Read Processor (FeatureBase)"},
+    {"value": "split_task", "label": "Splitter"},
     {"value": "write_fb", "label": "Write Processor (FeatureBase)"},
     {"value": "aidict", "label": "Generative Completion Processor"},
     {"value": "aichat", "label": "Generative Chat Processor"},

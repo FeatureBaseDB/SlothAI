@@ -223,6 +223,10 @@ class Task:
 	def tasks_by_user(self, user_id):
 		return TaskModel.fetch(user_id=user_id)
 
+	def create(self):
+		self.store()
+		self.queue()
+
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
 	pass

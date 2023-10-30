@@ -13,6 +13,8 @@ import json
 
 import openai
 
+from itertools import groupby
+
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
 
@@ -27,6 +29,8 @@ from jinja2 import Environment
 
 from enum import Enum
 
+import datetime
+
 # supress OpenAI resource warnings for unclosed sockets
 import warnings
 warnings.filterwarnings("ignore")
@@ -34,9 +38,9 @@ warnings.filterwarnings("ignore")
 from SlothAI.web.custom_commands import random_word, random_sentence, process_and_segment_texts_with_overlap
 from SlothAI.web.models import User, Node, Template, Pipeline
 
-from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
+from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
-from SlothAI.lib.util import extras_from_template, fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document, load_from_storage, random_string
+from SlothAI.lib.util import fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document, load_from_storage, random_string
 
 env = Environment()
 env.globals['random_word'] = random_word
@@ -212,8 +216,8 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 		num_images = 1
 
 	if not prompt:
-	    raise ValueError("'prompt' field is required.")
-	
+		raise ValueError("'prompt' field is required.")
+
 	if "dall-e" in task.document.get('model'):
 		openai.api_key = task.document.get('openai_token')
 
@@ -371,6 +375,79 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 
 
 @processer
+def split_task(node: Dict[str, any], task: Task) -> Task:
+
+	template = Template.get(template_id=node.get('template_id'))
+	input_fields = [n['name'] for n in template.get('input_fields')]
+	output_fields = [n['name'] for n in template.get('output_fields')]
+	batch_size = node.get('extras', {}).get('batch_size', None)
+
+	# batch_size must be in extras
+	if not batch_size:
+		raise NonRetriableError("split_task processor: batch_size must be specified in extras!")
+	
+	try:
+		batch_size = int(batch_size)
+	except Exception as e:
+		raise NonRetriableError(e)
+
+	# all input / output fields should be lists of the same length to use split_task
+	total_sizes = []
+	for output_field in output_fields:
+		if output_field in input_fields:
+			field = task.document[output_field]
+			if not isinstance(field, list):
+				raise NonRetriableError(f"split_task processor: input fields must be list type: got {type(field)}")
+
+			total_sizes.append(len(field))
+
+		else:
+			raise NonRetriableError(f"split_task processor: all output fields must be taken from input fields: output field {output_field} was not found in input fields.")
+
+	if not all_equal(total_sizes):
+		raise NonRetriableError("split_task processor: len of fields must be equal to re-batch a task")
+
+	# split the data and re-task
+	try:
+		tasks = []
+		do_while = True
+		while do_while:
+			batch_data = {}
+			for field in output_fields:
+				if len(task.document[field]) == 0:
+					do_while = False
+					break
+				batch_data[field] = task.document[field][:batch_size]
+				del task.document[field][:batch_size]
+
+			if not do_while:
+				break
+
+			batched_task = Task(
+				id = random_string(),
+				user_id=task.user_id,
+				pipe_id=task.pipe_id,
+				nodes=task.nodes[1:],
+				document=batch_data,
+				created_at=datetime.datetime.utcnow(),
+				retries=0,
+				error=None,
+				state=TaskState.RUNNING,
+			)
+
+			tasks.append(batched_task)
+			
+		for new_task in tasks:
+			new_task.create()
+	except Exception as e:
+		raise NonRetriableError(e)
+
+	# the initial task doesn't make it past split_task. so remove the rest of the nodes
+	task.nodes = [task.next_node()]
+	return task
+
+
+@processer
 def read_fb(node: Dict[str, any], task: Task) -> Task:
 	user = User.get_by_uid(task.user_id)
 	doc = {
@@ -466,6 +543,7 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 	columns, records = process_data_dict_for_insert(data, column_type_map, table)
 
 	sql = f"INSERT INTO {table} ({','.join(columns)}) VALUES {','.join(records)};"
+	print(sql)
 	_, err = featurebase_query({"sql": sql, "dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']})
 	if err:
 		if "exception" in err:
@@ -592,3 +670,6 @@ def load_template(name="default"):
 
 	return template
 
+def all_equal(iterable):
+    g = groupby(iterable)
+    return next(g, True) and not next(g, False)
