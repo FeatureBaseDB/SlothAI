@@ -162,11 +162,6 @@ $(document).ready(function() {
         }
     }
 
-    // sort table
-    $('#nodesTable').DataTable({
-        "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }]
-    });
-
     // badge popovers
     $('.extras').popover({
       trigger: 'focus'
@@ -203,36 +198,65 @@ $(document).ready(function() {
         });
     });
 
-    // JavaScript to change button colors
-    const buttons = document.querySelectorAll("#nodeTable .btn");
+    // Function to change button colors
+    function changeButtonColors() {
+        const buttons = document.querySelectorAll("#nodeTable .btn");
 
-    buttons.forEach(button => {
-        const name = button.innerText;
-        var color = "";
-        if (!name) {
-            const altname = $(button).attr('title');
-            if (altname) {
-                color = getColorFromName(altname);
+        buttons.forEach(button => {
+            const name = button.innerText;
+            var color = "";
+
+            if (!name) {
+                const altname = $(button).attr('title');
+                if (altname) {
+                    color = getColorFromName(altname);
+                    button.style.backgroundColor = color;
+                    button.style.borderColor = color;
+                }
+            } else {
+                color = getColorFromName(name);
                 button.style.backgroundColor = color;
                 button.style.borderColor = color;
             }
-        } else {
-            color = getColorFromName(name);
-            button.style.backgroundColor = color;
-            button.style.borderColor = color;
-        }        
+        });
+    }
 
+    // Function to change badge colors
+    function changeBadgeColors() {
+        const badges = document.querySelectorAll("#nodeTable .badge");
+
+        badges.forEach(badge => {
+            const name = processString(badge.innerText);
+            const color = getColorFromName(name);
+            badge.style.backgroundColor = color;
+            badge.style.borderColor = color;
+        });
+    }
+
+    // Function to run after both changeButtonColors and changeBadgeColors are done
+    function sortTable() {
+        // sort table
+        $('#nodesTable').DataTable({
+            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }]
+        });
+    }
+
+    // Run changeButtonColors and changeBadgeColors functions using Promises
+    const buttonColorsPromise = new Promise((resolve) => {
+        changeButtonColors();
+        resolve();
     });
 
-    // JavaScript to change button colors
-    const badges = document.querySelectorAll("#nodeTable .badge");
-
-    badges.forEach(badge => {
-        const name = processString(badge.innerText);
-        const color = getColorFromName(name);
-        badge.style.backgroundColor = color;
-        badge.style.borderColor = color;
+    const badgeColorsPromise = new Promise((resolve) => {
+        changeBadgeColors();
+        resolve();
     });
+
+    // Wait for both promises to resolve, and then execute anotherFunction
+    Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
+        sortTable();
+    });
+
 
     function processString(inputString) {
       if (inputString.includes(':')) {

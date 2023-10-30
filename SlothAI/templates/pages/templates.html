@@ -21,10 +21,10 @@
             <thead>
                 <tr>
                     <th>Template</th>
-                    <th class="sorting_disabled">Inputs</th>
-                    <th class="sorting_disabled">Outputs</th>
-                    <th class="sorting_disabled">Extras</th>
-                    <th class="sorting_disabled">Action</th>
+                    <th>Inputs</th>
+                    <th>Outputs</th>
+                    <th>Extras</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody id="templateTable">
@@ -83,11 +83,6 @@ $(document).ready(function() {
         }
     }
 
-    // sort table
-    $('#templatesTable').DataTable({
-        "columnDefs": [{ "orderable": false, "targets": [1,2,3,4] }]
-    });
-
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
         var template_id = $(this).data("template-id");
@@ -125,26 +120,6 @@ $(document).ready(function() {
     });
 
 
-    // JavaScript to change button colors
-    const buttons = document.querySelectorAll("#templateTable .btn");
-
-    buttons.forEach(button => {
-        const name = button.innerText;
-        const color = getColorFromName(name);
-        button.style.backgroundColor = color;
-        button.style.borderColor = color;
-    });
-
-    // JavaScript to change button colors
-    const badges = document.querySelectorAll("#templateTable .badge");
-
-    badges.forEach(badge => {
-        const name = processString(badge.innerText);
-        const color = getColorFromName(name);
-        badge.style.backgroundColor = color;
-        badge.style.borderColor = color;
-    });
-
     function processString(inputString) {
       if (inputString.includes(':')) {
         const parts = inputString.split(':');
@@ -165,6 +140,56 @@ $(document).ready(function() {
         const color = `hsl(${hash % 360}, 70%, 60%)`;
         return color;
     }
+
+    // Function to change button colors
+    function changeButtonColors() {
+        const buttons = document.querySelectorAll("#templateTable .btn");
+
+        buttons.forEach(button => {
+            const name = button.innerText;
+            const color = getColorFromName(name);
+            button.style.backgroundColor = color;
+            button.style.borderColor = color;
+        });
+    }
+
+    // Function to change badge colors
+    function changeBadgeColors() {
+        const badges = document.querySelectorAll("#templateTable .badge");
+
+        badges.forEach(badge => {
+            const name = processString(badge.innerText);
+            const color = getColorFromName(name);
+            badge.style.backgroundColor = color;
+            badge.style.borderColor = color;
+        });
+    }
+
+    // Function to run after both changeButtonColors and changeBadgeColors are done
+    function sortTable() {
+        // sort table
+        $('#templatesTable').DataTable({
+            "columnDefs": [{ "orderable": false, "targets": [1,2,3,4] }]
+        });
+    }
+
+    // Run changeButtonColors and changeBadgeColors functions using Promises
+    const buttonColorsPromise = new Promise((resolve) => {
+        changeButtonColors();
+        resolve();
+    });
+
+    const badgeColorsPromise = new Promise((resolve) => {
+        changeBadgeColors();
+        resolve();
+    });
+
+    // Wait for both promises to resolve, and then execute anotherFunction
+    Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
+        sortTable();
+    });
+
+
 });
 </script>
 {% endblock %}
