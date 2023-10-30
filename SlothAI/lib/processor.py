@@ -118,14 +118,19 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 	template = Template.get(template_id=node.get('template_id'))
 	template_text = remove_fields_and_extras(template.get('text'))
 
-	if template_text:
-		jinja_template = env.from_string(template_text)
-		jinja = jinja_template.render(task.document)
-
+	try:
+		if template_text:
+			jinja_template = env.from_string(template_text)
+			jinja = jinja_template.render(task.document)
+	except Exception as e:
+		raise NonRetriableError("jinja2 processor: unable to render jinja")
+			
+	try:
 		jinja_json = json.loads(jinja)
-
 		for k,v in jinja_json.items():
 			task.document[k] = v
+	except Exception as e:
+		raise NonRetriableError("jinja2 processor: unable to load jinja output as JSON.")
 
 	return task
 
@@ -139,18 +144,22 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 	# output and input fields
 	template = Template.get(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
-	output_field = output_fields[0].get('name')
-	
 	input_fields = template.get('input_fields')
+	
+	if not input_fields:
+		raise NonRetriableError("embedding processor: input_fields required.")
 	input_field = input_fields[0].get('name')
+
+	if not output_fields:
+		raise NonRetriableError("embedding processor: input_fields required.")
+	output_field = output_fields[0].get('name')
 
 	if "text-embedding-ada-002" in task.document.get('model'):
 		try:
 			embedding_results = openai.Embedding.create(input=task.document.get(input_field), model=task.document.get('model'))
 		except Exception as ex:
-			task.document['error'] = f"exception talking to OpenAI ada embedding: {ex}"
-			task.document[output_field] = []
-			return task
+			# making non-retriable for now.. we can handle different error cases as they come up
+			raise NonRetriableError(f"exception talking to OpenAI ada embedding: {ex}")
 
 		task.document[output_field] = [_object.get('embedding') for _object in embedding_results.get('data')]
 	else:
@@ -195,8 +204,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 	try:
 		ai_dict = eval(ai_dict_str)
 	except (ValueError, SyntaxError):
-		task.document['error'] = f"exception talking to OpenAI dict create: {ex}"
-		ai_dict = {}
+		raise RetriableError("aidict processor: unable to evaluate the response from the ai.")
 
 	task.document.update(ai_dict)
 	
@@ -237,10 +245,8 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 			task.document[output_field] = urls
 		
 		except Exception as ex:
-			print(ex)
-			task.document['error'] = f"exception talking to OpenAI image create: {ex}"
-			task.document[output_field] = []
-			return task
+			# non-retriable error for now but add retriable as needed
+			raise NonRetriableError(f"aiimage processor: exception talking to OpenAI image create: {ex}")
 	else:
 		task.document[output_field] = []
  
@@ -310,8 +316,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 			page_stream.close()
 
 	else:
-		task.document.update({"error": "This processor only supports PDFs. Upload with type set to `application/pdf`."})
-		return task
+		raise NonRetriableError("read_file processor: only supports PDFs. Upload with type set to `application/pdf`.")
 
 	# update the document
 	task.document[output_field] = texts
@@ -378,8 +383,16 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 def split_task(node: Dict[str, any], task: Task) -> Task:
 
 	template = Template.get(template_id=node.get('template_id'))
-	input_fields = [n['name'] for n in template.get('input_fields')]
-	output_fields = [n['name'] for n in template.get('output_fields')]
+	input_fields = template.get('input_fields')
+	output_fields = template.get('output_fields')
+	if not input_fields:
+		raise NonRetriableError("split_task processor: input fields required")
+	if not output_fields:
+		raise NonRetriableError("split_task processor: output fields required")
+
+	inputs  = [n['name'] for n in input_fields]
+	outputs = [n['name'] for n in output_fields] 
+
 	batch_size = node.get('extras', {}).get('batch_size', None)
 
 	# batch_size must be in extras
@@ -393,9 +406,9 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 
 	# all input / output fields should be lists of the same length to use split_task
 	total_sizes = []
-	for output_field in output_fields:
-		if output_field in input_fields:
-			field = task.document[output_field]
+	for output in outputs:
+		if output in inputs:
+			field = task.document[output]
 			if not isinstance(field, list):
 				raise NonRetriableError(f"split_task processor: input fields must be list type: got {type(field)}")
 
@@ -413,7 +426,7 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 		do_while = True
 		while do_while:
 			batch_data = {}
-			for field in output_fields:
+			for field in outputs:
 				if len(task.document[field]) == 0:
 					do_while = False
 					break
@@ -543,7 +556,6 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 	columns, records = process_data_dict_for_insert(data, column_type_map, table)
 
 	sql = f"INSERT INTO {table} ({','.join(columns)}) VALUES {','.join(records)};"
-	print(sql)
 	_, err = featurebase_query({"sql": sql, "dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']})
 	if err:
 		if "exception" in err:

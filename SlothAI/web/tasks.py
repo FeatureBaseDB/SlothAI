@@ -41,9 +41,3 @@ def process_tasks(cron_key):
 		task.drop()
 		
 	return f"successfully completed node", 200
-
-# @tasks.route('/tasks', methods=['GET'])
-# @flask_login.login_required
-# def process_tasks():
-
-# 	tasks = Task.fetch(user_id=current_user.uid)
