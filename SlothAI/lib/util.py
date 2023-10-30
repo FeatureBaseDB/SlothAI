@@ -332,6 +332,7 @@ def build_mermaid(pipeline, nodes):
     
     previous_node_name = nodes[0].get('name')
     previous_node_template = nodes[0].get('template_name')
+    previous_node_processor = nodes[0].get('processor')
 
     excluded_keys = ["token", "secret", "password"]
 
@@ -358,12 +359,18 @@ def build_mermaid(pipeline, nodes):
 
         mermaid_string = mermaid_string + f"{previous_node_name} -->|{link_list}| {node.get('name')}[{node.get('name')}\n{node.get('processor')}]\n"
 
+        # add extra line for a split task
+        if previous_node_processor == "split_task":
+            mermaid_string = mermaid_string + f"{previous_node_name} --> {node.get('name')}[{node.get('name')}\n{node.get('processor')}]\n"
+
+        # check if it's a table reference
         if node.get('extras').get('table'):
             if node.get('processor') == "write_fb":
                 mermaid_string = mermaid_string + f"{node.get('name')} --> FB[({node.get('extras').get('table')}\nFeatureBase)]\n"
             if node.get('processor') == "read_fb":
                 mermaid_string = mermaid_string + f"FB[({node.get('extras').get('table')}\nFeatureBase)] --> {node.get('name')}\n"
 
+        # add template
         mermaid_string = mermaid_string + f"{node.get('template_name')}[[{previous_node_template}\ntemplate]] --> |{previous_extras_list}|{previous_node_name}\n"
 
         link_list = ""
@@ -372,7 +379,8 @@ def build_mermaid(pipeline, nodes):
 
         previous_node_name = node.get('name')
         previous_node_template = node.get('template_name')
-
+        previous_node_processor = node.get('processor')
+    
         if node.get('extras'):
             def sanitize_value(value, key):
                 value = f"{value}"
