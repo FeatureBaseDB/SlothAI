@@ -14,12 +14,12 @@
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Pipelines</h4>
         <p>Pipelines process your data and are built from nodes. Click for more information.</p>
-        <div class="text-right">
+        <div class="text-left">
             <button id="uploadPipeline" type="button" class="btn btn-info">
                 <i class="fas fa-upload"></i> Upload
             </button>
             <button id="createPipeline" type="button" class="btn btn-success">
-                <i class="fas fa-plus"></i> Add Pipeline
+                <i class="fas fa-plus"></i> Create Pipeline
             </button>
         </div>
 
@@ -35,14 +35,14 @@
                 {% for pipeline in pipelines %}
                 <tr>
                     <td>
-                        <button class="btn btn-secondary" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'">{{ pipeline.name }}</button>
+                        <button class="btn btn-secondary" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'"><i class="fas fa-code-branch"></i> {{ pipeline.name }}</button>
                     </td>
                     <td>
                         <div class="btn-group">
                             {% for node_id in pipeline.node_ids %}
                                 {% for node in nodes %}
                                     {% if node.node_id == node_id %}
-                                        <button data-node_id="{{node_id}}" class="btn btn-secondary">{{ node.name }}</button>
+                                        <button title="{{ node.processor }}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary"><i class="fas fa-cube"></i> {{ node.name }}</button>
                                     {% endif %}
                                 {% endfor %}
                             {% endfor %}
@@ -65,7 +65,7 @@
 
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Create a Pipeline</h4>
-        <p>Click on the "Add Pipeline" button to create a new Pipeline. Pipelines run documents through a list of node processors.</p>
+        <p>Click on the "Create Pipeline" button to create a new Pipeline. Pipelines run documents through a list of node processors.</p>
 
         <button id="createPipeline" type="button" class="btn btn-success">
             <i class="fas fa-plus"></i> Create Pipeline
@@ -77,7 +77,7 @@
     -d '{"text": ["There was a sudden knock at the door, then silence."]}' \
     https://ai.featurebase.com/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
         <p></p>
-        <p>The fields in the data sent to a pipeline will depend on the inputs required for each node in the pipeline.</p>
+        <p>The fields in the data you send to a pipeline will depend on the inputs defined in its nodes.</p>
     </div>
     {% endif %}
 </div>
@@ -162,6 +162,11 @@ $(document).ready(function () {
             return 0;
         }
     }
+    
+    // sort table
+    $('#pipelineTable').DataTable({
+        "columnDefs": [{ "orderable": false, "targets": [2] }]
+    });
 
     function getColorFromName(name) {
         name = name.trim(); // Remove leading and trailing spaces
@@ -191,7 +196,6 @@ $(document).ready(function () {
 
     // create buttons in the list
     function createButton(name, title, content, extras=false) {
-        console.log(content);
         const container = $('<div>');
         if (extras && Object.keys(content).length) {
             for (const key in content) {
@@ -272,6 +276,7 @@ $(document).ready(function () {
     node_buttons.each(function() {
         var nodeButton = $(this);
         var nodeID = nodeButton.data('node_id');
+        var nodeTemplateID = nodeButton.data('template_id')
         var nodeInfo = getNodeInfo(nodeID);
 
         var container = $('<div>');
@@ -303,14 +308,17 @@ $(document).ready(function () {
                 container.append(badge);
                 container.append('<br>');
             });
-        } else {
-            var badge = $('<span>', {
-                class: 'badge badge-success',
-                text: 'passthrough',
-            });
-            container.append(badge);
-        }
 
+            if (outputFields.length === 0 && inputFields.length === 0) {
+                var badge = $('<span>', {
+                    class: 'badge badge-success',
+                    text: 'passthrough',
+                });
+                container.append(badge);
+                container.append('<br>');
+            }
+        }
+        container.append($('<a href="/templates/'+nodeTemplateID+'">edit template</a>'));
         nodeButton.popover({
             content: container.html(),
             trigger: 'focus',
@@ -396,7 +404,7 @@ $(document).ready(function () {
 
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
-        var pipelineId = $(this).data("pipe-id");
+        var pipelineId = $(this).data("pipe_id");
         var $this = $(this);
         var spinner = $this.siblings(".spinner-border");
         
@@ -426,11 +434,14 @@ $(document).ready(function () {
 
     $("#createButton").click(function () {
         $("#createPipeline").prop("disabled", true);
+        $("#createButton").prop("disabled", true);
         pipelineData = {"name": $("#pipelineName").val(), "nodes": selectedNodes};
 
         // Move this to a notice in the form
         if (!/^[a-z-_]+$/.test(pipelineData.name)) {
             toastr.error("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
+            $("#createPipeline").prop("disabled", false);
+            $("#createButton").prop("disabled", false);
         } else {
             $.ajax({
                 type: "POST",
@@ -444,6 +455,7 @@ $(document).ready(function () {
                 },
                 error: function (error) {
                     $("#createPipeline").prop("disabled", false);
+                    $("#createButton").prop("disabled", false);
                     toastr.error(error.responseJSON.message);
                 }
             });

@@ -12,18 +12,19 @@
 
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Templates</h4>
-        <p>The following templates are available for use in your nodes. Templates may not be deleted if they are being used by a node.</p>
-        <div class="text-right">
+        <p>The following templates are available for use in your nodes. Templates are typically paired with processors.</p>
+        <div class="text-left">
             <a href="/templates/new" class="btn btn-success"><i class="fas fa-plus"></i> Create Template</a>
         </div>
-        <table class="table table-striped">
+        <p></p>
+        <table id="templatesTable" class="table table-striped">
             <thead>
                 <tr>
                     <th>Template</th>
-                    <th>Inputs</th>
-                    <th>Outputs</th>
-                    <th>Extras</th>
-                    <th>Action</th>
+                    <th class="sorting_disabled">Inputs</th>
+                    <th class="sorting_disabled">Outputs</th>
+                    <th class="sorting_disabled">Extras</th>
+                    <th class="sorting_disabled">Action</th>
                 </tr>
             </thead>
             <tbody id="templateTable">
@@ -55,8 +56,6 @@
                             {% endfor %}
                         {% endif %}
                     </td>
-
-
                     <td>
                         <button class="delete-button btn btn-danger" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
                         <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">
@@ -83,6 +82,11 @@ $(document).ready(function() {
             return 0;
         }
     }
+
+    // sort table
+    $('#templatesTable').DataTable({
+        "columnDefs": [{ "orderable": false, "targets": [1,2,3,4] }]
+    });
 
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {

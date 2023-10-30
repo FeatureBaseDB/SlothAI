@@ -13,12 +13,12 @@
 
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Your Nodes</h4>
-        <p>The following nodes are available for use in your pipelines. Nodes may only be deleted if they are NOT being used by a pipeline.</p>
-        <div class="text-right">
+        <p>Nodes are templates paired with processors and may be added to pipelines.</p>
+        <div class="text-left">
             <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal"><i class="fas fa-plus"></i> Create Node</button>
         </div>
-
-        <table class="table table-striped">
+        <p></p>
+        <table id="nodesTable" class="table table-striped">
             <thead>
                 <tr>
                     <th>Node</th>
@@ -161,6 +161,11 @@ $(document).ready(function() {
             return 0;
         }
     }
+
+    // sort table
+    $('#nodesTable').DataTable({
+        "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }]
+    });
 
     // badge popovers
     $('.extras').popover({

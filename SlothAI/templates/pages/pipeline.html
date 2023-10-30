@@ -17,7 +17,7 @@
             {% for node_id in pipeline.node_ids %}
                 {% for node in nodes %}
                     {% if node.node_id == node_id %}
-                        <button data-node_id="{{node_id}}" class="btn btn-secondary">{{ node.name }}</button>
+                        <button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary">{{ node.name }}</button>
                     {% endif %}
                 {% endfor %}
             {% endfor %}
@@ -123,6 +123,7 @@ $(document).ready(function() {
     node_buttons.each(function() {
         var nodeButton = $(this);
         var nodeID = nodeButton.data('node_id');
+        var nodeTemplateID = nodeButton.data('template_id')
         var nodeInfo = getNodeInfo(nodeID);
 
         var container = $('<div>');
@@ -154,14 +155,16 @@ $(document).ready(function() {
                 container.append(badge);
                 container.append('<br>');
             });
-        } else {
-            var badge = $('<span>', {
-                class: 'badge badge-success',
-                text: 'passthrough',
-            });
-            container.append(badge);
+            if (outputFields.length === 0 && inputFields.length === 0) {
+                var badge = $('<span>', {
+                    class: 'badge badge-success',
+                    text: 'passthrough',
+                });
+                container.append(badge);
+                container.append('<br>');
+            }
         }
-
+        container.append($('<a href="/templates/'+nodeTemplateID+'">edit template</a>'));
         nodeButton.popover({
             content: container.html(),
             trigger: 'focus',

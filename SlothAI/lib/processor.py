@@ -320,8 +320,9 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 	if not user:
 		raise UserNotFoundError(user_id=task.user_id)
 
-	uri = url_for('callback.handle_callback', user_name=user.get('name'), _external=True)
-	auth_uri = f"{uri}?token={node.get('extras').get('callback_token')}"
+	# need to rewrite to allow mapping tokens to the url template
+	# alternately we could require a jinja template processor to be used in front of this to build the url
+	auth_uri = task.document.get('callback_uri')
 
 	# strip secure stuff out of the document
 	document = strip_secure_fields(task.document) # returns document
@@ -358,7 +359,7 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 		requests.ConnectTimeout,
 	) as exception:
 		raise RetriableError(exception)
-	except Exception:
+	except Exception as exception:
 		raise NonRetriableError(exception)
 
 	return task
@@ -548,9 +549,18 @@ def evaluate_extras(node, task) -> Dict[str, any]:
 	# get the node's current extras, which may be templated
 	extras = node.get('extras', {})
 
-	extras_template = env.from_string(str(extras))
-	extras_from_template = extras_template.render(extras)
+	# combine with inputs
+	combined_dict = extras.copy()
+	combined_dict.update(task.document)
+
+	# eval the extras from inputs_fields first
+	extras_template = env.from_string(str(combined_dict))
+	extras_from_template = extras_template.render(combined_dict)
 	extras_eval = ast.literal_eval(extras_from_template)
+
+	# remove the keys that were in the document
+	extras_eval = {key: value for key, value in extras_eval.items() if key not in task.document}
+
 	return extras_eval
 
 

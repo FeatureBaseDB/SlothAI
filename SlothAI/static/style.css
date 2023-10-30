@@ -223,4 +223,10 @@ span.command-copy {
   color: white !important;
 }
 
+.dataTables_filter {
+  margin-bottom: 8px;
+}
 
+.dataTables_length {
+  padding-top: 8px;
+}

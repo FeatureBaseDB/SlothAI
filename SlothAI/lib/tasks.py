@@ -383,6 +383,7 @@ def process_data_dict_for_insert(data, column_type_map, table):
 
 	return columns, records
 
+
 def validate_dict_structure(keys_list, input_dict):
     for key in keys_list:
         keys = key.get('name').split('.')
@@ -395,25 +396,24 @@ def validate_dict_structure(keys_list, input_dict):
 
     return None
 
+
 def transform_data(output_keys, data):
-	out = {}
+    out = {}
 
-	if len(output_keys) == 1 and output_keys[0]['name'] == 'data':
-		# Special case: If the output key is 'data', wrap the data in a single key
-		out['data'] = data
-	else:
-		for key_info in output_keys:
-			key_name = key_info['name']
+    if len(output_keys) == 1 and output_keys[0] == 'data':
+        # Special case: If the output key is 'data', wrap the data in a single key
+        out['data'] = data
+    else:
+        for key_name in output_keys:
+            if key_name in data:
+                out[key_name] = data[key_name]
+            else:
+                raise KeyError(f"Key not found: {key_name}")
 
-			if key_name in data:
-				out[key_name] = data[key_name]
-			else:
-				raise KeyError(f"Key not found: {key_name}")
+    return out
 
-	return out
 
 def box_required():
-
 	box_required = False
 	selected_box = None
 

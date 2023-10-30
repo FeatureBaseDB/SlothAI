@@ -11,7 +11,7 @@ callback = Blueprint('callback', __name__)
 @flask_login.login_required
 def handle_callback(user_name):
     data = request.get_data()
-    
+
     try:
         data = json.loads(data)
         node_id = data['node_id']
@@ -19,6 +19,7 @@ def handle_callback(user_name):
         del data['node_id']
         del data['pipe_id']
     except Exception as e:
+        print("error")
         return jsonify({"error": e}), 400
 
     log = Log.create(user_id=flask_login.current_user.uid, line=str(request.get_data()), node_id=node_id, pipe_id=pipe_id)

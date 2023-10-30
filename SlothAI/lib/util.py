@@ -251,15 +251,22 @@ def fields_from_template(template):
 
 
 def extras_from_template(template):
+    # only uses the last pattern. leaving these here for testing.
     extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)
+    extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*}', re.DOTALL)
+    extras_pattern = re.compile(r'extras\s*=\s*{.*?}', re.DOTALL)
+    extras_pattern = re.compile(r'extras\s*=\s*\{(?:\s*".*?"\s*:\s*".*?"\s*,?)*}', re.DOTALL)
+    extras_pattern = re.compile(r'extras\s*=\s*{((?:[^{}]|{{[^{}]*}})*)}', re.DOTALL)
+    
     extras_matches = extras_pattern.findall(template)
-
+    print(extras_matches[0])
     try:
         extras_content = ast.literal_eval("{" + extras_matches[0] + "}")
         if not isinstance(extras_content, dict):
             return None, {"error": "Extras is not a dictionary", "message": "Evaluation of extras failed."}
         return extras_content, False
     except Exception as ex:
+        print(ex)
         return None, {"error": f"{ex}", "message": "Evaluation of extras failed."}
 
 

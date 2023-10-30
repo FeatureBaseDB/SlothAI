@@ -246,7 +246,7 @@ def template_detail(template_id="new"):
 
     name_random = random_name(2)
 
-    empty_template = "{# New Template #}\n\n{# Extras are required. #}\nextras = {'key': 'value'}"
+    empty_template = '{# New Template #}\n\n{# Extras are required. #}\nextras = {"static_extra": "hello", "user_extra": None}'
 
     return render_template(
         'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random, template_examples=template_examples, empty_template=empty_template

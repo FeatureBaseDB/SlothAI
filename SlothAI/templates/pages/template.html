@@ -138,15 +138,13 @@ $(document).ready(function() {
                 data: JSON.stringify(data),
                 success: function(response) {
                     toastr.info("Template saved.");
+                    if (window.location.pathname === '/templates/new') {
+                        window.location.href = '/templates/'+response.responseJSON.template_id;
+                    }
                 },
                 error: function(error) {
                     toastr.error(error.responseJSON.message);
                     console.log(error.responseJSON.error);
-                },
-                complete: function(response) {
-                    if (window.location.pathname === '/templates/new') {
-                        window.location.href = '/templates/'+response.responseJSON.template_id;
-                    }
                 }
             });
 
