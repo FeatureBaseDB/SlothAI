@@ -309,7 +309,7 @@ def merge_extras(template_extras, node_extras):
 # build graph for pipeline
 def build_mermaid(pipeline, nodes):
     mermaid_string = "graph TD\n"
-    mermaid_string = mermaid_string + f"A[User Code] -->|JSON\nFile| {pipeline.get('name')}[{pipeline.get('name')} POST]\n"
+    mermaid_string = mermaid_string + f"A[User Code] -->|JSON\nFile| {pipeline.get('name')}[POST to {pipeline.get('name')}]\n"
     mermaid_string = mermaid_string + f"{pipeline.get('name')} -->|Task Response| A[JSON]\n"
 
     if nodes[0].get('input_fields'):
