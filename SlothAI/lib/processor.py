@@ -207,16 +207,26 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 	output_field = output_fields[0].get('name')
 	
 	input_fields = template.get('input_fields')
-	input_field = input_fields[0].get('name')
 
+	for field in input_fields:
+		name = field.get('name')
+		if name == 'prompt':
+			prompt = field
+		elif name == 'num_images':
+			num_images = field
+
+	# Check if 'prompt' and 'num_images' were found, or throw an error
+	if not prompt or not num_images:
+		raise ValueError("Both 'prompt' and 'num_images' fields are required.")
+	
 	if "dall-e" in task.document.get('model'):
 		openai.api_key = task.document.get('openai_token')
 
 		try:
 			response = openai.Image.create(
-			  prompt=task.document.get('prompt'),
-			  n=int(task.document.get('num_images')),
-			  size="1024x1024"
+				prompt = task.document.get('prompt')[:1000]
+				n=int(task.document.get('num_images')),
+				size="1024x1024"
 			)
 			urls = [[]]
 
