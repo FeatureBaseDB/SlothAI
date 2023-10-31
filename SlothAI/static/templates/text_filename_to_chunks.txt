@@ -1,16 +1,17 @@
-{# This template creates page chunks from texts. It requires the texts and the filename. #}
+{# This template creates chunks from page texts, which are passed in as a string per page. #}
 
 {# Extras #}
 extras = {"processor": "jinja2"}
 
 {# Input Fields #}
-input_fields = [{'name': 'texts', 'type': 'strings'}, {'name': 'filename', 'type': 'string'}]
+input_fields = [{'name': 'texts', 'type': 'strings'}, {'name': 'filenames', 'type': 'strings'}]
 
 {# Output Fields #}
 output_fields = [{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
 
-{% set data = process_and_segment_texts_with_overlap(texts, filename, overlap=50) %}
-
+{# The sub-processor `chunk_with_page_filename` returns chunks, page_nums, chunk_nums and filenames #}
+{# Here we call it with the first filename sent in the task POST. #}
+{% set data = chunk_with_page_filename(texts, filenames[0], overlap=50) %}
 {
     "chunks": {{ data.get('chunks')|tojson|safe }},
     "page_nums": {{ data.get('page_nums')|tojson|safe }},

@@ -29,7 +29,7 @@ def random_sentence():
 
 
 @custom_commands.app_template_global()
-def process_and_segment_texts_with_overlap(texts, filename, overlap=0):
+def chunk_with_page_filename(texts, filename, overlap=0):
     segmented_texts = []
     page_numbers = []
     chunk_numbers = []

@@ -1,39 +1,23 @@
 {# Use this template to drive an OpenAI keyterm processor! #}
 
-{# NOTE: You may remove any template commented lines, such as this one. #}
-
 {# Define the input_fields used in this template: #}
-input_fields = [
-  {
-    'name': "text",
-    'type': "string"
-  }
-]
+input_fields = [{'name': "chunks", 'type': "strings"}]
 
 {# The output_fields expected from the node processor using this template: #}
-output_fields = [
-  {
-    'name': "keyterms",
-    'type': "stringset"
-  }
-]
+output_fields = [{'name': "prompt", 'type': "string"}]
 
-{# Define the 'extras' for number of keyterms desired  #}
-extras = {
-  'num_keyterms': None,
-  'openai_token': None,
-  'model': 'gpt-3.5-turbo'
-}
+{# Extras #}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'processor': 'aidict', 'iterate_field': "chunks"}
 
 {# Process the input string: #}
-# complete dict task
-1. The user has provided the following from an input_field named 'text':
+# complete dict task by following step by step
+1. Inspect the following text:
 """
-{{text}}
+{% for chunk in chunks %}
+  {{ chunk }}
+{% endfor %}
 """
-2. You will build a python dictionary for the user. You will not do anything else.
-3. The required keys for the dictionary are: keyterms.
-4. The required value for keyterms is a list of strings.
-5. Extract 5 keyterms from the text and return as a dictionary:
-ai_dict =
-
+2. The required key for the dictionary is: 'keyterms'
+3. The required value for 'keyterms' is an array of strings.
+4. Create a concise list of the keyterms from the text in step 1 and then follow step 2 and 3 to build the dictionary:
+ai_dict = 

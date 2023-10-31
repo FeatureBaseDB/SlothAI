@@ -1,0 +1,10 @@
+{# Use this template to drive an OpenAI embedding node processor! #}
+
+{# Input Fields #}
+input_fields = [{'name': "texts", 'type': "strings"}]
+
+{# Output Fields #}
+output_fields = [{'name': "texts_embedding", 'type': "vectors"}]
+
+{# 1. Define the 'extras' for embedding vector size and model flavor - use instructor_xl for free #}
+extras = {'vector_size': 1536, 'model': 'text-embedding-ada-002', 'processor': 'embedding', 'openai_token': None}

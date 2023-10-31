@@ -31,7 +31,7 @@ import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
-from SlothAI.web.custom_commands import random_word, random_sentence, process_and_segment_texts_with_overlap
+from SlothAI.web.custom_commands import random_word, random_sentence, chunk_with_page_filename
 from SlothAI.web.models import User, Node, Template, Pipeline
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
@@ -41,7 +41,7 @@ from SlothAI.lib.util import fields_from_template, remove_fields_and_extras, str
 env = Environment()
 env.globals['random_word'] = random_word
 env.globals['random_sentence'] = random_sentence
-env.globals['process_and_segment_texts_with_overlap'] = process_and_segment_texts_with_overlap
+env.globals['chunk_with_page_filename'] = chunk_with_page_filename
 
 class DocumentValidator(Enum):
 	INPUT_FIELDS = 'input_fields'
@@ -112,6 +112,11 @@ def process(task: Task) -> Task:
 @processer
 def jinja2(node: Dict[str, any], task: Task) -> Task:
 	template = Template.get(template_id=node.get('template_id'))
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
+	output_fields = template.get('output_fields')
+	input_fields = template.get('input_fields')
+
 	template_text = remove_fields_and_extras(template.get('text'))
 
 	try:
@@ -139,6 +144,8 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 
 	# Output and input fields
 	template = Template.get(template_id=node.get('template_id'))
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
 	input_fields = template.get('input_fields')
 	
@@ -190,7 +197,8 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 def aidict(node: Dict[str, any], task: Task) -> Task:
 	# output and input fields
 	template = Template.get(template_id=node.get('template_id'))
-
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	input_fields = template.get('input_fields')
 	output_fields = template.get('output_fields')
 
@@ -278,6 +286,8 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 def aiimage(node: Dict[str, any], task: Task) -> Task:
 	# Output and input fields
 	template = Template.get(template_id=node.get('template_id'))
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
 	input_fields = template.get('input_fields')
 

@@ -1,7 +1,7 @@
 {# Use this template to drive a generative image processor. #}
 
 # Define the input_fields used in this template:
-input_fields = [{'name': "prompt", 'type': "strings"}]
+input_fields = [{'name': "prompts", 'type': "strings"}]
 
 # The output_fields expected from the node processor using this template:
 output_fields = [{'name': "uri", 'type': "urls"}]
