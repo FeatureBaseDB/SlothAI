@@ -306,6 +306,15 @@ def merge_extras(template_extras, node_extras):
     return merged_extras
 
 
+# convert all POST data to lists of things
+def transform_single_items_to_lists(input_dict):
+    for key, value in input_dict.items():
+        if not isinstance(value, list):
+            # If it's not already a list, replace it with a list containing the value
+            input_dict[key] = [value]
+    return input_dict
+
+
 # build graph for pipeline
 def build_mermaid(pipeline, nodes):
     mermaid_string = "graph TD\n"

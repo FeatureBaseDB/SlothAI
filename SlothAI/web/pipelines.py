@@ -15,7 +15,7 @@ from werkzeug.utils import secure_filename
 
 from SlothAI.lib.tasks import Task, TaskState
 from SlothAI.web.models import Pipeline, Node, Template
-from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub
+from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub, transform_single_items_to_lists
 
 pipeline = Blueprint('pipeline', __name__)
 
@@ -161,7 +161,7 @@ def ingest_post(pipeline_id):
             json_data = request.form.get('json')
             if not json_data:
                 return jsonify({"error": "When using mixed mode POSTs, you must supply a 'json' key with a JSON object."}), 400
-            json_data_dict = json.loads(json_data)
+            json_data_dict = transform_single_items_to_lists(json.loads(json_data))
 
             if not isinstance(json_data_dict, dict):
                 return jsonify({"error": "The 'json' data is not a dictionary"}), 400
@@ -169,16 +169,16 @@ def ingest_post(pipeline_id):
             json_data_dict['filename'] = filename
             json_data_dict['content_type'] = uploaded_file.content_type
         except Exception as ex:
-            return jsonify({"error": f"Error getting JSON data: {ex}"}), 400
+            return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
     else:
         # If it's not a file upload, try to read JSON data
         try:
-            json_data_dict = request.get_json()
+            json_data_dict = transform_single_items_to_lists(request.get_json())
 
             if not isinstance(json_data_dict, dict):
                 return jsonify({"error": "The JSON data is not a dictionary"}), 400
         except Exception as ex:
-            return jsonify({"error": f"Error getting JSON data: {ex}"}), 400
+            return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
 
 
     # now we create the task

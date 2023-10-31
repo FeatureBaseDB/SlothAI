@@ -130,106 +130,188 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 
 	return task
 
+
 @processer
 def embedding(node: Dict[str, any], task: Task) -> Task:
-	# load openai key then drop it from the document
+	# Load OpenAI key if needed
 	if "text-embedding-ada-002" in task.document.get('model'):
 		openai.api_key = task.document.get('openai_token')
 
-	# output and input fields
+	# Output and input fields
 	template = Template.get(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
 	input_fields = template.get('input_fields')
 	
 	if not input_fields:
 		raise NonRetriableError("embedding processor: input_fields required.")
-	input_field = input_fields[0].get('name')
-
+	
 	if not output_fields:
-		raise NonRetriableError("embedding processor: input_fields required.")
-	output_field = output_fields[0].get('name')
+		raise NonRetriableError("embedding processor: output_fields required.")
+	
+	# Loop through each input field and produce the proper output for each <key>_embedding output field
+	for input_field in input_fields:
+		input_field_name = input_field.get('name')
 
-	for chunk in task.document.get(input_field):
-		print(len(chunk),chunk)
-	if "text-embedding-ada-002" in task.document.get('model'):
+		# Define the output field name for embeddings
+		output_field = f"{input_field_name}_embedding"
+
+		# Check if the output field is in output_fields
+		if output_field not in [field['name'] for field in output_fields]:
+			raise NonRetriableError(f"'{output_field}' is not in 'output_fields'.")
+
+		# Get the input data chunks
+		input_data = task.document.get(input_field_name)
+
+		# Initialize a list to store the embeddings
+		embeddings = []
+
 		try:
-			embedding_results = openai.Embedding.create(input=task.document.get(input_field), model=task.document.get('model'))
-		except Exception as ex:
-			# making non-retriable for now.. we can handle different error cases as they come up
-			raise NonRetriableError(f"exception talking to OpenAI ada embedding: {ex}")
+			if "text-embedding-ada-002" in task.document.get('model'):
+				batch_size = 10
+				for i in range(0, len(input_data), batch_size):
+					batch = input_data[i:i + batch_size]
+					embedding_results = openai.Embedding.create(input=batch, model=task.document.get('model'))
+					embeddings.extend([_object.get('embedding') for _object in embedding_results.get('data')])
+			else:
+				embedding_results = []
 
-		task.document[output_field] = [_object.get('embedding') for _object in embedding_results.get('data')]
-	else:
-		task.document[output_field] = []
- 
+		except Exception as ex:
+			# Making non-retriable for now; you can handle different error cases as needed
+			raise NonRetriableError(f"Exception talking to OpenAI ada embedding: {ex}")
+
+		# Add the embeddings to the output field
+		task.document[output_field] = embeddings
+
 	return task
 
 
+# complete dictionaries
 @processer
 def aidict(node: Dict[str, any], task: Task) -> Task:
 	# output and input fields
 	template = Template.get(template_id=node.get('template_id'))
-	output_fields = template.get('output_fields')
-	output_field = output_fields[0].get('name')
-	
+
 	input_fields = template.get('input_fields')
-	input_field = input_fields[0].get('name')
+	output_fields = template.get('output_fields')
+
+	# Check if each input field is present in 'task.document'
+	for field in input_fields:
+		field_name = field['name']
+		if field_name not in task.document:
+			raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+
+	# replace single strings with lists
+	task.document = process_input_fields(task.document, input_fields)
+
+	# Check if there are more than one input fields and grab the iterate_field
+	if len(input_fields) > 1:
+		iterate_field_name = extras.get('iterate_field')
+		if not iterate_field_name:
+			raise NonRetriableError("More than one input field requires an 'iterate_field' value in extras.")
+
+		if iterate_field_name not in [field['name'] for field in input_fields]:
+			raise NonRetriableError(f"'{iterate_field_name}' must be present in 'input_fields' when there are more than one input fields.")
+	else:
+		iterate_field_name = input_fields[0]['name']
+	
 
 	if "gpt" in task.document.get('model'):
 		openai.api_key = task.document.get('openai_token')
 
-	template_text = remove_fields_and_extras(template.get('text'))
+		errors = []
+		# just loop over them
+		for iterate_index, item in enumerate(task.document.get(iterate_field_name)):
+			# item is not used...but we set iterate_index for the template
+			task.document['iterate_index'] = iterate_index
 
-	if template_text:
-		jinja_template = env.from_string(template_text)
-		prompt = jinja_template.render(task.document)
-	
-	completion = openai.ChatCompletion.create(
-		model = task.document.get('model'),
-		messages = [
-			{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."},
-			{"role": "user", "content": prompt}
-		]
-	)
+			template_text = remove_fields_and_extras(template.get('text'))
 
-	answer = completion.choices[0].message
+			if template_text:
+				jinja_template = env.from_string(template_text)
+				prompt = jinja_template.render(task.document)
 
-	ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
-	ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
-	ai_dict_str = ai_dict_str.strip('python_dict = ')
+			completion = openai.ChatCompletion.create(
+				model = task.document.get('model'),
+				messages = [
+					{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."},
+					{"role": "user", "content": prompt}
+				]
+			)
 
-	try:
-		ai_dict = eval(ai_dict_str)
-	except (ValueError, SyntaxError):
-		raise RetriableError("aidict processor: unable to evaluate the response from the ai.")
+			answer = completion.choices[0].message
 
-	task.document.update(ai_dict)
-	
-	return task
+			ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
+			ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
+			ai_dict_str = ai_dict_str.strip('ai_dict = ')
+				
+			try:
+				ai_dict = eval(ai_dict_str)
+
+				for field in output_fields:
+					field_name = field['name']
+
+					# Check if the field_name is present in ai_dict
+					if field_name in ai_dict:
+						# Ensure that the field exists in task.document as a list
+						if field_name not in task.document:
+							task.document[field_name] = []
+
+						# Append the value(s) from ai_dict to the corresponding list in task.document
+						value = ai_dict[field_name]
+						task.document[field_name].append(value)
+					else:
+						errors.append(f"The aidict processor didn't return the fields expected in output_fields for index: {iterate_index}.")
+				
+			except (ValueError, SyntaxError):
+				errors.append(f"The aidict processor was unable to evaluate the response from the AI for index: {iterate_index}.")
+
+		task.document['aidict_errors'] = errors
+		task.document.pop('iterate_index')
+		return task
+
+	else:
+		raise NonRetriableError("The aidict processor expects a supported model.")
 
 
+# generate images off a prompt
 @processer
 def aiimage(node: Dict[str, any], task: Task) -> Task:
-	# output and input fields
+	# Output and input fields
 	template = Template.get(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
+	input_fields = template.get('input_fields')
+
+	# Ensure there is only one input field
+	if len(input_fields) != 1:
+		raise NonRetriableError("Only one input field is allowed in 'input_fields'.")
+
+	input_field = input_fields[0].get('name')
+
+	# Check that there is only one output field
+	if len(output_fields) != 1:
+		raise NonRetriableError("Only one output field is allowed in 'output_fields'.")
+
 	output_field = output_fields[0].get('name')
-	
-	prompt = task.document.get('prompt', "")
+
+	# Apply [:1000] to the input field as the prompt
+	for prompt in task.document.get(input_field):
+		prompt = prompt[:1000]
+		break
+
+	if not prompt:
+		raise NonRetriableError("Input field is required and should contain the prompt.")
+
 	num_images = task.document.get('num_images', 0)
 	if not num_images:
 		num_images = 1
-
-	if not prompt:
-		raise ValueError("'prompt' field is required.")
 
 	if "dall-e" in task.document.get('model'):
 		openai.api_key = task.document.get('openai_token')
 
 		try:
 			response = openai.Image.create(
-				prompt = task.document.get('prompt')[:1000],
-				n=int(task.document.get('num_images')),
+				prompt=prompt,
+				n=int(num_images),
 				size="1024x1024"
 			)
 			urls = [[]]
@@ -240,13 +322,13 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 					urls[0].append(item['url'])
 
 			task.document[output_field] = urls
-		
+
 		except Exception as ex:
 			# non-retriable error for now but add retriable as needed
 			raise NonRetriableError(f"aiimage processor: exception talking to OpenAI image create: {ex}")
 	else:
 		task.document[output_field] = []
- 
+
 	return task
 
 
@@ -290,7 +372,6 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
 		# build seperate pages and process each, adding text to texts
 		for page_num in range(num_pages):
-			print(page_num)
 			pdf_writer = PyPDF2.PdfWriter()
 			pdf_writer.add_page(pdf_reader.pages[page_num])
 			page_stream = BytesIO()
@@ -306,7 +387,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 			request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
 			result = client.process_document(request=request)
 			document = result.document
-			print(document.text)
+
 			# move to texts
 			texts.append(document.text.replace("'","`").replace('"', '``').replace("\n"," ").replace("\r"," ").replace("\t"," "))
 
@@ -422,7 +503,7 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 
 	app.logger.info(f"Split Task: Task ID: {task.id}. Task Size: {total_sizes[0]}. Batch Size: {batch_size}. Number of Batches: {math.ceil(total_sizes[0] / batch_size)}")
 
-	new_task_count = total_sizes[0] / batch_size
+	new_task_count = math.ceil(total_sizes[0] / batch_size)
 
 	# split the data and re-task
 	try:
@@ -625,6 +706,20 @@ def sloth_processing(node: Dict[str, any], task: Task, type) -> Task:
 
 # helper functions
 # ================
+def process_input_fields(task_document, input_fields):
+	updated_document = task_document
+	
+	for field in input_fields:
+		field_name = field['name']
+		if field_name in updated_document:
+			# Check if the field is present in the document
+			value = updated_document[field_name]
+			if not isinstance(value, list):
+				# If it's not already a list, replace it with a list containing the value
+				updated_document[field_name] = [value]
+	
+	return updated_document
+
 
 def validate_document(node, task: Task, validate: DocumentValidator):
 	template = Template.get(template_id=node.get('template_id'))
@@ -680,5 +775,5 @@ def load_template(name="default"):
 	return template
 
 def all_equal(iterable):
-    g = groupby(iterable)
-    return next(g, True) and not next(g, False)
+	g = groupby(iterable)
+	return next(g, True) and not next(g, False)

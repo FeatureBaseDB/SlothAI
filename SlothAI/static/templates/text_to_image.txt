@@ -1,24 +1,10 @@
 {# Use this template to drive a generative image processor. #}
 
-{# Define the input_fields used in this template: #}
-input_fields = [
-  {
-    'name': "prompt",
-    'type': "string"
-  }
-]
+# Define the input_fields used in this template:
+input_fields = [{'name': "prompt", 'type': "strings"}]
 
-{# The output_fields expected from the node processor using this template: #}
-output_fields = [
-  {
-    'name': "uri",
-    'type': "url"
-  }
-]
+# The output_fields expected from the node processor using this template:
+output_fields = [{'name': "uri", 'type': "urls"}]
 
-{# Define the 'extras' for number of keyterms desired  #}
-extras = {
-  'num_images': None,
-  'openai_token': None,
-  'model': 'dall-e'
-}
+# Define the 'extras' for the number of keyterms desired:
+extras = {'num_images': None, 'openai_token': None, 'model': 'dall-e'}
