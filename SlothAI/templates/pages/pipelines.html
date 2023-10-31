@@ -139,6 +139,10 @@
 $(document).ready(function () {
     // grab the nodes from the template and make them available via getNodeInfo
     var nodes = JSON.parse('{{nodes | tojson}}');
+    console.log(nodes[0].processor)
+    if (nodes[0].processor == "read_file") {
+        toastr.info("This pipeline supports PDF file uploads.")
+    }
 
     function getNodeInfo(nodeId) {
         const node = nodes.find(node => node.node_id === nodeId);
@@ -462,6 +466,34 @@ $(document).ready(function () {
         }
     });
 
+    $('#uploadButton').on('click', function() {
+        $('#fileInput').click();
+    });
+
+    $('#fileInput').on('change', function() {
+        // Get the selected file
+        var file = this.files[0];
+
+        // Prepare the form data
+        var formData = new FormData();
+        formData.append('json', JSON.stringify({})); // Your JSON data
+        formData.append('file', file);
+
+        // Make the POST request
+        $.ajax({
+            type: 'POST',
+            url: '/pipeline/G6Mle7JZup29j/task',
+            data: formData,
+            processData: false, // Prevent jQuery from processing the data
+            contentType: false, // Set the content type to false for multipart/form-data
+            success: function(data) {
+                toastr.success('Uploaded file to pipeline');
+            },
+            error: function(xhr, status, error) {
+                toastr.error('Upload failed:', error);
+            }
+        });
+    });
 });
 </script>
 {% endblock %}

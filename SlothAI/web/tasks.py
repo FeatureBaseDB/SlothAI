@@ -1,4 +1,5 @@
 import json
+import traceback
 
 from flask import Blueprint, request
 from flask import current_app as app
@@ -36,6 +37,7 @@ def process_tasks(cron_key):
 		app.logger.error(f"processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: retrying task.")
 		task.retry()
 	except Exception as e:
+		traceback.print_exc()
 		task.error = str(e)
 		app.logger.error(f"processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: dropping task.")
 		task.drop()

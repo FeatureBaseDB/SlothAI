@@ -134,7 +134,6 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 
 	return task
 
-
 @processer
 def embedding(node: Dict[str, any], task: Task) -> Task:
 	# load openai key then drop it from the document
@@ -342,15 +341,18 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 	document = strip_secure_fields(task.document) # returns document
 
 	keys_to_keep = []
-	for field in template.get('output_fields', []):
-		for key, value in field.items():
-			if key == 'name':
-				keys_to_keep.append(value)
+	if template.get('output_fields'):
+		for field in template.get('output_fields'):
+			for key, value in field.items():
+				if key == 'name':
+					keys_to_keep.append(value)
 
-	if len(keys_to_keep) == 0:
-		data = document
+		if len(keys_to_keep) == 0:
+			data = document
+		else:
+			data = filter_document(document, keys_to_keep)
 	else:
-		data = filter_document(document, keys_to_keep)
+		data = document
 
 	# must add node_id and pipe_id
 	data['node_id'] = node.get('node_id')
@@ -381,7 +383,6 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 
 @processer
 def split_task(node: Dict[str, any], task: Task) -> Task:
-
 	template = Template.get(template_id=node.get('template_id'))
 	input_fields = template.get('input_fields')
 	output_fields = template.get('output_fields')
@@ -556,6 +557,7 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 	columns, records = process_data_dict_for_insert(data, column_type_map, table)
 
 	sql = f"INSERT INTO {table} ({','.join(columns)}) VALUES {','.join(records)};"
+
 	_, err = featurebase_query({"sql": sql, "dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']})
 	if err:
 		if "exception" in err:

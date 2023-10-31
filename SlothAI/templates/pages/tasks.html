@@ -11,13 +11,13 @@
     <h2 class="page_heading">Tasks</h2>
 
     {% if tasks %}
-    <table class="table table-striped">
+    <table id="tasksTable" class="table table-striped">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>User ID</th>
-                <th>Pipeline ID</th>
-                <th>Current Node ID</th>
+                <th>Pipeline</th>
+                <th>Node</th>
                 <th>Created At</th>
                 <th>State</th>
                 <th>Error</th>
@@ -52,10 +52,37 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
+
+    // sort table
+    $('#tasksTable').DataTable({});
+
+    // is it a travesty that I didn't write any of this?
+    let inactivityTimer; // Initialize a timer variable
+
+    // Function to reload the page
     function reloadPage() {
-        location.reload();
+      window.location.reload();
     }
-    setInterval(reloadPage, 30000);
+
+    // Function to start the inactivity timer
+    function startInactivityTimer() {
+      inactivityTimer = setTimeout(reloadPage, 30000); // Reload the page after 1 minute (60000 milliseconds)
+    }
+
+    // Function to reset the inactivity timer
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer); // Clear the previous timer
+      startInactivityTimer(); // Start a new timer
+    }
+
+    // Event listeners for mouse and keyboard activity
+    document.addEventListener('mousemove', resetInactivityTimer); // Mouse activity
+    document.addEventListener('keydown', resetInactivityTimer); // Keyboard activity
+
+    // Start the initial timer
+    startInactivityTimer();
+    // Probably not.
+
 });
 </script>
 {% endblock %}

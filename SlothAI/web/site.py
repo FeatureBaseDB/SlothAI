@@ -245,6 +245,29 @@ def template_detail(template_id="new"):
 @flask_login.login_required
 def tasks():
     tasks = Task.tasks_by_user(current_user.uid)
+
+    """
+    for entry, task in enumerate(tasks):
+        node = Node.get(uid=current_user.uid, node_id=task.get('current_node_id'))
+        pipeline = Pipeline.get(uid=current_user.uid, pipe_id=task.get('pipe_id'))
+
+        if node:
+            if node.get('name'):
+                tasks[entry]['node_name'] = node.get('name')
+            else:
+                tasks[entry]['node_name'] = task.get('current_node_id')
+        else:
+            tasks[entry]['node_name'] = task.get('current_node_id')
+
+        if pipeline:
+            if pipeline.get('name'):
+                tasks[entry]['pipeline_name'] = pipeline.get('name')
+            else:
+                tasks[entry]['pipeline_name'] = task.get('pipe_id')
+        else:
+            tasks[entry]['pipeline_name'] = task.get('pipe_id')
+
+    """
     username = current_user.name
     return render_template(
         'pages/tasks.html', tasks=tasks, username=username
