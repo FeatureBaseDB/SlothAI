@@ -4,7 +4,7 @@
 {# When used properly, it allows rapid inferencing of large amounts of data. #}
 
 {# The split_task processor requires input_fields and output_fields to be the same. #}
-output_fields = [{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
+input_fields = [{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
 
 output_fields = [{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
 
