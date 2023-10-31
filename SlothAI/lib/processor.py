@@ -153,6 +153,8 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 		raise NonRetriableError("embedding processor: input_fields required.")
 	output_field = output_fields[0].get('name')
 
+	for chunk in task.document.get(input_field):
+		print(len(chunk),chunk)
 	if "text-embedding-ada-002" in task.document.get('model'):
 		try:
 			embedding_results = openai.Embedding.create(input=task.document.get(input_field), model=task.document.get('model'))
@@ -292,6 +294,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
 		# build seperate pages and process each, adding text to texts
 		for page_num in range(num_pages):
+			print(page_num)
 			pdf_writer = PyPDF2.PdfWriter()
 			pdf_writer.add_page(pdf_reader.pages[page_num])
 			page_stream = BytesIO()
@@ -307,7 +310,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 			request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
 			result = client.process_document(request=request)
 			document = result.document
-
+			print(document.text)
 			# move to texts
 			texts.append(document.text.replace("'","`").replace('"', '``').replace("\n"," ").replace("\r"," ").replace("\t"," "))
 

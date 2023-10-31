@@ -27,7 +27,7 @@
         <hr/>
         <h4>Send Data</h4>
         <p>The pipeline is used by POST'ing data to the task ingestion endpoint:</p>
-        
+
         <ul class="nav nav-tabs" id="codeTabs" role="tablist">
             <li class="nav-item">
                 <a class="nav-link active" id="curl-tab" data-toggle="tab" href="#curl" role="tab" aria-controls="curl" aria-selected="true">cURL</a>
@@ -35,6 +35,11 @@
             <li class="nav-item">
                 <a class="nav-link" id="python-tab" data-toggle="tab" href="#python" role="tab" aria-controls="python" aria-selected="false">Python</a>
             </li>
+            {% if nodes[0].processor == 'read_file' %}
+            <li class="nav-item">
+                <a class="nav-link" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
+            </li>
+            {% endif %}
         </ul>
 
         <div class="tab-content" id="codeTabContent">
@@ -58,6 +63,18 @@ if response.status_code == 200:
 else:
     print(response.text)<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
             </div>
+            {% if nodes[0].processor == 'read_file' %}
+<div class="input-group mb-3">
+  <div class="custom-file">
+    <input type="file" class="custom-file-input" id="inputGroupFile02">
+    <label class="custom-file-label" for="inputGroupFile02" aria-describedby="inputGroupFileAddon02">Choose file</label>
+  </div>
+  <div class="input-group-append">
+    <span class="input-group-text" id="inputGroupFileAddon02">Upload</span>
+  </div>
+</div>
+
+            {% endif %}
         </div>
 
         <hr/>
@@ -235,6 +252,43 @@ $(document).ready(function() {
 			$('span.command-copy').removeClass('flash');
 		}, 500);
 	});
+
+    // Handle the "Upload" button
+    $('#uploadButton').on('click', function() {
+        var pipeId = $(this).data('pipe-id'); // Retrieve the pipe_id from the button's data attribute
+        var inputFile = $('#inputFile')[0];
+        toastr.success("upload called")
+
+        // Check if a file is selected
+        if (inputFile.files.length > 0) {
+            var file = inputFile.files[0];
+
+            var formData = new FormData();
+            formData.append('json', JSON.stringify({})); // Your JSON data
+            formData.append('file', file);
+
+            // Construct the URL with the pipe_id
+            var url = `/pipeline/${pipeId}/task`;
+
+            // Make the POST request with the constructed URL
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    console.log('Upload success:', data);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Upload failed:', error);
+                }
+            });
+        } else {
+            // Handle the case where no file is selected
+            console.error('No file selected.');
+        }
+    });
 });
 </script>
 {% endblock %}
