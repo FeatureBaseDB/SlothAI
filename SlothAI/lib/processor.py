@@ -1,10 +1,6 @@
-import random
-import string
-
 import ast
 import re
-import copy
-import hashlib
+import math
 
 from io import BytesIO
 
@@ -419,28 +415,24 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 			total_sizes.append(len(field))
 
 		else:
-			raise NonRetriableError(f"split_task processor: all output fields must be taken from input fields: output field {output_field} was not found in input fields.")
+			raise NonRetriableError(f"split_task processor: all output fields must be taken from input fields: output field {output} was not found in input fields.")
 
 	if not all_equal(total_sizes):
 		raise NonRetriableError("split_task processor: len of fields must be equal to re-batch a task")
 
+	app.logger.info(f"Split Task: Task ID: {task.id}. Task Size: {total_sizes[0]}. Batch Size: {batch_size}. Number of Batches: {math.ceil(total_sizes[0] / batch_size)}")
+
+	new_task_count = total_sizes[0] / batch_size
+
 	# split the data and re-task
 	try:
-		tasks = []
-		do_while = True
-		while do_while:
+		for i in range(new_task_count):
 			batch_data = {}
 			for field in outputs:
-				if len(task.document[field]) == 0:
-					do_while = False
-					break
 				batch_data[field] = task.document[field][:batch_size]
 				del task.document[field][:batch_size]
 
-			if not do_while:
-				break
-
-			batched_task = Task(
+			new_task = Task(
 				id = random_string(),
 				user_id=task.user_id,
 				pipe_id=task.pipe_id,
@@ -451,12 +443,12 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 				error=None,
 				state=TaskState.RUNNING,
 			)
-
-			tasks.append(batched_task)
-			
-		for new_task in tasks:
+		
 			new_task.create()
+			app.logger.info(f"Split Task: spawning task {i} of projected {new_task_count}. It's ID is {new_task.id}")
+
 	except Exception as e:
+		app.logger.warn(f"Task with ID {task.id} was being split. An exception was raised during that process. {i - 1} tasks were created before that exception was raised.")
 		raise NonRetriableError(e)
 
 	# the initial task doesn't make it past split_task. so remove the rest of the nodes
