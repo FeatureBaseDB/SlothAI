@@ -183,6 +183,7 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 				embedding_results = []
 
 		except Exception as ex:
+			print(input_data)
 			# Making non-retriable for now; you can handle different error cases as needed
 			raise NonRetriableError(f"Exception talking to OpenAI ada embedding: {ex}")
 

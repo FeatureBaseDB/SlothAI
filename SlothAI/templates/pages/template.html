@@ -139,7 +139,7 @@ $(document).ready(function() {
                 success: function(response) {
                     toastr.info("Template saved.");
                     if (window.location.pathname === '/templates/new') {
-                        window.location.href = '/templates/'+response.responseJSON.template_id;
+                        window.location.href = '/templates';
                     }
                 },
                 error: function(error) {

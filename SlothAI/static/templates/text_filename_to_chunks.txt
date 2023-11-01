@@ -4,17 +4,17 @@
 extras = {"processor": "jinja2"}
 
 {# Input Fields #}
-input_fields = [{'name': 'texts', 'type': 'strings'}, {'name': 'filename', 'type': 'strings'}]
+input_fields = [{'name': 'texts', 'type': 'strings'}, {'name': 'filename', 'type': 'string'}]
 
 {# Output Fields #}
 output_fields = [{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
 
 {# The sub-processor `chunk_with_page_filename` returns chunks, page_nums, chunk_nums and filenames #}
 {# Here we call it with the first filename sent in the task POST. #}
-{% set data = chunk_with_page_filename(texts, filename[0], overlap=50) %}
+{% set data = chunk_with_page_filename(texts, filename, overlap=50) %}
 {
     "chunks": {{ data.get('chunks')|tojson|safe }},
     "page_nums": {{ data.get('page_nums')|tojson|safe }},
     "chunk_nums": {{ data.get('chunk_nums')|tojson|safe }},
-    "filenames": {{ data.get('filename')|tojson|safe }}
+    "filenames": {{ data.get('filenames')|tojson|safe }}
 }
