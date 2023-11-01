@@ -552,10 +552,10 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 			)
 		
 			new_task.create()
-			app.logger.info(f"Split Task: spawning task {i} of projected {new_task_count}. It's ID is {new_task.id}")
+			app.logger.info(f"Split Task: spawning task {i + 1} of projected {new_task_count}. It's ID is {new_task.id}")
 
 	except Exception as e:
-		app.logger.warn(f"Task with ID {task.id} was being split. An exception was raised during that process. {i - 1} tasks were created before that exception was raised.")
+		app.logger.warn(f"Task with ID {task.id} was being split. An exception was raised during that process.")
 		raise NonRetriableError(e)
 
 	# the initial task doesn't make it past split_task. so remove the rest of the nodes
@@ -627,10 +627,15 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 		create_schema = Schemar(data=data).infer_create_table_schema() # check data.. must be lists
 		err = create_table(table, create_schema, auth)
 		if err:
-			if "exception" in err:
+			if "already exists" in err:
+				# between checking if the table existed and trying to create the
+				# table, the table was created.
+				pass
+			elif "exception" in err:
+				# issue connecting to FeatureBase cloud
 				raise RetriableError(err)
 			else:
-				# good response from the server but query error
+				# good response from the server but there was a query error.
 				raise NonRetriableError(err)
 			
 	# get columns from the table
