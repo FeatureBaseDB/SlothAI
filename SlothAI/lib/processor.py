@@ -249,7 +249,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
 			retries = 3
 			# try a few times
-			while True:
+			for _try in range(retries):
 				completion = openai.ChatCompletion.create(
 					model = task.document.get('model'),
 					messages = [
@@ -280,13 +280,13 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 							task.document[field_name].append(value)
 						else:
 							errors.append(f"The aidict processor didn't return the fields expected in output_fields for index: {iterate_index}.")
+					# break out
 					break				
-				except (ValueError, SyntaxError):
-					print("got an error probably on eval in aidict")
+				except (ValueError, SyntaxError, NameError):
+					app.logger.warn(f"The AI failed to build a dictionary. Try #{_try}.")
 					errors.append(f"The aidict processor was unable to evaluate the response from the AI for index: {iterate_index}.")
-					retries = retries - 1
-					if retries < 1:
-						break
+			else:				
+				raise NonRetriableError(f"Tried {retries} to get a dictionary from the AI, but failed.")
 
 		task.document['aidict_errors'] = errors
 		task.document.pop('iterate_index')
