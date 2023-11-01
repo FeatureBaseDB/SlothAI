@@ -259,7 +259,7 @@ def extras_from_template(template):
     extras_pattern = re.compile(r'extras\s*=\s*{((?:[^{}]|{{[^{}]*}})*)}', re.DOTALL)
     
     extras_matches = extras_pattern.findall(template)
-    print(extras_matches[0])
+
     try:
         extras_content = ast.literal_eval("{" + extras_matches[0] + "}")
         if not isinstance(extras_content, dict):

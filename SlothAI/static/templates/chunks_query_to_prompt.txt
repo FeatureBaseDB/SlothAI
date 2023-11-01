@@ -7,13 +7,14 @@ input_fields = [{'name': "chunks", 'type': "strings"},{'name': "query", 'type': 
 output_fields = [{'name': "prompts", 'type': "strings"}]
 
 {# Extras - we set the iterate_key to 'query' to allow all chunks into the prompt #}
-extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'processor': 'aidict', 'iterate_key': "query"}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'processor': 'aidict', 'iterate_field': "query"}
 
 {# Process the input string: #}
 # complete dict task by following step by step
 1. The user has provided the following query:
 """
-{{query}}
+{{query[iterate_index]}}
+"""
 2. A search was run against this query and the following document chunks were returned:
 """
 {% for chunk in chunks %}

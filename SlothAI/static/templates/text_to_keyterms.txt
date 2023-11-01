@@ -4,20 +4,19 @@
 input_fields = [{'name': "chunks", 'type': "strings"}]
 
 {# The output_fields expected from the node processor using this template: #}
-output_fields = [{'name': "prompt", 'type': "string"}]
+output_fields = [{'name': "keyterms", 'type': "strings"}]
 
 {# Extras #}
-extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'processor': 'aidict', 'iterate_field': "chunks"}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'processor': 'aidict', 'num_keyterms': 5, iterate_field': "chunks"}
 
 {# Process the input string: #}
 # complete dict task by following step by step
 1. Inspect the following text:
 """
-{% for chunk in chunks %}
-  {{ chunk }}
-{% endfor %}
+{{ chunks[iterate_index] }}
 """
 2. The required key for the dictionary is: 'keyterms'
-3. The required value for 'keyterms' is an array of strings.
-4. Create a concise list of the keyterms from the text in step 1 and then follow step 2 and 3 to build the dictionary:
+3. The required value for 'keyterms' is an array of ({num_keyterms}) strings.
+4. Create a concise list of ({{num_keyterms}}) keyterms from the text in step 1 and then follow step 2 and 3 to build the dictionary:
 ai_dict = 
+

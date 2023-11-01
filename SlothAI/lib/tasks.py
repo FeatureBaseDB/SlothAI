@@ -136,7 +136,7 @@ class Task:
 		if self.document.get('run_in', None):
 			future_time = datetime.utcnow() + timedelta(seconds=int(self.document.get('run_in')))
 		else:
-			delay = random.randint(500, 3000)
+			delay = random.randint(100, 300)
 			future_time = datetime.utcnow() + timedelta(milliseconds=delay)
 
 		# Set the timestamp using the calculated future time

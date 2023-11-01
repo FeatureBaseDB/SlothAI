@@ -213,12 +213,13 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
 	# Check if there are more than one input fields and grab the iterate_field
 	if len(input_fields) > 1:
-		iterate_field_name = extras.get('iterate_field')
+		iterate_field_name = task.document.get('iterate_field')
+
 		if not iterate_field_name:
 			raise NonRetriableError("More than one input field requires an 'iterate_field' value in extras.")
 
-		if iterate_field_name not in [field['name'] for field in input_fields]:
-			raise NonRetriableError(f"'{iterate_field_name}' must be present in 'input_fields' when there are more than one input fields.")
+		if iterate_field_name != "False" and iterate_field_name not in [field['name'] for field in input_fields]:
+			raise NonRetriableError(f"'{iterate_field_name}' must be present in 'input_fields' when there are more than one input fields, or you may use 'False' for no iteration.")
 	else:
 		iterate_field_name = input_fields[0]['name']
 	
@@ -227,8 +228,13 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 		openai.api_key = task.document.get('openai_token')
 
 		errors = []
+		if iterate_field_name != "False":
+			iterator = task.document.get(iterate_field_name)
+		else:
+			iterator = ['False']
+
 		# just loop over them
-		for iterate_index, item in enumerate(task.document.get(iterate_field_name)):
+		for iterate_index, item in enumerate(iterator):
 			# item is not used...but we set iterate_index for the template
 			task.document['iterate_index'] = iterate_index
 
@@ -237,44 +243,53 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 			if template_text:
 				jinja_template = env.from_string(template_text)
 				prompt = jinja_template.render(task.document)
+			else:
+				raise NonRetriableError("Couldn't find template text.")
 
-			completion = openai.ChatCompletion.create(
-				model = task.document.get('model'),
-				messages = [
-					{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."},
-					{"role": "user", "content": prompt}
-				]
-			)
+			retries = 3
+			# try a few times
+			while True:
+				completion = openai.ChatCompletion.create(
+					model = task.document.get('model'),
+					messages = [
+						{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."},
+						{"role": "user", "content": prompt}
+					]
+				)
 
-			answer = completion.choices[0].message
+				answer = completion.choices[0].message
 
-			ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
-			ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
-			ai_dict_str = ai_dict_str.strip('ai_dict = ')
-				
-			try:
-				ai_dict = eval(ai_dict_str)
+				ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
+				ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
+				ai_dict_str = ai_dict_str.strip('ai_dict = ')
 
-				for field in output_fields:
-					field_name = field['name']
+				try:
+					ai_dict = eval(ai_dict_str)
+					for field in output_fields:
+						field_name = field['name']
 
-					# Check if the field_name is present in ai_dict
-					if field_name in ai_dict:
-						# Ensure that the field exists in task.document as a list
-						if field_name not in task.document:
-							task.document[field_name] = []
+						# Check if the field_name is present in ai_dict
+						if field_name in ai_dict:
+							# Ensure that the field exists in task.document as a list
+							if field_name not in task.document:
+								task.document[field_name] = []
 
-						# Append the value(s) from ai_dict to the corresponding list in task.document
-						value = ai_dict[field_name]
-						task.document[field_name].append(value)
-					else:
-						errors.append(f"The aidict processor didn't return the fields expected in output_fields for index: {iterate_index}.")
-				
-			except (ValueError, SyntaxError):
-				errors.append(f"The aidict processor was unable to evaluate the response from the AI for index: {iterate_index}.")
+							# Append the value(s) from ai_dict to the corresponding list in task.document
+							value = ai_dict[field_name]
+							task.document[field_name].append(value)
+						else:
+							errors.append(f"The aidict processor didn't return the fields expected in output_fields for index: {iterate_index}.")
+					break				
+				except (ValueError, SyntaxError):
+					print("got an error probably on eval in aidict")
+					errors.append(f"The aidict processor was unable to evaluate the response from the AI for index: {iterate_index}.")
+					retries = retries - 1
+					if retries < 1:
+						break
 
 		task.document['aidict_errors'] = errors
 		task.document.pop('iterate_index')
+
 		return task
 
 	else:
