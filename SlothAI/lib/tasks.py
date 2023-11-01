@@ -366,6 +366,13 @@ def process_data_dict_for_insert(data, column_type_map, table):
 	if "_id" not in columns:
 		columns = ["_id"] + columns
 
+	data_lengths = []
+	for column in data.keys():
+		data_lengths.append(len(data[column]))
+
+	if not all_equal(data_lengths):
+		raise NonRetriableError("data dict for insert: length of values must be equal for all keys in data.")
+
 	# build insert tuple for each record
 	for i, _ in enumerate(data[list(data.keys())[0]]):
 		record = ""
@@ -387,6 +394,10 @@ def process_data_dict_for_insert(data, column_type_map, table):
 
 	return columns, records
 
+from itertools import groupby
+def all_equal(iterable):
+	g = groupby(iterable)
+	return next(g, True) and not next(g, False)
 
 def validate_dict_structure(keys_list, input_dict):
     for key in keys_list:
