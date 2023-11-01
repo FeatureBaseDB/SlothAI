@@ -7,7 +7,7 @@ input_fields = [{'name': "chunks", 'type': "strings"}]
 output_fields = [{'name': "keyterms", 'type': "strings"}]
 
 {# Extras #}
-extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'processor': 'aidict', 'num_keyterms': 5, iterate_field': "chunks"}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'processor': 'aidict', 'num_keyterms': 5, 'iterate_field': "chunks"}
 
 {# Process the input string: #}
 # complete dict task by following step by step
