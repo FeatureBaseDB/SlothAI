@@ -39,7 +39,7 @@ class TaskState(Enum):
 			raise Exception("invalid state_as_string")
 
 class Task:
-	def __init__(self, id: str, user_id: str, pipe_id: str, nodes: List[str], document: dict, created_at: datetime, retries: int, error: str, state: TaskState):
+	def __init__(self, id: str, user_id: str, pipe_id: str, nodes: List[str], document: dict, created_at: datetime, retries: int, error: str, state: TaskState, split_status: int):
 		self.id = id
 		self.user_id = user_id
 		self.pipe_id = pipe_id
@@ -49,6 +49,7 @@ class Task:
 		self.retries = retries
 		self.error = error
 		self.state = state
+		self.split_status = split_status
 
 	@property
 	def created_at(self):
@@ -68,6 +69,7 @@ class Task:
 			"retries": self.retries,
 			"error": self.error,
 			"state": self.state.value,
+			"split_status": self.split_status
 		}
 
 	@classmethod
@@ -85,6 +87,7 @@ class Task:
 			retries=task_dict['retries'],
 			error=task_dict['error'],
 			state=TaskState.state_from_string(task_dict['state']),
+			split_status=task_dict['split_status']
 		)
 
 	def to_json(self) -> str:
@@ -154,7 +157,8 @@ class Task:
 			state=self.state,
 			retries=self.retries,
 			error=self.error,
-			current_node_id=self.next_node()
+			current_node_id=self.next_node(),
+			split_status=self.split_status,
 		)
 
 
@@ -199,11 +203,12 @@ class Task:
 			state=self.state,
 			error=self.error,
 			retries=self.retries,
+			split_status=self.split_status
 		)
 
 		return task
 
-	def update_store(self, state=None, retries=None, error=None, current_node_id=None):
+	def update_store(self, state=None, retries=None, error=None, current_node_id=None, split_status=None):
 		update_args = {}
 
 		if state is not None:
@@ -214,6 +219,8 @@ class Task:
 			update_args['error'] = error
 		if current_node_id is not None:
 			update_args['current_node_id'] = current_node_id
+		if split_status is not None:
+			update_args['split_status'] = split_status
 
 		task = TaskModel.update(self.id, **update_args)
 
@@ -226,6 +233,15 @@ class Task:
 	def create(self):
 		self.store()
 		self.queue()
+
+	def refresh_split_status(self):
+		_tasks = TaskModel.fetch(task_id=self.id)
+		if len(_tasks) != 1:
+			return False
+		_task = _tasks[0]
+		self.split_status = _task.get('split_status')
+		return True
+
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!

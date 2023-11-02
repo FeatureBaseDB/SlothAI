@@ -509,8 +509,11 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 	try:
 		batch_size = int(batch_size)
 	except Exception as e:
-		raise NonRetriableError(e)
+		raise NonRetriableError("split_task processor: batch size must be an integer")
 
+	# this call is currently required to update split status
+	task.refresh_split_status()
+	
 	# all input / output fields should be lists of the same length to use split_task
 	total_sizes = []
 	for output in outputs:
@@ -519,7 +522,13 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 			if not isinstance(field, list):
 				raise NonRetriableError(f"split_task processor: input fields must be list type: got {type(field)}")
 
-			total_sizes.append(len(field))
+			# if this task was partially process, we need to truncate the data
+			# to only contain the data that hasn't been split.
+			if task.split_status != -1:
+				total_sizes.append(len(task.document[output][task.split_status:]))
+				del task.document[output][:task.split_status]
+			else:
+				total_sizes.append(len(field))
 
 		else:
 			raise NonRetriableError(f"split_task processor: all output fields must be taken from input fields: output field {output} was not found in input fields.")
@@ -527,7 +536,7 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 	if not all_equal(total_sizes):
 		raise NonRetriableError("split_task processor: len of fields must be equal to re-batch a task")
 
-	app.logger.info(f"Split Task: Task ID: {task.id}. Task Size: {total_sizes[0]}. Batch Size: {batch_size}. Number of Batches: {math.ceil(total_sizes[0] / batch_size)}")
+	app.logger.info(f"Split Task: Task ID: {task.id}. Task Size: {total_sizes[0]}. Batch Size: {batch_size}. Number of Batches: {math.ceil(total_sizes[0] / batch_size)}. Task split status was set to {task.split_status}.")
 
 	new_task_count = math.ceil(total_sizes[0] / batch_size)
 
@@ -549,9 +558,11 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 				retries=0,
 				error=None,
 				state=TaskState.RUNNING,
+				split_status=-1
 			)
 		
 			new_task.create()
+			task.update_store(split_status=(i + 1) * batch_size)
 			app.logger.info(f"Split Task: spawning task {i + 1} of projected {new_task_count}. It's ID is {new_task.id}")
 
 	except Exception as e:

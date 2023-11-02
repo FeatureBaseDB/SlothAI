@@ -192,6 +192,7 @@ def ingest_post(pipeline_id):
         retries=0,
 		error=None,
 		state=TaskState.RUNNING,
+        split_status=-1
     )
 
     # store and queue

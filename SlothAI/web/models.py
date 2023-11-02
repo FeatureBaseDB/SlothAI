@@ -652,10 +652,11 @@ class Task(ndb.Model):
     state = ndb.StringProperty()
     error = ndb.StringProperty()
     retries = ndb.IntegerProperty()
+    split_status = ndb.IntegerProperty()
 
     @classmethod
     @ndb_context_manager
-    def create(cls, task_id, user_id, current_node_id, pipe_id, created_at, state, error, retries):
+    def create(cls, task_id, user_id, current_node_id, pipe_id, created_at, state, error, retries, split_status):
         task = cls(
             task_id=task_id,
             user_id=user_id,
@@ -665,6 +666,7 @@ class Task(ndb.Model):
             state=state.value,
             error=error,
             retries=retries,
+            split_status = split_status,
         )
         task.put()
         return task.to_dict()
@@ -716,6 +718,8 @@ class Task(ndb.Model):
             task.current_node_id = kwargs['current_node_id']
         if 'retries' in kwargs:
             task.retries = kwargs['retries']
+        if 'split_status' in kwargs:
+            task.split_status = kwargs['split_status']
 
         task.put()
 
