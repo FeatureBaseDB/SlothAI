@@ -26,6 +26,7 @@ class TaskState(Enum):
 	RUNNING = 'running'
 	COMPLETED = 'completed'
 	FAILDED = 'failed'
+	CANCELED = 'canceled'
 
 	@classmethod
 	def state_from_string(self, state_as_string):
@@ -105,63 +106,6 @@ class Task:
 		task_dict = json.loads(json_str)
 		return cls.from_dict(task_dict)
 
-	def queue(self):
-		project_id = app.config['PROJECT_ID']
-		client = tasks_v2.CloudTasksClient()
-		queue = client.queue_path(project_id, "us-east1", app.config['SLOTH_QUEUE'])
-		encoding = self.to_json().encode()
-
-		if app.config['DEV'] == "True":
-			task = {
-				"http_request": {
-					"url": f"{app.config['NGROK_URL']}/tasks/process/{app.config['CRON_KEY']}",
-					"headers": {"Content-type": "application/json"},
-					"http_method": tasks_v2.HttpMethod.POST
-				}
-			}
-			task["http_request"]["body"] = encoding
-		else:
-			task = {
-				"app_engine_http_request": {
-					"http_method": tasks_v2.HttpMethod.POST,
-					"app_engine_routing": {"version": os.environ['GAE_VERSION']},
-					"relative_uri": f"/tasks/process/{app.config['CRON_KEY']}",
-					"headers": {"Content-type": "application/json"}
-				}
-			}
-			task["app_engine_http_request"]["body"] = encoding
-
-
-		# Create a timestamp
-		timestamp = timestamp_pb2.Timestamp()
-
-		# Calculate the time 15 seconds from now
-		if self.document.get('run_in', None):
-			future_time = datetime.utcnow() + timedelta(seconds=int(self.document.get('run_in')))
-		else:
-			delay = random.randint(100, 300)
-			future_time = datetime.utcnow() + timedelta(milliseconds=delay)
-
-		# Set the timestamp using the calculated future time
-		timestamp.FromDatetime(future_time)
-
-		task["schedule_time"] = timestamp
-
-		# Send the task to the Cloud Tasks queue
-		response = client.create_task(parent=queue, task=task)
-
-		# self.id = response.name.split('/')[-1]
-
-		# todo so error handling
-		_ = self.update_store(
-			state=self.state,
-			retries=self.retries,
-			error=self.error,
-			current_node_id=self.next_node(),
-			split_status=self.split_status,
-		)
-
-
 	def next_node(self):
 		if len(self.nodes) == 0:
 			return None
@@ -176,71 +120,6 @@ class Task:
 			node = self.nodes[0]
 			self.nodes = []
 			return node
-
-	def retry(self):
-		if self.retriable():
-			self.retries += 1
-			self.queue()
-			return True
-		else:
-			self.drop()
-
-	def drop(self):
-		self.update_store(error=self.error, retries=self.retries, current_node_id=self.next_node(), state=TaskState.FAILDED)
-
-	def retriable(self):
-		if self.retries >= 5:
-			return False
-		return True
-
-	def store(self):
-		task = TaskModel.create(
-			task_id=self.id,
-			user_id=self.user_id,
-			current_node_id=self.next_node(),
-			pipe_id=self.pipe_id,
-			created_at=self._created_at,
-			state=self.state,
-			error=self.error,
-			retries=self.retries,
-			split_status=self.split_status
-		)
-
-		return task
-
-	def update_store(self, state=None, retries=None, error=None, current_node_id=None, split_status=None):
-		update_args = {}
-
-		if state is not None:
-			update_args['state'] = state
-		if retries is not None:
-			update_args['retries'] = retries
-		if error is not None:
-			update_args['error'] = error
-		if current_node_id is not None:
-			update_args['current_node_id'] = current_node_id
-		if split_status is not None:
-			update_args['split_status'] = split_status
-
-		task = TaskModel.update(self.id, **update_args)
-
-		return task
-
-	@classmethod
-	def tasks_by_user(self, user_id):
-		return TaskModel.fetch(user_id=user_id)
-
-	def create(self):
-		self.store()
-		self.queue()
-
-	def refresh_split_status(self):
-		_tasks = TaskModel.fetch(task_id=self.id)
-		if len(_tasks) != 1:
-			return False
-		_task = _tasks[0]
-		self.split_status = _task.get('split_status')
-		return True
 
 
 def delete_task(name):

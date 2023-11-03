@@ -246,7 +246,7 @@ def template_detail(template_id="new"):
 @site.route('/tasks')
 @flask_login.login_required
 def tasks():
-    tasks = Task.tasks_by_user(current_user.uid)
+    tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid)
 
     """
     for entry, task in enumerate(tasks):

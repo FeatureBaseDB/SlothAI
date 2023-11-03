@@ -512,7 +512,14 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 		raise NonRetriableError("split_task processor: batch size must be an integer")
 
 	# this call is currently required to update split status
-	task.refresh_split_status()
+	
+	try:
+		task_stored = app.config['task_service'].fetch_tasks(task_id=task.id)
+		task_stored = task_stored[0]
+		task.split_status = task_stored['split_status']
+	except Exception as e:
+		raise NonRetriableError(f"getting task by ID but got none: {e}")
+	# task.refresh_split_status()
 	
 	# all input / output fields should be lists of the same length to use split_task
 	total_sizes = []
@@ -560,9 +567,14 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 				state=TaskState.RUNNING,
 				split_status=-1
 			)
-		
-			new_task.create()
-			task.update_store(split_status=(i + 1) * batch_size)
+
+			# create new task and queue it		
+			app.config['task_service'].create_task(new_task)
+
+			# commit status of split on original task
+			task.split_status = (i + 1) * batch_size
+			app.config['task_service'].update_task(task_id=task.id, split_status=task.split_status)
+
 			app.logger.info(f"Split Task: spawning task {i + 1} of projected {new_task_count}. It's ID is {new_task.id}")
 
 	except Exception as e:

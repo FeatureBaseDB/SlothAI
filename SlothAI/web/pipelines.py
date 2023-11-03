@@ -251,7 +251,7 @@ def ingest_post(pipeline_id):
 
     # store and queue
     task.document = json_data_dict
-    task.create()
+    app.config['task_service'].create_task(task)
 
     return jsonify(task.to_dict()), 200
 
