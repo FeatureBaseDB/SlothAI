@@ -1,7 +1,7 @@
 
 from SlothAI.lib.tasks import Task, TaskState
-from SlothAI.storage.task import AbstractTaskStore
-from SlothAI.storage.task_queue import AbstractTaskQueue
+from SlothAI.lib.task_storage import AbstractTaskStore
+from SlothAI.lib.task_queue import AbstractTaskQueue
 
 from typing import Dict
 
