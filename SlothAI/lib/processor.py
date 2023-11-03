@@ -253,14 +253,14 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 				completion = openai.ChatCompletion.create(
 					model = task.document.get('model'),
 					messages = [
-						{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."},
+						{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary. You may use capitalization, where needed."},
 						{"role": "user", "content": prompt}
 					]
 				)
 
 				answer = completion.choices[0].message
 
-				ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
+				ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "")
 				ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
 				ai_dict_str = ai_dict_str.strip('ai_dict = ')
 

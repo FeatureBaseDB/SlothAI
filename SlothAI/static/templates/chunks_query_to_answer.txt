@@ -11,17 +11,17 @@ extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'iterate_field': "quer
 
 {# Process the answer #}
 # complete dict task by following step by step
-1. The user has provided the following query:
-"""
-{{query[iterate_index]}}
-"""
-2. To respond to the user's query, consider the following text:
+1. The user is asking about a document, relevant portions of which are provided here:
 """
 {% for chunk in chunks %}
   {{ chunk }}
 {% endfor %}
 """
-4. The required key for the dictionary is: 'answer'
-5. The required value for answer is a string.
-6. Answer the user query from step 1. and use the information in step 2. to return a python dictionary with the 'answer':
+2. This is the user's query:
+"""
+{{query[iterate_key]}}
+"""
+3. The required key for the dictionary is: 'answer'
+4. The required value for answer is a string, which should be correctly capitalized.
+5. Answer the user query from step 2, using the from step 1 to return a python dictionary with the 'answer':
 ai_dict = 
