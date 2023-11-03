@@ -9,20 +9,33 @@
 <!-- Main Content -->
 <div class="content container mt-5 pt-5">
     <h2 class="page_heading">Pipeline Details</h2>
-
     <div class="rounded-lg border p-3">
-        <h3 class="mb-3">{{pipeline.name}}</h3>
-        <p>The pipeline '{{pipeline.name}}' contains the following nodes:</p>
-        <div class="btn-group">
+        <div class="row">
+            <div class="col text-left">
+                <h3 class="mb-3">{{pipeline.name}}</h3>
+            </div>
+            <div class="col text-right">
+                <button id="SavePipeline" class="btn btn-success ignore-color"><i class="fas fa-save"></i> Save</button>
+                <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary ignore-color"><i class="fas fa-download"></i> Download</button>
+                <button class="btn btn-danger delete-button" data-pipe-id="{{pipeline.pipe_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
+            </div>
+        </div>
+        <p>The pipeline '{{pipeline.name}}' contains the following nodes. They may be reordered.</p>
+        <div class="row">
+        <div class="col text-left">
+        <ul id="buttonSortable" class="btn-group">
             {% for node_id in pipeline.node_ids %}
                 {% for node in nodes %}
                     {% if node.node_id == node_id %}
-                        <button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary">{{ node.name }}</button>
+                        <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable" style="border-radius: 0 !important;">{{ node.name }}</button></li>
                     {% endif %}
                 {% endfor %}
             {% endfor %}
-            <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary ignore-color"><i class="fas fa-download"></i></button>
-            <button class="btn btn-danger delete-button" data-pipe-id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
+        </ul>
+        </div>
+        <div class="col text-right">
+            <button id="addNode" class="btn btn-success"><i class="fas fa-plus"></i> Add Node</button>
+        </div>
         </div>
         <hr/>
         <h4>Send Data</h4>
@@ -63,17 +76,17 @@ if response.status_code == 200:
 else:
     print(response.text)<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
             </div>
-            {% if nodes[0].processor == 'read_file' %}
-<div class="input-group mb-3">
-  <div class="custom-file">
-    <input type="file" class="custom-file-input" id="inputGroupFile02">
-    <label class="custom-file-label" for="inputGroupFile02" aria-describedby="inputGroupFileAddon02">Choose file</label>
-  </div>
-  <div class="input-group-append">
-    <span class="input-group-text" id="inputGroupFileAddon02">Upload</span>
-  </div>
-</div>
 
+            {% if nodes[0].processor == 'read_file' %}
+            <div class="input-group mb-3">
+              <div class="custom-file">
+                <input type="file" class="custom-file-input" id="inputGroupFile02">
+                <label class="custom-file-label" for="inputGroupFile02" aria-describedby="inputGroupFileAddon02">Choose file</label>
+              </div>
+              <div class="input-group-append">
+                <span class="input-group-text" id="inputGroupFileAddon02">Upload</span>
+              </div>
+            </div>
             {% endif %}
         </div>
 
@@ -83,6 +96,48 @@ else:
             {{mermaid_string}}
         </div>
     </div>
+
+    <div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="nodeFormModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title card-callout" id="nodeFormModalLabel">Add Node to Pipeline</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="selectedNode">Available Nodes</label>
+                        <div class="input-group">
+                            <select class="form-control" id="selectedNode">
+                                <optgroup id="nodePulldown" label="Available Nodes">
+                                    <option value="None">None</option>
+                                    {% for node in all_nodes %}
+                                        {% if node.node_id not in pipeline.get('node_ids') or node.processor == 'callback' %}
+                                            <option value="{{ node.node_id }}">{{ node.name }} ➔ {{ node.template_name }} ➔ {{ node.processor }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Node list section -->
+                    <div style="margin-top: 20px" class="form-group">
+                        <div class="rounded-lg border p-3" id="selectedNodesContainer" style="display: none;">
+                            <!-- Content inside the container -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" id="updateButton"><i class="fas fa-plus"></i> Add Node</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 
@@ -103,6 +158,7 @@ else:
 $(document).ready(function() {
     // grab the nodes from the template and make them available via getNodeInfo
     var nodes = JSON.parse('{{nodes | tojson}}');
+    var all_nodes = JSON.parse('{{all_nodes | tojson}}');
 
     function getColorFromName(name) {
         name = name.trim(); // Remove leading and trailing spaces
@@ -114,17 +170,20 @@ $(document).ready(function() {
         return color;
     }
 
-    const buttons = document.querySelectorAll(".btn-group .btn:not(.ignore-color)");
-    buttons.forEach(button => {
+    function setButtonColors() {
+      const buttons = document.querySelectorAll(".btn-group .btn:not(.ignore-color)");
+      buttons.forEach(button => {
         const name = button.innerText;
         const color = getColorFromName(name);
         button.style.backgroundColor = color;
         button.style.borderColor = color;
+      });
+    }
 
-    });
+    setButtonColors();
 
     function getNodeInfo(nodeId) {
-        const node = nodes.find(node => node.node_id === nodeId);
+        const node = all_nodes.find(node => node.node_id === nodeId);
 
         if (node) {
             const { name, template_name, processor, input_fields, output_fields, extras } = node;
@@ -135,60 +194,109 @@ $(document).ready(function() {
     }
 
     var node_buttons = $('button[data-node_id]');
-    
-    // Loop through the buttons
-    node_buttons.each(function() {
-        var nodeButton = $(this);
-        var nodeID = nodeButton.data('node_id');
-        var nodeTemplateID = nodeButton.data('template_id')
-        var nodeInfo = getNodeInfo(nodeID);
 
-        var container = $('<div>');
-
-        if (nodeInfo) {
-            var inputFields = nodeInfo.input_fields || [];
-            var outputFields = nodeInfo.output_fields || [];
-
-            // Process inputs (green)
-            inputFields.forEach(function(field) {
-                var badgeText = "input:" + field.name;
-                var badge = $('<span>', {
-                    class: 'badge badge-success',
-                    text: badgeText,
-                });
-
-                container.append(badge);
-                container.append('<br>');
-            });
-
-            // Process outputs (blue)
-            outputFields.forEach(function(field) {
-                var badgeText = 'output:' + field.name;
-                var badge = $('<span>', {
-                    class: 'badge badge-primary',
-                    text: badgeText,
-                });
-
-                container.append(badge);
-                container.append('<br>');
-            });
-            if (outputFields.length === 0 && inputFields.length === 0) {
-                var badge = $('<span>', {
-                    class: 'badge badge-success',
-                    text: 'passthrough',
-                });
-                container.append(badge);
-                container.append('<br>');
-            }
-        }
-        container.append($('<a href="/templates/'+nodeTemplateID+'">edit template</a>'));
-        nodeButton.popover({
-            content: container.html(),
-            trigger: 'focus',
-            html: true,
-            placement: 'top',
-        });
+    $("#buttonSortable").sortable({
+        revert: true,
+        tolerance: "pointer"
     });
+
+    function deleteNode(nodeID) {
+        toastr.info(nodeID)
+    }
+
+    function setPopovers() {
+        // Loop through the buttons
+        node_buttons.each(function() {
+            var nodeButton = $(this);
+            var nodeID = nodeButton.data('node_id');
+            var nodeTemplateID = nodeButton.data('template_id')
+            var nodeInfo = getNodeInfo(nodeID);
+
+            var container = $('<div>');
+
+            if (nodeInfo) {
+                var inputFields = nodeInfo.input_fields || [];
+                var outputFields = nodeInfo.output_fields || [];
+
+                // Process inputs (green)
+                inputFields.forEach(function(field) {
+                    var badgeText = "input:" + field.name;
+                    var badge = $('<span>', {
+                        class: 'badge badge-success',
+                        text: badgeText,
+                    });
+
+                    container.append(badge);
+                    container.append('<br>');
+                });
+
+                // Process outputs (blue)
+                outputFields.forEach(function(field) {
+                    var badgeText = 'output:' + field.name;
+                    var badge = $('<span>', {
+                        class: 'badge badge-primary',
+                        text: badgeText,
+                    });
+
+                    container.append(badge);
+                    container.append('<br>');
+                });
+                if (outputFields.length === 0 && inputFields.length === 0) {
+                    var badge = $('<span>', {
+                        class: 'badge badge-success',
+                        text: 'passthrough',
+                    });
+                    container.append(badge);
+                    container.append('<br>');
+                }
+            }
+            var pipe_id = "{{pipeline.get('pipe_id')}}";
+            container.append($('<a href="/templates/'+nodeTemplateID+'">Edit Template</a><br/>'));
+            container.append($('<a href="/pipelines/'+pipe_id+'/'+nodeID+'/delete">Delete Node</a>'));
+            nodeButton.popover({
+                content: container.html(),
+                trigger: 'focus',
+                html: true,
+                placement: 'top',
+            });
+        });
+    }
+
+    setPopovers();
+
+    // add node to pipeline
+    $("#addNode").on("click", function() {
+        if ($("#nodePulldown").find('option').length > 1) {
+            $("#nodeFormModal").modal("show");
+            $("#selectedNodesContainer").hide();
+            $("#selectedNodesContainer").empty();
+            selectedNodes = [];
+        } else {
+            toastr.error("No nodes. Add a node first before adding a pipeline.");
+        }
+        setButtonColors();
+    });
+
+    $("#updateButton").on("click", function() {
+        var selectedNodeID = $("#selectedNode").val();
+        var selectedNode = all_nodes.find(function(node) {
+            return node.node_id == selectedNodeID;
+        });
+
+        if (selectedNode) {
+            var newLi = '<li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i>' +
+                        '<button title="' + selectedNode.processor + '" data-template_id="' + selectedNode.template_id + '" data-node_id="' + selectedNode.node_id +
+                        '" class="btn btn-secondary btn-sortable" style="border-radius: 0 !important;">' + selectedNode.name + '</button></li>';
+            $("#buttonSortable").append(newLi);
+        }
+        
+        node_buttons = $('button[data-node_id]');
+        setButtonColors();
+        setPopovers();
+        // Close the 'nodeformmodal' modal
+        $("#nodeFormModal").modal('hide');
+    });
+
 
     // delete button
     $(".delete-button").on("click", function () {
@@ -210,6 +318,36 @@ $(document).ready(function() {
         });
     });
 
+    $("#SavePipeline").on("click", function () {
+        $(this).prop("disabled", true);
+        var dataNodeIds = [];
+        $("#buttonSortable li button").each(function() {
+            var node_id = $(this).data("node_id");
+            dataNodeIds.push(node_id);
+        });
+
+        var postData = {
+            nodes: dataNodeIds
+        };
+
+        $.ajax({
+            type: "POST",
+            url: "/pipeline/" + '{{pipeline.pipe_id}}',
+            data: JSON.stringify(postData),
+            contentType: "application/json",
+            success: function(response) {
+                toastr.success("Pipeline saved.");
+                location.reload();
+            },
+            error: function(xhr, status, error) {
+                toastr.error(status + " - " + error);
+            },
+            complete: function() {
+                $("#SavePipeline").prop("disabled", false);
+            }
+        });
+    });
+    
     // Listen for the click event on the download button
     $('#DownloadPipeline').on('click', function() {
         $(this).prop('disabled', true);

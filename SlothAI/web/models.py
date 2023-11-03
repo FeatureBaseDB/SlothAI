@@ -339,8 +339,6 @@ class Pipeline(ndb.Model):
         current_utc_time = datetime.datetime.utcnow()
         pipeline = cls.query(cls.uid == uid, cls.name == name).get()
 
-        # TODO check the node IDs are good...
-
         if not pipeline:
             pipe_id = random_string(13)
             pipeline = cls(
@@ -350,6 +348,11 @@ class Pipeline(ndb.Model):
                 node_ids=node_ids,
                 created=current_utc_time
             )
+            pipeline.put()
+
+        else:
+            print("updating pipeline")
+            pipeline.node_ids = node_ids
             pipeline.put()
 
         return pipeline.to_dict()

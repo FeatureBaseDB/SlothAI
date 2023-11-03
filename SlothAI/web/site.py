@@ -120,28 +120,28 @@ def pipeline_view(pipe_id):
     
     # add input and output fields, plus template name
     _nodes = []
+    _all_nodes = []
+    
     head_input_fields = []
-    for node_id in pipeline.get('node_ids'):
-        for node in nodes:
-            if node.get('node_id') == node_id:
+    for node in nodes:
+        for template in templates:
+            if template.get('template_id') == node.get('template_id'):
+                if not head_input_fields:
+                    head_input_fields = template.get('input_fields', [])
+                    head_processor = node.get('processor')
 
-                for template in templates:
-                    if template.get('template_id') == node.get('template_id'):
-                        if not head_input_fields:
-                            head_input_fields = template.get('input_fields', [])
-                            head_processor = node.get('processor')
-
-                        node['template_name'] = template.get('name')
-                        node['input_fields'] = template.get('input_fields')
-                        node['output_fields'] = template.get('output_fields')
-                        break
-
-                for key in node.get('extras').keys():
-                    if 'token' in key or 'password' in key:
-                        node['extras'][key] = '[secret]'
-
-                _nodes.append(node)
+                node['template_name'] = template.get('name')
+                node['input_fields'] = template.get('input_fields')
+                node['output_fields'] = template.get('output_fields')
                 break
+
+        for key in node.get('extras').keys():
+            if 'token' in key or 'password' in key:
+                node['extras'][key] = '[secret]'
+
+        if node.get('node_id') in pipeline.get('node_ids'):
+            _nodes.append(node)
+        _all_nodes.append(node)
 
     mermaid_string = build_mermaid(pipeline, _nodes)
 
@@ -156,7 +156,7 @@ def pipeline_view(pipe_id):
     else:
         example_d = """'{"text": ["There was a knock at the door and then, silence."]}'"""
 
-    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=_nodes, head_input_fields=head_input_fields, example_d=example_d, mermaid_string=mermaid_string)
+    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=_nodes, all_nodes=nodes, head_input_fields=head_input_fields, example_d=example_d, mermaid_string=mermaid_string)
 
 
 @site.route('/nodes', methods=['GET'])

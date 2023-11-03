@@ -5,7 +5,7 @@ from datetime import datetime
 
 from google.cloud import ndb
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, redirect, url_for
 from flask import current_app as app
 
 import flask_login
@@ -83,6 +83,46 @@ def pipelines_download(pipe_id):
     return response
 
 
+@pipeline.route('/pipeline/<pipe_id>', methods=['POST'])
+@flask_login.login_required
+def pipeline_update(pipe_id):
+    user_id = current_user.uid
+    pipeline = Pipeline.get(uid=user_id, pipe_id=pipe_id)
+
+    if not pipeline:
+        return jsonify({"error": "Pipeline not found", "message": "The pipeline was not found."}), 404
+        
+    # Make sure request is valid JSON
+    if request.is_json:
+        json_data = request.get_json()
+
+        # Make sure request JSON contains name and node_ids keys
+        name = pipeline.get('name')
+        nodes = json_data.get('nodes', None)
+
+        if not name or not nodes:
+            return jsonify({"error": "Invalid JSON Object", "message": "The request body must be valid JSON data and contain a 'name' and 'nodess' key."}), 400
+        
+        if not isinstance(nodes, list):
+            return jsonify({"error": "Invalid JSON Object", "message": f"The value of the 'nodes' key must be a list of node_ids. Got: {type(nodes)}"}), 400
+
+        # Make sure all nodes exist
+        for node in nodes:
+            node = Node.fetch(node_id=node, uid=user_id)
+            if not node:
+                return jsonify({"error": "Invalid Node ID", "message": f"Unable to find a node with name {node}"}), 400
+
+        # update with the create method
+        pipeline = Pipeline.create(user_id, name, nodes)
+        
+        if not pipeline:
+            return jsonify({"error": "Update failed", "message": "Unable to update pipeline."}), 501
+        
+        return jsonify(pipeline), 200
+
+    return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
+
+
 @pipeline.route('/pipeline', methods=['POST'])
 @flask_login.login_required
 def pipeline_add():
@@ -122,6 +162,20 @@ def pipeline_add():
         return jsonify(pipeline), 200
 
     return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
+
+
+# totally lame, but popovers still don't allow click handling TODO FIX THIS
+@pipeline.route('/pipelines/<pipe_id>/<node_id>/delete', methods=['GET'])
+@flask_login.login_required
+def pipeline_node_delete(pipe_id, node_id):
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+    nodes = pipeline.get('node_ids')
+    
+    if node_id in nodes:
+        nodes.remove(node_id) 
+
+    pipeline = Pipeline.create(current_user.uid, pipeline.get('name'), nodes)
+    return redirect(url_for('site.pipeline_view', pipe_id=pipe_id))
 
 
 @pipeline.route('/pipeline/<pipe_id>', methods=['DELETE'])
