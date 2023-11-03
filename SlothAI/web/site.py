@@ -118,18 +118,17 @@ def pipeline_view(pipe_id):
 
     pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
     
+    if not pipeline:
+        return redirect(url_for('site.pipelines'))
+
     # add input and output fields, plus template name
     _nodes = []
     _all_nodes = []
-    
-    head_input_fields = []
+
+    # build two lists, one of the ones in the pipeline, another of all nodes
     for node in nodes:
         for template in templates:
             if template.get('template_id') == node.get('template_id'):
-                if not head_input_fields:
-                    head_input_fields = template.get('input_fields', [])
-                    head_processor = node.get('processor')
-
                 node['template_name'] = template.get('name')
                 node['input_fields'] = template.get('input_fields')
                 node['output_fields'] = template.get('output_fields')
@@ -143,18 +142,24 @@ def pipeline_view(pipe_id):
             _nodes.append(node)
         _all_nodes.append(node)
 
+    # sort the list based on the current order in the pipeline
+    node_order_mapping = {node_id: index for index, node_id in enumerate(pipeline.get('node_ids'))}
+    def custom_sort_key(item):
+        return node_order_mapping.get(item['node_id'], len(pipeline.get('node_ids')))
+    _nodes = sorted(_nodes, key=custom_sort_key)
+
+    # build the graph for inspection
     mermaid_string = build_mermaid(pipeline, _nodes)
 
-    if not pipeline:
-        return redirect(url_for('site.pipelines'))
+    # build an example POST usin generative AI
+    head_input_fields = _nodes[0].get('input_fields')
+    head_processor = _nodes[0].get('processor')
+    
+    document = {"head_input_fields": head_input_fields, "pipe_id": pipe_id, "head_processor": head_processor, "user_api_token": token}
+    example_d = gpt_completion(document, "form_example")
+    if not example_d:
+        example_d = """'{"text": ["The AI failed us again. Insert bad example here."]}'"""
 
-    if head_input_fields:
-        document = {"head_input_fields": head_input_fields, "pipe_id": pipe_id, "head_processor": head_processor, "user_api_token": token}
-        example_d = gpt_completion(document, "form_example")
-        if not example_d:
-            example_d = """'{"text": ["The AI failed us again. Insert bad example here."]}'"""
-    else:
-        example_d = """'{"text": ["There was a knock at the door and then, silence."]}'"""
 
     return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=_nodes, all_nodes=nodes, head_input_fields=head_input_fields, example_d=example_d, mermaid_string=mermaid_string)
 
