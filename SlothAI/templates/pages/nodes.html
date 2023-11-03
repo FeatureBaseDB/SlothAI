@@ -120,6 +120,7 @@
                     <div class="form-group">
                         <label for="nodeProcessor">Node Processor:</label>
                         <select class="form-control" id="nodeProcessor">
+                        <option value="all">All</option>
                         {% for processor in processors %}
                         <option value="{{ processor['value'] }}">{{ processor['label'] }}</option>
                         {% endfor %}
@@ -237,7 +238,9 @@ $(document).ready(function() {
     function sortTable() {
         // sort table
         $('#nodesTable').DataTable({
-            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }]
+            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
+            "order": [[0, "asc"]],
+            "pageLength": 25
         });
     }
 
@@ -284,7 +287,7 @@ $(document).ready(function() {
 
     $("#addNodeButton").on("click", function() {
         $("#addNodeModalButton").prop("disabled", true);
-        
+        $("#nodeProcessor").val("all");
         var templateSelect = $('#nodeTemplate');
 
         // empty the node pulldown and any extras
@@ -301,7 +304,8 @@ $(document).ready(function() {
             success: function(response) {
                 templateSelect.append($('<option>', {
                     value: 'none',
-                    text: "None"
+                    text: "None",
+                    'data-processor': "none"
                 }));
     
                 response.forEach(function (template) {
@@ -329,7 +333,8 @@ $(document).ready(function() {
 
                     templateSelect.append($('<option>', {
                         value: template.template_id,
-                        text: optionText
+                        text: optionText,
+                        'data-processor': template.processor
                     }));
                 });
                 $("#nodeTemplateSpinner").hide();
@@ -345,6 +350,54 @@ $(document).ready(function() {
         var randomName = "{{name_random}}";
         $('#nodeName').val(randomName);
     });
+
+    $("#nodeProcessor").on("change", function() {
+        var selectedProcessor = $(this).val();
+        var noneOption = $("#nodeTemplate option[value='none']");
+
+        $("#dynamicFieldsContainer").empty();
+
+        // Set the selected option to "None" initially
+        noneOption.prop("selected", true);
+
+        if (selectedProcessor === "all") {
+            // If "All" is selected, show all options
+            $("#nodeTemplate option").show();
+        } else {
+            // Loop over options in #nodeTemplate and hide/show them based on the selected processor
+            var firstVisibleOption = null;
+
+            $("#nodeTemplate option").each(function() {
+                var dataProcessor = $(this).data("processor");
+                if (selectedProcessor === dataProcessor) {
+                    $(this).show(); // Show the option
+                    if (firstVisibleOption === null && this !== noneOption[0]) {
+                        firstVisibleOption = $(this);
+                    }
+                } else {
+                    $(this).hide(); // Hide the option
+                }
+            });
+
+            // If there is a visible option other than "None," select the first visible option
+            if (firstVisibleOption !== null) {
+                firstVisibleOption.prop("selected", true).trigger('change');
+            }
+        current_processor = selectedProcessor;
+        }
+    });
+
+    // Event listener for clicking on the #nodeTemplate element
+    $("#nodeTemplate").on("click", function() {
+        var visibleOptions = $(this).find("option:visible");
+
+        // Check if there is only one visible option
+        if (visibleOptions.length === 0) {
+            toastr.error("You need to add a template for this processor.");
+        }
+    });
+
+    var current_processor = "None";
 
     // Event listener for the template selection
     $("#nodeTemplate").on("change", function() {
@@ -407,8 +460,16 @@ $(document).ready(function() {
                     if (response.processor) {
                         // Set the selected processor in the dropdown
                         $("#nodeProcessor").val(response.processor);
+                        if (!response.processor == current_processor) {
+                            current_processor = response.processor;
+                            $("#nodeProcessor").trigger('change');                            
+                        }
                     } else if (response.extras.processor) {
                         $("#nodeProcessor").val(response.extras.processor);
+                        if (!response.extras.processor == current_processor) {
+                            current_processor = response.extras.processor;
+                            $("#nodeProcessor").trigger('change');                            
+                        }
                     }
                     // renable the add button
                     $("#addNodeModalButton").prop("disabled", false);
@@ -430,7 +491,6 @@ $(document).ready(function() {
             contentType: 'application/json',
             data: JSON.stringify(requestData),
             success: function(response) {
-                console.log(response)
                 callback(true);
             },
             error: function(error) {
