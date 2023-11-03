@@ -2,12 +2,8 @@ from flask import Blueprint, render_template
 from flask import current_app as app
 from faker import Faker
 
-import zlib
-
 import nltk
-from nltk.data import find
-nltk.data.load('./SlothAI/static/english.pickle')
-tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+tokenizer = nltk.data.load('./SlothAI/static/english.pickle')
 
 custom_commands = Blueprint('custom_commands', __name__)
 
