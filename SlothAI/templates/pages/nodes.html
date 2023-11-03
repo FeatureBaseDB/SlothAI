@@ -351,6 +351,7 @@ $(document).ready(function() {
         $('#nodeName').val(randomName);
     });
 
+    var allHidden = false;
     $("#nodeProcessor").on("change", function() {
         var selectedProcessor = $(this).val();
         var noneOption = $("#nodeTemplate option[value='none']");
@@ -366,7 +367,7 @@ $(document).ready(function() {
         } else {
             // Loop over options in #nodeTemplate and hide/show them based on the selected processor
             var firstVisibleOption = null;
-
+            allHidden = true;
             $("#nodeTemplate option").each(function() {
                 var dataProcessor = $(this).data("processor");
                 if (selectedProcessor === dataProcessor) {
@@ -374,6 +375,7 @@ $(document).ready(function() {
                     if (firstVisibleOption === null && this !== noneOption[0]) {
                         firstVisibleOption = $(this);
                     }
+                    allHidden = false;
                 } else {
                     $(this).hide(); // Hide the option
                 }
@@ -387,12 +389,9 @@ $(document).ready(function() {
         }
     });
 
-    // Event listener for clicking on the #nodeTemplate element
     $("#nodeTemplate").on("click", function() {
-        var visibleOptions = $(this).find("option:visible");
-
-        // Check if there is only one visible option
-        if (visibleOptions.length === 0) {
+        // Check if there are options
+        if (allHidden) {
             toastr.error("You need to add a template for this processor.");
         }
     });
