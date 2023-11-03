@@ -21,6 +21,7 @@
             <thead>
                 <tr>
                     <th>Template</th>
+                    <th>Processor</th>
                     <th>Inputs</th>
                     <th>Outputs</th>
                     <th>Extras</th>
@@ -30,7 +31,7 @@
             <tbody id="templateTable">
                 {% for template in templates %}
                     <td><button class="btn btn-secondary" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-pen"></i> {{ template.name }}</button></td>
-                    
+                    <td><button class="btn btn-secondary"><i class="fas fa-microchip"></i> {{ template.processor }}</button></td>
                     <td>
                         {% if template is not none and template.get('input_fields') is not none %}
                             {% for input_field in template['input_fields'] %}
@@ -169,7 +170,9 @@ $(document).ready(function() {
     function sortTable() {
         // sort table
         $('#templatesTable').DataTable({
-            "columnDefs": [{ "orderable": false, "targets": [1,2,3,4] }]
+            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
+            "order": [[0, "asc"]],
+            "pageLength": 25
         });
     }
 
