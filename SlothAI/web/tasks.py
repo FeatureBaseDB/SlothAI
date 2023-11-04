@@ -51,14 +51,45 @@ def process_tasks(cron_key):
 @tasks.route('/tasks', methods=['DELETE'])
 @flask_login.login_required
 def delete_tasks():
-	# if task is running locally, kill it but make sure to send 200 resp to app engine
+	'''
+	DELETE /tasks?state=running&state=complete
+	'''
+	task_service = app.config['task_service']
+	states = request.args.getlist('state')
+	if not states:
+		states = [
+			TaskState.COMPLETED.value,
+			TaskState.CANCELED.value,
+			TaskState.FAILDED.value
+		]
+	else:
+		for state in states:
+			if not task_service.is_valid_state_for_delete(state):
+				return f"Invalid state: {state}", 400
 	
-	# delete it's entry from  
+	ok = task_service.delete_tasks_by_states(user_id=current_user.uid, states=states)
+	if not ok:
+		return "Issue deleting tasks", 500
+		
 	return "OK", 200
 
 @tasks.route('/tasks/<task_id>', methods=['DELETE'])
+@flask_login.login_required
 def delete_task(task_id):
+	task_service = app.config['task_service']
+	task = task_service.fetch_tasks(task_id=task_id)
+	if len(task) == 0:
+		return "Task not found", 404
+	
+	# user can only delete task they own
+	if task[0]['user_id'] != current_user.uid:
+		return "Task not found", 404
+	
+	if task[0]["state"] == TaskState.RUNNING.value:
+		return "Cannot delete a task in running state. Cancel the task first, then try again", 403
 
-	# task = app.store.get_task(user_id=)
-
-	return f"{task_id}: OK", 200
+	ok = task_service.delete_task_by_id(task_id=task_id)
+	if not ok:
+		return "Issue deleting task", 500
+	
+	return f"OK", 200

@@ -21,6 +21,9 @@ class AbstractTaskStore(ABC):
 	def delete_older_than(cls, hours=0, minutes=0, seconds=0):
 		pass
 
+	@abstractmethod
+	def delete(cls, task_id=None, user_id=None, states=None):
+		pass
 
 # Create a context manager decorator for NDBTaskStore
 def ndb_context_manager(func):
@@ -115,3 +118,45 @@ class NDBTaskStore(ndb.Model):
         task.put()
 
         return task.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def delete(cls, task_id=None, user_id=None, states=None):
+        query_conditions = []
+
+        if user_id:
+            query_conditions.append(cls.user_id == user_id)
+
+        if task_id:
+            # If task_id is provided, we use it in the query conditions.
+            query_conditions.append(cls.task_id == task_id)
+        elif states:
+            # If states are provided but no task_id, then we prepare a compound 'OR' condition for all the states.
+            # This is assuming that the combination of user_id and each of the states is desired.
+            state_conditions = [cls.state == state for state in states]
+            if user_id:
+                # If user_id is also provided, it should be 'AND'ed with the 'OR' condition of states.
+                query_conditions.append(ndb.AND(*state_conditions))
+            else:
+                # If user_id is not provided, just use the 'OR' condition of states.
+                query_conditions.extend(state_conditions)
+        else:
+            # If neither task_id nor states are provided, return False.
+            return False
+
+        if query_conditions:
+            # Use 'AND' to combine all conditions
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).fetch()
+        else:
+            entities = []
+
+        # TODO: use unit of work pattern to make this "atomic"
+        try:
+            for entity in entities:
+                entity.key.delete()
+        except Exception:
+             return False
+
+        return True
+    

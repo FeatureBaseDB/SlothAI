@@ -23,8 +23,8 @@ from SlothAI.web.models import User, Log
 import config as config 
 
 from SlothAI.lib.services import TaskService
-from SlothAI.lib.task_storage import NDBTaskStore
-from SlothAI.lib.task_queue import AppEngineTaskQueue
+from SlothAI.lib.storage import NDBTaskStore
+from SlothAI.lib.queue import AppEngineTaskQueue
 
 def create_app(conf='dev'):
 

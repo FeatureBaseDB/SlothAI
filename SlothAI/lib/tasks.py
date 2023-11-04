@@ -40,6 +40,7 @@ class TaskState(Enum):
 			raise Exception("invalid state_as_string")
 
 class Task:
+	
 	def __init__(self, id: str, user_id: str, pipe_id: str, nodes: List[str], document: dict, created_at: datetime, retries: int, error: str, state: TaskState, split_status: int):
 		self.id = id
 		self.user_id = user_id

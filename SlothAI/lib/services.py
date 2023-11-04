@@ -1,11 +1,12 @@
 
 from SlothAI.lib.tasks import Task, TaskState
-from SlothAI.lib.task_storage import AbstractTaskStore
-from SlothAI.lib.task_queue import AbstractTaskQueue
+from SlothAI.lib.storage import AbstractTaskStore
+from SlothAI.lib.queue import AbstractTaskQueue
 
-from typing import Dict
+from typing import Dict, List
 
 class TaskService:
+
     def __init__(self, task_store: AbstractTaskStore, task_queue: AbstractTaskQueue):
         self.task_store = task_store
         self.task_queue = task_queue
@@ -64,3 +65,28 @@ class TaskService:
         if task.retries >= 5:
             return False
         return True
+    
+    def is_valid_state_for_delete(self, state: str):
+        '''
+        at this point, we will say you cannot delete a task until it's in a
+        non-running state
+        '''
+        if state == TaskState.CANCELED.value:
+            return True
+        if state == TaskState.FAILDED.value:
+            return True
+        if state == TaskState.COMPLETED.value:
+            return True
+        return False
+    
+    def delete_tasks_by_states(self, user_id: str = "", states: List[str]= []):
+        for state in states:
+            if not self.is_valid_state_for_delete(state):
+                return False
+        if user_id != "":
+            return self.task_store.delete(states=states, user_id=user_id)
+        
+        return self.task_store.delete(states=states)
+
+    def delete_task_by_id(self, task_id):
+        return self.task_store.delete(task_id=task_id)
