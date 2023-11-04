@@ -60,8 +60,8 @@
 <code>curl -X POST "http{% if 'localhost' not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}" \
 -H "Content-Type: application/json" \
 -d {{example_d}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
-    </div>
-    <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab">
+            </div>
+            <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab">
 <code># POST to SlothAI
 import requests
 
@@ -76,16 +76,12 @@ if response.status_code == 200:
 else:
     print(response.text)<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
             </div>
-
             {% if nodes[0].processor == 'read_file' %}
-            <div class="input-group mb-3">
-              <div class="custom-file">
-                <input type="file" class="custom-file-input" id="inputGroupFile02">
-                <label class="custom-file-label" for="inputGroupFile02" aria-describedby="inputGroupFileAddon02">Choose file</label>
-              </div>
-              <div class="input-group-append">
-                <span class="input-group-text" id="inputGroupFileAddon02">Upload</span>
-              </div>
+            <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+                <p></p>
+                <p>You may upload single PDFs or text files (<strong>.pdf or .txt</strong>) files to this pipeline. To upload multiple files, please use the code examples.</p>
+                <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt">
+                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
             </div>
             {% endif %}
         </div>
@@ -180,6 +176,7 @@ $(document).ready(function() {
       });
     }
 
+    // update the button colors
     setButtonColors();
 
     function getNodeInfo(nodeId) {
@@ -191,17 +188,6 @@ $(document).ready(function() {
         } else {
             return null;
         }
-    }
-
-    var node_buttons = $('button[data-node_id]');
-
-    $("#buttonSortable").sortable({
-        revert: true,
-        tolerance: "pointer"
-    });
-
-    function deleteNode(nodeID) {
-        toastr.info(nodeID)
     }
 
     function setPopovers() {
@@ -262,7 +248,15 @@ $(document).ready(function() {
         });
     }
 
+    // set popovers
+    var node_buttons = $('button[data-node_id]');
     setPopovers();
+
+    // make the buttons sortable
+    $("#buttonSortable").sortable({
+        revert: true,
+        tolerance: "pointer"
+    });
 
     // add node to pipeline
     $("#addNode").on("click", function() {
@@ -277,6 +271,7 @@ $(document).ready(function() {
         setButtonColors();
     });
 
+    // update the pipeline with new node
     $("#updateButton").on("click", function() {
         var selectedNodeID = $("#selectedNode").val();
         var selectedNode = all_nodes.find(function(node) {
@@ -296,7 +291,6 @@ $(document).ready(function() {
         // Close the 'nodeformmodal' modal
         $("#nodeFormModal").modal('hide');
     });
-
 
     // delete button
     $(".delete-button").on("click", function () {
@@ -318,6 +312,7 @@ $(document).ready(function() {
         });
     });
 
+    // save current pipeline nodes
     $("#SavePipeline").on("click", function () {
         $(this).prop("disabled", true);
         var dataNodeIds = [];
@@ -348,7 +343,7 @@ $(document).ready(function() {
         });
     });
     
-    // Listen for the click event on the download button
+    // download the pipeline
     $('#DownloadPipeline').on('click', function() {
         $(this).prop('disabled', true);
         toastr.info("Download request sent. Standby...");
@@ -391,42 +386,45 @@ $(document).ready(function() {
 		}, 500);
 	});
 
-    // Handle the "Upload" button
-    $('#uploadButton').on('click', function() {
-        var pipeId = $(this).data('pipe-id'); // Retrieve the pipe_id from the button's data attribute
-        var inputFile = $('#inputFile')[0];
-        toastr.success("upload called")
+    // Trigger the file input when the "Load" button is clicked
+    $('#loadButton').click(function() {
+        $('#fileInput').click();
+    });
 
-        // Check if a file is selected
-        if (inputFile.files.length > 0) {
-            var file = inputFile.files[0];
+    // Handle file input change event
+    $('#fileInput').change(function() {
+        const fileInput = this;
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                var fileData = event.target.result;
+                var url = `/pipeline/{{pipeline.get('pipe_id')}}/task`;
 
-            var formData = new FormData();
-            formData.append('json', JSON.stringify({})); // Your JSON data
-            formData.append('file', file);
-
-            // Construct the URL with the pipe_id
-            var url = `/pipeline/${pipeId}/task`;
-
-            // Make the POST request with the constructed URL
-            $.ajax({
-                type: 'POST',
-                url: url,
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(data) {
-                    console.log('Upload success:', data);
-                },
-                error: function(xhr, status, error) {
-                    console.error('Upload failed:', error);
-                }
-            });
-        } else {
-            // Handle the case where no file is selected
-            console.error('No file selected.');
+                // Create a FormData object for file and JSON data
+                var formData = new FormData();
+                formData.append('document', file, file.name); // Add the file
+                formData.append('json', JSON.stringify({})); // Add the JSON data
+                toastr.info("File upload started.")
+                $.ajax({
+                    type: 'POST',
+                    url: url,
+                    data: formData,
+                    processData: false,  // Prevent jQuery from processing the data
+                    contentType: false,  // Prevent jQuery from setting the content type
+                    success: function(data) {
+                        toastr.success('Uploaded file.');
+                        location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        toastr.error('Upload failed: ' + error);
+                    }
+                });
+            };
+            reader.readAsDataURL(file);
         }
     });
+
 });
 </script>
 {% endblock %}

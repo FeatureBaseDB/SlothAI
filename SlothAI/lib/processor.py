@@ -420,8 +420,36 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 			# Close the page stream
 			page_stream.close()
 
+	elif mime_type == "text/plain":
+		# grab document
+		gcs = storage.Client()
+		bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+		blob = bucket.blob(f"{uid}/{filename}")
+		text = blob.download_as_text()
+
+		# split on words
+		words = text.split()
+		chunks = []
+		current_chunk = []
+
+		# set the page chunk size (number of characters per page)
+		page_chunk_size = task.document.get('page_chunk_size', 1536)
+
+		# build the chunks
+		for word in words:
+			current_chunk.append(word)
+			if len(current_chunk) >= page_chunk_size:
+				chunks.append(' '.join(current_chunk))
+				current_chunk = []
+
+		# append any leftovers
+		if current_chunk:
+			chunks.append(' '.join(current_chunk))
+
+		texts = chunks
+
 	else:
-		raise NonRetriableError("read_file processor: only supports PDFs. Upload with type set to `application/pdf`.")
+		raise NonRetriableError("read_file processor: only supports PDFs or .txt files. Upload with type set to `application/pdf` or `text/plain`.")
 
 	# update the document
 	task.document[output_field] = texts

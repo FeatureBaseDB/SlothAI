@@ -54,6 +54,13 @@ button {
   color: rgba(0, 0, 0, 0.25); /* Change transparency on hover */
 }
 
+#fileUpload:hover {
+  background-color: #007bff; /* Change background color on hover */
+  color: #fff; /* Change text color on hover */
+  cursor: pointer; /* Use a regular pointer cursor on hover */
+  transition: background-color 0.3s, color 0.3s; /* Add a transition effect */
+}
+
 table {
   margin-top: 14px;
 }
