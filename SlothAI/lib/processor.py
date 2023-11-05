@@ -13,6 +13,7 @@ from itertools import groupby
 
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
+from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage_requests
 
 from typing import Dict
 
@@ -555,7 +556,7 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 		if output in inputs:
 			field = task.document[output]
 			if not isinstance(field, list):
-				raise NonRetriableError(f"split_task processor: input fields must be list type: got {type(field)}")
+				raise NonRetriableError(f"split_task processor: output fields must be list type: got {type(field)}")
 
 			# if this task was partially process, we need to truncate the data
 			# to only contain the data that hasn't been split.
@@ -611,6 +612,105 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 
 	# the initial task doesn't make it past split_task. so remove the rest of the nodes
 	task.nodes = [task.next_node()]
+	return task
+
+
+@processer
+def read_uri(node: Dict[str, any], task: Task) -> Task:
+	template = Template.get(template_id=node.get('template_id'))
+	
+	# OpenAI only for now
+	openai.api_key = task.document.get('openai_token')
+
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
+
+	user = User.get_by_uid(uid=task.user_id)
+	uid = user.get('uid')
+	
+	# use the first output field
+	try:
+		output_fields = template.get('output_fields')
+		output_field = output_fields[0].get('name')
+	except:
+		output_field = "texts"
+
+	input_fields = template.get('input_fields')
+	if not input_fields:
+		raise NonRetriableError("Input fields required for the read_uri processor.")
+
+	uri = task.document.get('uri')[0] # get the first uri
+	method = task.document.get('method')
+
+	if not uri or not method:
+		raise NonRetriableError("URI and method are required in the input fields.")
+
+	# scan for required fields in the input
+	for field in input_fields:
+		field_name = field['name']
+		if field_name not in task.document:
+			raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+
+	# Assuming 'bearer_token' is also a part of input_fields when needed
+	bearer_token = task.document.get('bearer_token')
+
+	# Now, you can proceed to build the request based on the method and URI
+	if method == 'GET':
+		# Perform a GET request
+		if bearer_token:
+			headers = {'Authorization': f'Bearer {bearer_token}'}
+			response = requests.get(uri, headers=headers)
+		else:
+			response = requests.get(uri)
+
+	elif method == 'POST':
+		# Perform a POST request
+		if bearer_token:
+			headers = {'Authorization': f'Bearer {bearer_token}'}
+			data = {}
+			response = requests.post(uri, headers=headers, json=data, stream=True, allow_redirects=True)
+
+		else:
+			data = {}
+			response = requests.post(uri, headers=headers, json=data, stream=True, allow_redirects=True)
+
+	else:
+		raise NonRetriableError("Request must contain a 'method' key that is one of: ['GET','POST'].")
+
+	if response.status_code != 200:
+		raise NonRetriableError(f"Request failed with status code: {response.status_code}")
+
+	print(response.headers)
+	# Check if the Content-Disposition header is present
+	if 'Content-Type' in response.headers:
+		content_type = response.headers['Content-Type']
+	else:
+		content_type = tasks.document.get('content_type')
+		if not content_type:
+			raise NonRetriableError("This URL will require using the filename and content_type fields.")
+
+	if 'Content-Type' in response.headers:
+		content_type = response.headers['Content-Type']
+	else:
+		content_type = task.document.get('content_type')
+
+	filename = task.document.get('filename')
+
+	if filename is None and content_type is None:
+		raise NonRetriableError("This URL will require using the filename and content_type fields.")
+
+	if filename is None:
+		file_extension = get_file_extension(content_type)
+
+		if not file_extension:
+			raise NonRetriableError("This URL will require using the filename and content_type fields.")
+		filename = f"{random_string(16)}.{file_extension}"
+
+	bucket_uri = upload_to_storage_requests(uid, filename, response.content, content_type)
+
+	task.document['filename'] = filename
+	task.document['content_type'] = content_type
+
 	return task
 
 

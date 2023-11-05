@@ -51,6 +51,7 @@ template_examples = [
     {"name": "Read from table", "template_name": "read_table", "processor_type": "read_fb"},
     {"name": "Read embedding distance from a table", "template_name": "read_embedding_from_table", "processor_type": "read_fb"},
     {"name": "Read PDF or text file and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
+    {"name": "Read file from URI with method", "template_name": "uri_to_file", "processor_type": "read_uri"},
     {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
     {"name": "Split tasks", "template_name": "split_tasks", "processor_type": "split_task"},
     {"name": "Read image and convert objects to labels", "template_name": "image_to_labels", "processor_type": "read_file"},
@@ -175,7 +176,7 @@ def pipeline_view(pipe_id):
         substitution_values['mime_type'] = "application/pdf"
     else:
         substitution_values.update(ai_dict)
-
+    print(substitution_values)
     # failsafe for setting content type and filename for a few processor templates
     substitution_values.setdefault('content_type', "application/pdf")
     substitution_values.setdefault('filename', "animate.pdf")
@@ -185,10 +186,10 @@ def pipeline_view(pipe_id):
     json_string = json_string.replace("'", '"')
     substitution_values['json_string'] = json_string
 
-    try:
-        python_template = load_template(f'{head_processor}_python')
-        curl_template = load_template(f'{head_processor}_curl')    
-    except Exception as ex:
+    python_template = load_template(f'{head_processor}_python')
+    curl_template = load_template(f'{head_processor}_curl')
+
+    if not python_template or not curl_template:
         python_template = load_template('jinja2_python')
         curl_template = load_template('jinja2_curl')
 

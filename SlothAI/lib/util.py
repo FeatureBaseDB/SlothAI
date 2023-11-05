@@ -60,13 +60,24 @@ def upload_to_storage(uid, filename, uploaded_file):
     gcs = storage.Client()
     bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
     blob = bucket.blob("%s/%s" % (uid, filename))
-    
-    # load content type
-    content_type = uploaded_file.content_type
 
     # upload file to storage
     uploaded_file.stream.seek(0)
     blob.upload_from_file(uploaded_file.stream, content_type=content_type)
+
+    # Construct and return the full bucket URI
+    bucket_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
+    return bucket_uri
+
+
+def upload_to_storage_requests(uid, filename, data, content_type):
+    # Set up bucket on Google Cloud
+    gcs = storage.Client()
+    bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+    blob = bucket.blob("%s/%s" % (uid, filename))
+
+    # Upload the bytes data to storage
+    blob.upload_from_string(data, content_type=content_type)
 
     # Construct and return the full bucket URI
     bucket_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
@@ -246,10 +257,10 @@ def fields_from_template(template):
 
 def extras_from_template(template):
     # only uses the last pattern. leaving these here for testing.
-    extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)
-    extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*}', re.DOTALL)
-    extras_pattern = re.compile(r'extras\s*=\s*{.*?}', re.DOTALL)
-    extras_pattern = re.compile(r'extras\s*=\s*\{(?:\s*".*?"\s*:\s*".*?"\s*,?)*}', re.DOTALL)
+    # extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)
+    # extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*}', re.DOTALL)
+    # extras_pattern = re.compile(r'extras\s*=\s*{.*?}', re.DOTALL)
+    # extras_pattern = re.compile(r'extras\s*=\s*\{(?:\s*".*?"\s*:\s*".*?"\s*,?)*}', re.DOTALL)
     extras_pattern = re.compile(r'extras\s*=\s*{((?:[^{}]|{{[^{}]*}})*)}', re.DOTALL)
     
     extras_matches = extras_pattern.findall(template)
@@ -399,6 +410,35 @@ def build_mermaid(pipeline, nodes):
     mermaid_string = mermaid_string + f"{previous_node_template}a[[{previous_node_template}\ntemplate]] --> |{previous_extras_list}|{previous_node_name}\n"
 
     return mermaid_string
+
+
+import mimetypes
+
+def get_file_extension(content_type):
+    # Create a mapping of content types to file extensions
+    content_type_to_extension = {
+        'application/json': 'json',
+        'application/pdf': 'pdf',
+        'text/plain': 'txt',
+        'text/html': 'html',
+        'text/css': 'css',
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'audio/mpeg': 'mp3',
+        'audio/mp4': 'mp4',
+        'audio/mpeg': 'mpeg',
+        'audio/mpeg': 'mpga',
+        'audio/wav': 'wav',
+        'audio/ogg': 'ogg',
+        'audio/webm': 'webm',
+        'text/markdown': 'md',
+        'text/csv': 'csv',
+    }
+
+    # Use the provided content_type to determine the file extension
+    file_extension = content_type_to_extension.get(content_type.split(';')[0])
+
+    return file_extension
 
 
 # maybe not used due to remove_fields_and_extras
