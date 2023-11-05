@@ -615,6 +615,89 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 
 
 @processer
+def aiaudio(node: Dict[str, any], task: Task) -> Task:
+	template = Template.get(template_id=node.get('template_id'))
+	
+	# OpenAI only for now
+	openai.api_key = task.document.get('openai_token')
+
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
+	
+	# use the first output field
+	try:
+		output_fields = template.get('output_fields')
+		output_field = output_fields[0].get('name')
+	except:
+		output_field = "texts"
+
+	user = User.get_by_uid(uid=task.user_id)
+	uid = user.get('uid')
+	filename = task.document.get('filename')
+	content_type = task.document.get('content_type')
+
+	# Check if the mime type is supported
+	supported_content_types = ['audio/mpeg', 'audio/mpeg3', 'audio/x-mpeg-3', 'audio/mp3', 'audio/mpeg-3', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/x-wav']
+	
+	for supported_type in supported_content_types:
+		if supported_type in content_type:
+			break
+	else:
+		raise NonRetriableError(f"Unsupported file type: {content_type}")
+
+	# Get the document
+	gcs = storage.Client()
+	bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+	blob = bucket.blob(f"{uid}/{filename}")
+	audio_file = BytesIO()
+
+	audio_file.name = f"{filename}"  # You can choose a unique name
+	
+	# download to file
+	blob.download_to_file(audio_file)
+	audio_file.content_type = content_type
+	
+	# must seek to the start
+	audio_file.seek(0)
+
+	# Get the file size using the BytesIO object's getbuffer method
+	file_size = len(audio_file.getbuffer())
+
+	# Check if the file size is within the limit (25 MB)
+	max_file_size = 25 * 1024 * 1024  # 25 MB in bytes
+	if file_size > max_file_size:
+		raise NonRetriableError("File size exceeds the 25 MB limit")
+
+	# process the audio
+	model = task.document.get('model', "whisper-1")
+	transcript = openai.Audio.transcribe(model, audio_file, content_type="wav")
+
+	# split on words
+	words = transcript.get('text', "").split(" ")
+	chunks = []
+	current_chunk = []
+
+	# set the page chunk size (number of characters per page)
+	page_chunk_size = task.document.get('page_chunk_size', 1536)
+
+	# build the chunks
+	for word in words:
+		current_chunk.append(word)
+		if len(current_chunk) >= page_chunk_size:
+			chunks.append(' '.join(current_chunk))
+			current_chunk = []
+
+	# append any leftovers
+	if current_chunk:
+		chunks.append(' '.join(current_chunk))
+
+	task.document[output_field] = chunks
+		
+	# Return the modified task
+	return task
+
+
+@processer
 def read_fb(node: Dict[str, any], task: Task) -> Task:
 	user = User.get_by_uid(task.user_id)
 	doc = {

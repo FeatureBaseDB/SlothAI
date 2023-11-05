@@ -1,0 +1,3 @@
+curl -X POST "$protocol://$hostname/pipeline/$pipe_id/task?token=$token" \
+-F "document=@./animate.pdf;type=application/pdf" \
+-F '$json_string;type=application/json'

@@ -96,11 +96,12 @@ def template_update(template_id):
 @template.route('/templates/generate_name', methods=['GET'])
 @flask_login.login_required
 def generate_name():
-    while True:
-        name = random_name(2)
-        if len(name) < 13:
+    # get short name
+    for x in range(20):
+        name_random = random_name(2).split('-')[0]
+        if len(name_random) < 9:
             break
-    return jsonify({"name": name})
+    return jsonify({"name": name_random})
 
 
 @template.route('/templates', methods=['POST'])
@@ -124,7 +125,7 @@ def template_create():
                 return jsonify({"error": error.get('error'), "message": error.get('message')}), 400
 
             processor = extras.get('processor', template_data.get('processor', 'jinja2'))
-                
+            print(processor)
             created_template = Template.create(
                 name=template_data.get('name'),
                 uid=uid,

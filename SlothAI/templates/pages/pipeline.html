@@ -52,29 +52,17 @@
             <li class="nav-item">
                 <a class="nav-link" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
             </li>
+            {% elif nodes[0].processor == 'aiaudio' %}
+            <li class="nav-item">
+                <a class="nav-link" id="record-tab" data-toggle="tab" href="#record" role="tab" aria-controls="record" aria-selected="false">Record Audio</a>
+            </li>
             {% endif %}
         </ul>
 
         <div class="tab-content" id="codeTabContent">
-            <div class="tab-pane fade show active" id="curl" role="tabpanel" aria-labelledby="curl-tab">
-<code>curl -X POST "http{% if 'localhost' not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}" \
--H "Content-Type: application/json" \
--d {{example_d}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
+            <div class="tab-pane fade show active" id="curl" role="tabpanel" aria-labelledby="curl-tab"><code>{{ curl_code }}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
             </div>
-            <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab">
-<code># POST to SlothAI
-import requests
-
-url = "http{% if 'localhost' not in hostname %}s{% endif %}://{{hostname}}/pipeline/{{pipeline.pipe_id}}/task?token={{token}}"
-headers = {"Content-Type": "application/json"}
-data = {{ example_d|replace("'", '') }}
-
-response = requests.post(url, headers=headers, json=data)
-
-if response.status_code == 200:
-    print(response.text)
-else:
-    print(response.text)<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
+            <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab"><code>{{python_code}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
             </div>
             {% if nodes[0].processor == 'read_file' %}
             <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
@@ -82,6 +70,14 @@ else:
                 <p>You may upload single PDFs or text files (<strong>.pdf or .txt</strong>) files to this pipeline. To upload multiple files, please use the code examples.</p>
                 <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt">
                 <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+            </div>
+            {% elif nodes[0].processor == 'aiaudio' %}
+            <div class="tab-pane fade" id="record" role="tabpanel" aria-labelledby="record-tab">
+                <p></p>
+                <p>Click to record. Click stop when you are done, then click upload.</p>
+                <button id="startRecord" class="btn btn-primary"><i class="fas fa-microphone"></i> Record</button>
+                <button id="stopRecord" class="btn btn-secondary" disabled><i class="fas fa-stop"></i> Stop</button>
+                <button id="uploadRecord" class="btn btn-success"><i class="fas fa-upload"></i> Upload</button>
             </div>
             {% endif %}
         </div>
@@ -425,6 +421,66 @@ $(document).ready(function() {
         }
     });
 
+    let mediaRecorder;
+    let audioChunks = [];
+
+    $("#startRecord").click(function() {
+        navigator.mediaDevices
+            .getUserMedia({ audio: true })
+            .then(function(stream) {
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: "audio/webm" // Set the desired mimeType
+                });
+
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                mediaRecorder.start();
+                $("#startRecord").prop("disabled", true);
+                $("#stopRecord").prop("disabled", false);
+            })
+            .catch(function(error) {
+                console.error("Error accessing audio: " + error);
+            });
+    });
+
+    $("#stopRecord").click(function() {
+        mediaRecorder.stop();
+        $("#startRecord").prop("disabled", false);
+        $("#stopRecord").prop("disabled", true);
+    });
+
+    $("#uploadRecord").click(function() {
+        if (audioChunks.length === 0) {
+            toastr.error("No recorded audio to upload.");
+            return;
+        }
+
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+
+        const url = `/pipeline/{{pipeline.get('pipe_id')}}/task`;
+
+        const formData = new FormData();
+        formData.append("document", blob, "recorded_audio.webm"); // Change the filename and content type here
+        formData.append("json", JSON.stringify({ filename: "recorded_audio.webm", content_type: "audio/webm" }));
+
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(data) {
+                toastr.success("Uploaded recorded audio.");
+                location.reload();
+            },
+            error: function(xhr, status, error) {
+                toastr.error("Upload failed: " + error);
+            },
+        });
+    });
 });
 </script>
 {% endblock %}

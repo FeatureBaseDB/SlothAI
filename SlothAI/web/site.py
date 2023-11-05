@@ -1,3 +1,5 @@
+import json
+
 from google.cloud import ndb
 
 from flask import Blueprint, render_template
@@ -8,7 +10,7 @@ from flask import current_app as app
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.util import random_name, gpt_completion, build_mermaid
+from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template
 from SlothAI.web.models import Pipeline, Node, Template, Log
 from SlothAI.lib.tasks import Task
 
@@ -45,10 +47,10 @@ template_examples = [
     {"name": "Convert text to embedding", "template_name": "text_to_embedding", "processor_type": "embedding"},
     {"name": "Convert text to an OpenAI embedding", "template_name": "text_to_ada_embedding", "processor_type": "embedding"},
     {"name": "Write to table", "template_name": "write_table", "processor_type": "write_fb"},
-    {"name": "Write PDF chunks to a table", "template_name": "chunks_embeddings_pages_to_table", "processor_type": "write_fb"},
+    {"name": "Write file chunks to a table", "template_name": "chunks_embeddings_pages_to_table", "processor_type": "write_fb"},
     {"name": "Read from table", "template_name": "read_table", "processor_type": "read_fb"},
     {"name": "Read embedding distance from a table", "template_name": "read_embedding_from_table", "processor_type": "read_fb"},
-    {"name": "Read PDF and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
+    {"name": "Read PDF or text file and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
     {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
     {"name": "Split tasks", "template_name": "split_tasks", "processor_type": "split_task"},
     {"name": "Read image and convert objects to labels", "template_name": "image_to_labels", "processor_type": "read_file"},
@@ -62,6 +64,7 @@ template_examples = [
     {"name": "Generate answers from chunks and a query", "template_name": "chunks_query_to_answer", "processor_type": "aidict"},
     {"name": "Converse and answer questions from texts and keyterms", "template_name": "texts_and_keyterms_to_answer", "processor_type": "aichat"},
     {"name": "Generate an image from text", "template_name": "text_to_image", "processor_type": "aiimage"},
+    {"name": "Transcribe audio to text pages", "template_name": "audio_to_text", "processor_type": "aiaudio"},
 ]
 
 @site.route('/logs', methods=['GET'])
@@ -112,7 +115,6 @@ def pipeline_view(pipe_id):
     # get the user and their tables
     username = current_user.name
     token = current_user.api_token
-    hostname = request.host
     templates = Template.fetch(uid=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
 
@@ -123,7 +125,6 @@ def pipeline_view(pipe_id):
 
     # add input and output fields, plus template name
     _nodes = []
-    _all_nodes = []
 
     # build two lists, one of the ones in the pipeline, another of all nodes
     for node in nodes:
@@ -140,7 +141,6 @@ def pipeline_view(pipe_id):
 
         if node.get('node_id') in pipeline.get('node_ids'):
             _nodes.append(node)
-        _all_nodes.append(node)
 
     # sort the list based on the current order in the pipeline
     node_order_mapping = {node_id: index for index, node_id in enumerate(pipeline.get('node_ids'))}
@@ -152,16 +152,51 @@ def pipeline_view(pipe_id):
     mermaid_string = build_mermaid(pipeline, _nodes)
 
     # build an example POST usin generative AI
-    head_input_fields = _nodes[0].get('input_fields')
+    head_input_fields = _nodes[0].get('input_fields', [])
+    head_field_names = [field.get('name') for field in head_input_fields]
     head_processor = _nodes[0].get('processor')
-    
-    document = {"head_input_fields": head_input_fields, "pipe_id": pipe_id, "head_processor": head_processor, "user_api_token": token}
-    example_d = gpt_completion(document, "form_example")
-    if not example_d:
-        example_d = """'{"text": ["The AI failed us again. Insert bad example here."]}'"""
 
+    # Create a dictionary to store the template substitution values
+    substitution_values = {
+        "pipe_id": pipe_id,
+        "pipe_name": pipeline.get('name'),
+        "hostname": request.host,
+        "protocol": request.scheme,
+        "token": token,
+        "head_processor": head_processor,
+        "head_input_fields": ", ".join(head_field_names)
+    }
 
-    return render_template('pages/pipeline.html', username=username, dbid=current_user.dbid, token=token, hostname=hostname, pipeline=pipeline, nodes=_nodes, all_nodes=nodes, head_input_fields=head_input_fields, example_d=example_d, mermaid_string=mermaid_string)
+    # Loop over the input fields and add them to the substitution dictionary
+    ai_dict = gpt_dict_completion(substitution_values, template = 'form_example')
+    if not ai_dict:
+        ai_dict = {"texts": ["There was a knock at the door, then silence.","Bob was there, wanting to tell Alice about an organization."]}
+        substitution_values['filename'] = "animate.pdf"
+        substitution_values['mime_type'] = "application/pdf"
+    else:
+        substitution_values.update(ai_dict)
+
+    # failsafe for setting content type and filename for a few processor templates
+    substitution_values.setdefault('content_type', "application/pdf")
+    substitution_values.setdefault('filename', "animate.pdf")
+
+    # load the json string
+    json_string = json.dumps(ai_dict)
+    json_string = json_string.replace("'", '"')
+    substitution_values['json_string'] = json_string
+
+    try:
+        python_template = load_template(f'{head_processor}_python')
+        curl_template = load_template(f'{head_processor}_curl')    
+    except Exception as ex:
+        python_template = load_template('jinja2_python')
+        curl_template = load_template('jinja2_curl')
+
+    python_code = python_template.substitute(substitution_values)
+    curl_code = curl_template.substitute(substitution_values)
+
+    # render the page
+    return render_template('pages/pipeline.html', username=username, pipeline=pipeline, nodes=_nodes, all_nodes=nodes,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string)
 
 
 @site.route('/nodes', methods=['GET'])
@@ -234,7 +269,11 @@ def template_detail(template_id="new"):
 
     hostname = request.host
 
-    name_random = random_name(2)
+    # get short name
+    for x in range(20):
+        name_random = random_name(2).split('-')[0]
+        if len(name_random) < 9:
+            break
 
     empty_template = '{# New Template #}\n\n{# Extras are required. #}\nextras = {"static_extra": "hello", "user_extra": None}'
 

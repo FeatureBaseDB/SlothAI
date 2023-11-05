@@ -1,27 +1,7 @@
 # form an example
-
-1. Consider an example input. The input_fields for the `jinja2` processor example's pipeline were as follows:
-"""
-[{'name': "text", 'type': "strings"}]
-"""
-
-2. Review this example output as a result of attention in 1.:
-"""
-curl -X POST \
-"http://localhost:8080/pipeline/1L7lirUMUP4UU/task?token=VBtQYnXjdPsGBM0hifAqePy9Ef2kXPWYChWnNO" \
--H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."]}'
-"""
-
-3. As you can see, the array in step 1. describes the name of the field in the -d string, as well as indicating what type of value is used there, such as a list of strings
-
-3. We have a new pipeline with the following input_fields using the `$head_processor` processor:
+1. We have a new pipeline with the following input_fields using the `$head_processor` processor:
 """
 $head_input_fields
 """
-
-4. Doing nothing else, finish the sample below by providing the string passed to -d:
-curl -X POST \
-"http://localhost:8080/pipeline/$pipe_id/task?token=$user_api_token" \
--H "Content-Type: application/json" \
--d 
+2. Using the input fields from step 1, and having some fun with it, form a python dictionary that has each input_field a a key in a dict called ai_dict, then build an example 'value' for each key that makes sense based on the key name and keeping in mind this is for an example python or curl call for the user.
+ai_dict = 

@@ -133,12 +133,6 @@ def gpt_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo")
 # called only by our stuff
 def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo", alt_token=""):
     
-    if not document:
-        document = {
-            "instructions": "generate a short list of keyterms with the key 'keyterms':",
-            "text": "[generate_random_keyterms]"
-        }
-    
     # load openai key then drop it from the document
     try:
         openai.api_key = app.config['OPENAI_TOKEN']
@@ -150,8 +144,8 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
         template = load_template(template)
         prompt = template.substitute(document)
     except Exception as ex:
-        print(ex)
-        return document
+        return {}
+
     completion = openai.ChatCompletion.create(
         model = model,
         messages = [
@@ -162,9 +156,9 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
 
     answer = completion.choices[0].message
 
-    ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "").lower()
+    ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "")
     ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
-    ai_dict_str = ai_dict_str.strip('python_dict = ')
+    ai_dict_str = ai_dict_str.strip('ai_dict = ')
 
     try:
         ai_dict = eval(ai_dict_str)

@@ -1,0 +1,18 @@
+# POST audio to $pipe_name
+import requests
+import json
+
+# URL
+url = "$protocol://$hostname/pipeline/$pipe_id/task?token=$token"
+
+# Define the file and JSON data
+files = {'document': ('animate.pdf', open('animate.pdf', 'rb'), 'application/pdf')}
+json_data = json.dumps($json_string)
+
+# Send the request with both file and JSON data
+response = requests.post(url, files=files, data=json_data, headers={'Content-Type': 'application/json'})
+
+if response.status_code == 200:
+    print(response.text)
+else:
+    print(response.status_code)

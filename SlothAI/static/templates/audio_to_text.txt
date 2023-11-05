@@ -1,4 +1,4 @@
-{# Use this template to read a PDF or .txt file and convert it to text #}
+{# Use this template to transcribe audio and convert it to text pages #}
 
 {# Input Fields #}
 {# These should not be changed, as they are provided by the task ingestion endpoint for file uploads. #}
@@ -8,4 +8,4 @@ input_fields = [{'name': 'filename', 'type': 'string'},{'name': 'content_type', 
 output_fields = [{'name': 'texts', 'type': 'strings'}]
 
 {# Extras 'page_chunk_size' is used for .txt files only, to set page size #}
-extras = {"processor": "read_file", "page_chunk_size": 1536}
+extras = {"openai_token": None, "model": "whisper-1", "processor": "aiaudio", "page_chunk_size": 1536}
