@@ -240,10 +240,15 @@ $(document).ready(function() {
         $('#nodesTable').DataTable({
             "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
             "order": [[0, "asc"]],
-            "pageLength": 25
+            "pageLength": 25,
+            "responsive": true,
+            "columnDefs": [
+                    { responsivePriority: 1, targets: 1 },
+                    { responsivePriority: 2, targets: 3 },
+                    { responsivePriority: 2, targets: 4 }   
+                ]
         });
     }
-
     // Run changeButtonColors and changeBadgeColors functions using Promises
     const buttonColorsPromise = new Promise((resolve) => {
         changeButtonColors();
@@ -259,7 +264,6 @@ $(document).ready(function() {
     Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
         sortTable();
     });
-
 
     function processString(inputString) {
       if (inputString.includes(':')) {

@@ -628,7 +628,7 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
 	user = User.get_by_uid(uid=task.user_id)
 	uid = user.get('uid')
 	
-	# use the first output field
+	# use the first output field TODO FIX THIS
 	try:
 		output_fields = template.get('output_fields')
 		output_field = output_fields[0].get('name')
@@ -664,15 +664,17 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
 			response = requests.get(uri)
 
 	elif method == 'POST':
+		data = {}
+		for field in task.document.get('data_fields'):
+			data[field] = task.document[field]
+		
 		# Perform a POST request
 		if bearer_token:
 			headers = {'Authorization': f'Bearer {bearer_token}'}
-			data = {}
 			response = requests.post(uri, headers=headers, json=data, stream=True, allow_redirects=True)
 
 		else:
-			data = {}
-			response = requests.post(uri, headers=headers, json=data, stream=True, allow_redirects=True)
+			response = requests.post(uri, json=data, stream=True, allow_redirects=True)
 
 	else:
 		raise NonRetriableError("Request must contain a 'method' key that is one of: ['GET','POST'].")
@@ -680,7 +682,6 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
 	if response.status_code != 200:
 		raise NonRetriableError(f"Request failed with status code: {response.status_code}")
 
-	print(response.headers)
 	# Check if the Content-Disposition header is present
 	if 'Content-Type' in response.headers:
 		content_type = response.headers['Content-Type']

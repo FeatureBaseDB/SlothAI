@@ -47,19 +47,39 @@
     </div>
 
     <div class="form-group mt-3">
-        <textarea class="form-control" id="templateText" rows="4">{% if template %}{{ template.text }}{% else %}{{empty_template}}{% endif %}</textarea>
+        <div id="editor" class="form-control" id="templateText" rows="4">{% if template %}{{ template.text }}{% else %}{{empty_template}}{% endif %}</div>
     </div>
 </div>
 {% endblock %}
 
 {% block javascript %}
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.31.1/ace.js" integrity="sha512-a9+UssxQ7SRBDf5iwiGlGP1WezkIpdqKKIO37B3ellyQRjdrpj+NuDWme/nJQXkALyVpahGXRpJX7mLTvctyoQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 <script type="text/javascript">
 $(document).ready(function() {
+    ace.require("ace/ext/language_tools");
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/textmate");
+    editor.getSession().setMode("ace/mode/python");
+    editor.setHighlightActiveLine(false)
+    editor.resize()
+    editor.setOptions({
+        autoScrollEditorIntoView: true,
+        copyWithEmptySelection: true,
+    });
+    editor.setShowPrintMargin(false);
+    editor.getSession().setUseWrapMode(true)
+
+    editor.setOptions({
+        enableBasicAutocompletion: true
+    });
+
     {% if template %}$('#renameButton').hide();{% endif %}
 
     {% if not has_templates %}
     $.get('/static/templates/get_started_callback.txt', function(response) {
-        $("#templateText").val(response);
+        editor.setValue(response);
         toastr.info('Loaded getting started template.');
     });
     {% endif %}
@@ -73,7 +93,7 @@ $(document).ready(function() {
     {% endfor %}
 
     var originalTemplateName = $("#templateName").val();
-    var originalTemplateText = $("#templateText").val();
+    var originalTemplateText = editor.getValue();
     var templateNameChanged = false;
 
     {% if template %}
@@ -121,7 +141,7 @@ $(document).ready(function() {
     $("#saveButton").on("click", function(event) {
         event.preventDefault();
         var selectedTemplate = $("#generateTemplateDropdown .dropdown-item.active");
-        var newTemplateText = $("#templateText").val();
+        var newTemplateText = editor.getValue();
 
         if (newTemplateText !== originalTemplateText) {
             var data = {
@@ -204,7 +224,7 @@ $(document).ready(function() {
     });
 
     $("#downloadButton").on("click", function() {
-        var templateText = $("#templateText").val();
+        var templateText = editor.getValue();
         var templateName = $("#templateName").val();
         var blob = new Blob([templateText], { type: "text/plain" });
         var url = window.URL.createObjectURL(blob);
@@ -245,7 +265,7 @@ $(document).ready(function() {
             const reader = new FileReader();
             reader.onload = function(event) {
                 const fileContent = event.target.result;
-                $('#templateText').text(fileContent);
+                editor.setValue(fileContent);
                 toastr.info('Loaded file.');
             };
             reader.readAsText(file);
@@ -263,7 +283,7 @@ $(document).ready(function() {
             url: '/static/templates/' + encodedTemplateName + '.txt',
             type: 'GET',
             success: function(response) {
-                $("#templateText").val(response);
+                editor.setValue(response);
                 toastr.info('Template loaded.');
             },
             error: function(error) {

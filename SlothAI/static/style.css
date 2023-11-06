@@ -24,10 +24,19 @@ label {
   outline: 0;
 }
 
+#editor { 
+  height: 50vw;
+  width: 80vw;
+}
+
 /* Button styles */
 button {
   -webkit-appearance: none;
   border-radius: 0;
+}
+
+table tr td:last-child button {
+    margin-top: 6px;
 }
 
 #buttonSortable {
@@ -63,6 +72,7 @@ button {
 
 table {
   margin-top: 14px;
+  font-size:0.9rem;
 }
 
 /* Link styles */
