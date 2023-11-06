@@ -14,7 +14,6 @@ from google.protobuf import timestamp_pb2
 
 from SlothAI.lib.gcloud import box_start
 from SlothAI.web.models import Box
-from SlothAI.web.models import Task as TaskModel
 from SlothAI.lib.util import random_string, handle_quotes
 from SlothAI.lib.schemar import string_to_datetime, datetime_to_string, FBTypes
 
@@ -335,11 +334,18 @@ def box_required():
 		for box in boxes:
 			# if the box is START, PROVISIONING, STAGING, RUNNING
 			if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
+				# boxes with these states should have ip addr but for some
+				# reason they don't always
+				box_ip = box.get('ip_address')
+				if not box_ip:
+					halted_t4s.append(box)
+					continue
+				
 				# can we ping it?
-				response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
+				response_time = ping(box_ip, timeout=2.0)  # Set a 2-second timeout
 
-				if response_time and check_webserver_connection(box.get('ip_address'), 9898):
-					print("pinging", box.get('ip_address'), response_time, box.get('status'))
+				if response_time and check_webserver_connection(box_ip, 9898):
+					print("pinging", box_ip, response_time, box.get('status'))
 					# ping worked and the server responded
 					active_t4s.append(box)
 				else:

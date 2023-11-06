@@ -51,7 +51,7 @@ def process_tasks(cron_key):
 	except RetriableError as e:
 		task.error = str(e)
 		app.logger.error(f"processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: retrying task.")
-		task_service.retry_task()
+		task_service.retry_task(task)
 	except services.InvalidStateForProcess as e:
 		# state likely changed during processing a task, don't requeue
 		# TODO: this could be drop task but drop_task should accept a final state.

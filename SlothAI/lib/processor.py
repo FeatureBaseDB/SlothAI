@@ -141,23 +141,28 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 
 @processer
 def embedding(node: Dict[str, any], task: Task) -> Task:
-	# Load OpenAI key if needed
-	if "text-embedding-ada-002" in task.document.get('model'):
-		openai.api_key = task.document.get('openai_token')
-
-	# Output and input fields
 	template = Template.get(template_id=node.get('template_id'))
-	if not template:
-		raise TemplateNotFoundError(template_id=node.get('template_id'))
-	output_fields = template.get('output_fields')
 	input_fields = template.get('input_fields')
+	output_fields = template.get('output_fields')
+	if not input_fields:
+		raise NonRetriableError("split_task processor: input fields required")
+	if not output_fields:
+		raise NonRetriableError("split_task processor: output fields required")
+
+	extras = node.get('extras', None)
+	if not extras:
+		raise NonRetriableError("embedding processor: extras not found but is required")
 	
+	model = extras.get('model')
+	if not model:
+		raise NonRetriableError("embedding processor: model not found in extras but is required")
+
 	if not input_fields:
 		raise NonRetriableError("embedding processor: input_fields required.")
 	
 	if not output_fields:
 		raise NonRetriableError("embedding processor: output_fields required.")
-	
+
 	# Loop through each input field and produce the proper output for each <key>_embedding output field
 	for input_field in input_fields:
 		input_field_name = input_field.get('name')
@@ -175,23 +180,24 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 		# Initialize a list to store the embeddings
 		embeddings = []
 
-		try:
-			if "text-embedding-ada-002" in task.document.get('model'):
+		if model == "text-embedding-ada-002":
+			try:
 				batch_size = 10
 				for i in range(0, len(input_data), batch_size):
 					batch = input_data[i:i + batch_size]
 					embedding_results = openai.Embedding.create(input=batch, model=task.document.get('model'))
 					embeddings.extend([_object.get('embedding') for _object in embedding_results.get('data')])
-			else:
-				embedding_results = []
 
-		except Exception as ex:
-			print(input_data)
-			# Making non-retriable for now; you can handle different error cases as needed
-			raise NonRetriableError(f"Exception talking to OpenAI ada embedding: {ex}")
+				# Add the embeddings to the output field
+				task.document[output_field] = embeddings
+			except Exception as ex:
+				app.logger.info("embedding processor: " + input_data)
+				# Making non-retriable for now; you can handle different error cases as needed
+				raise NonRetriableError(f"Exception talking to OpenAI ada embedding: {ex}")
 
-		# Add the embeddings to the output field
-		task.document[output_field] = embeddings
+
+		elif "instructor" in model:
+			task = sloth_embedding(input_field_name, output_field, model, task)
 
 	return task
 
@@ -1001,59 +1007,62 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 # remove these
 # ============
 
-@processer
-def sloth_embedding(node: Dict[str, any], task: Task) -> Task:
-	return sloth_processing(node, task, "embedding")
-
-@processer
-def sloth_keyterms(node: Dict[str, any], task: Task) -> Task:
-	return sloth_processing(node, task, "keyterms")
-
-
-def sloth_processing(node: Dict[str, any], task: Task, type) -> Task:
-	if type == "embedding":
-		path = "embed"
-		response_key = "embeddings"
-	elif type == "keyterms":
-		path = "keyterms"
-		response_key = "keyterms"
-	else:
-		raise Exception("sloth can only process embedding or keyterms.")
-
-	template = Template.get(template_id=node.get('template_id'))
-	input_fields, output_fields = fields_from_template(template.get('text'))
-
-	if len(input_fields) != 1:
-		task.document['error'] = "sloth only supports a single input field to get embedded at this time."
-
-	if len(output_fields) != 1:
-		task.document['error'] = "sloth only supports a single output field to hold the embedding at this time."
+def sloth_embedding(input_field: str, output_field: str, model: str, task: Task) -> Task:
 
 	data = {
-		"text": task.document[input_fields[0]['name']]
+		"text": task.document[input_field],
+		"model": model
 		# data = get_values_by_json_paths(keys, task.document)
 		# TODO: could be a nested key
 	}
 
 	defer, selected_box = box_required()
 	if defer:
-		task.document['error'] = "sloth virtual machine is being started"
-		return task
+		raise RetriableError("sloth virtual machine is being started")
 	
-	url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/{path}"
+	url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
 
 	try:
 		# Send the POST request with the JSON data
-		response = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"}, timeout=30)
+		response = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"}, timeout=60)
 	except Exception as ex:
-		task.document['error'] = f"Exception raised connecting to sloth virtual machine: {ex}"
-		return task
+		raise NonRetriableError(f"Exception raised connecting to sloth virtual machine: {ex}")
 
 	# Check the response status code for success
 	if response.status_code == 200:
-		task.document[output_fields[0]['name']] = response.json().get(response_key)
+		task.document[output_field] = response.json().get("embeddings")
 	else:
-		task.document['error'] = f"request to sloth_embedding virtual machine failed with status code {response.status_code}: {response.text}"
+		raise NonRetriableError(f"request to sloth_embedding virtual machine failed with status code {response.status_code}: {response.text}")
+
+	return task
+
+
+def sloth_keyterms(input_field: str, output_field: str, model: str, task: Task) -> Task:
+
+	data = {
+		"text": task.document[input_field],
+		"model": model
+		# data = get_values_by_json_paths(keys, task.document)
+		# TODO: could be a nested key
+	}
+
+	defer, selected_box = box_required()
+	if defer:
+		raise RetriableError("sloth virtual machine is being started")
+	
+	url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/keyterms"
+
+	try:
+		# Send the POST request with the JSON data
+		response = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"}, timeout=60)
+	except Exception as ex:
+		raise NonRetriableError(f"Exception raised connecting to sloth virtual machine: {ex}")
+
+	# Check the response status code for success
+	if response.status_code == 200:
+		task.document[output_field] = response.json().get("keyterms")
+	else:
+		raise NonRetriableError(f"request to sloth_keyterms virtual machine failed with status code {response.status_code}: {response.text}")
 
 	return task
 

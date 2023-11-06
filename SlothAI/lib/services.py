@@ -69,7 +69,7 @@ class TaskService:
 		)
 
     def retry_task(self, task: Task):
-        if self._is_retriable(self, task):
+        if self._is_retriable(task):
             task.retries += 1
             self.queue_task(task)
         else:
