@@ -66,6 +66,7 @@ template_examples = [
     {"name": "Generate answers from chunks and a query", "template_name": "chunks_query_to_answer", "processor_type": "aidict"},
     {"name": "Generate chat from texts", "template_name": "text_to_chat", "processor_type": "aichat"},
     {"name": "Generate an image from text", "template_name": "text_to_image", "processor_type": "aiimage"},
+    {"name": "List objects in image", "template_name": "image_to_objects", "processor_type": "aivision"},
     {"name": "Transcribe audio to text pages", "template_name": "audio_to_text", "processor_type": "aiaudio"},
 ]
 

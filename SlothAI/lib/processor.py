@@ -380,6 +380,66 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 		raise NonRetriableError("The aidict processor expects a supported model.")
 
 
+# look at a picture and get objects
+@processer
+def aivision(node: Dict[str, any], task: Task) -> Task:
+	# Output and input fields
+	template = Template.get(template_id=node.get('template_id'))
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
+	output_fields = template.get('output_fields')
+	input_fields = template.get('input_fields')
+
+	# use the first output field
+	try:
+		output_fields = template.get('output_fields')
+		output_field = output_fields[0].get('name')
+	except:
+		output_field = "objects"
+
+	# Check if each input field is present in 'task.document'
+	for field in input_fields:
+		field_name = field['name']
+		if field_name not in task.document:
+			raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+
+	user = User.get_by_uid(uid=task.user_id)
+	uid = user.get('uid')
+	filename = task.document.get('filename')
+	content_type = task.document.get('content_type')
+
+	# deal with lists
+	if isinstance(filename, list):
+	    filename = filename[0]
+	if isinstance(content_type, list):
+	    content_type = content_type[0]
+
+	# Check if the mime type is supported for PNG, JPG, and BMP
+	supported_content_types = ['image/png', 'image/jpeg', 'image/bmp']
+
+	for supported_type in supported_content_types:
+		if supported_type in content_type:
+			break
+	else:
+		raise NonRetriableError(f"Unsupported file type: {content_type}")
+
+	image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
+
+	client = vision.ImageAnnotatorClient()
+	response = client.annotate_image({
+	    'image': {'source': {'image_uri': image_uri}},
+	    'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
+	})
+
+	# Get a list of detected labels (objects)
+	labels = [label.description.lower() for label in response.label_annotations]
+
+	# update the document with objects
+	task.document[output_field] = labels
+
+	return task
+
+
 # generate images off a prompt
 @processer
 def aiimage(node: Dict[str, any], task: Task) -> Task:
