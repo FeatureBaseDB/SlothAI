@@ -35,7 +35,8 @@
             <tbody>
                 {% for log in logs %}
                     <tr>
-                        <td>{{ log.created }}</td>
+                        <td>{{ log.created }} 
+                        <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></td>
                         <td data-log="{{ log.line }}"></td>
                     </tr>
                 {% endfor %}
@@ -72,12 +73,13 @@ $(document).ready(function() {
                 }
             }
         } catch (error) {
-            console.log("error");
+            toastr.error("Error parsing JSON. Showing in plain format.")
             jsonDataObj = { "ParsingError": "Error parsing JSON" };
         }
 
         var preContent = JSON.stringify(jsonDataObj, null, 2);
-        tdLog.html('<pre style="font-size: 10px;">' + preContent + '</pre>');
+
+        tdLog.html('<div><pre class="logEntry" style="font-size: 10px;">' + preContent + '</pre><span class="log-expand"><i class="fa fa-ellipsis-h" aria-hidden="true"></i> </span></div>');
 
         if (!jsonDataObj || jsonDataObj.ParsingError) {
             tdLog.find('pre').text(cleanedData);
@@ -92,6 +94,16 @@ $(document).ready(function() {
         document.addEventListener('keydown', resetInactivityTimer);
 
         startInactivityTimer();
+    });
+
+    // Handle click on the expand icon
+    $('.log-expand').on('click', function() {
+        var pre = $(this).siblings('pre.logEntry');
+        if (pre.css('height') != '240px') {
+            pre.css('height', '240px');
+        } else {
+            pre.css('height', '100%');
+        }
     });
 
     $('#clearCompleted').click(function() {

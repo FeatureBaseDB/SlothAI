@@ -228,6 +228,17 @@ span.command-copy {
   cursor: pointer;
 }
 
+span.log-expand {
+  opacity: .6;
+  font-size: 20px;
+  color: #555755;
+  cursor: pointer;
+}
+
+.logEntry {
+  height: 240px;
+}
+
 /* Code block styles */
 .code-block {
   background-color: #f5f5f5;
