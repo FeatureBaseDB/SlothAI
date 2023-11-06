@@ -196,6 +196,80 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 	return task
 
 
+# complete strings
+@processer
+def aichat(node: Dict[str, any], task: Task) -> Task:
+	# output and input fields
+	template = Template.get(template_id=node.get('template_id'))
+	if not template:
+		raise TemplateNotFoundError(template_id=node.get('template_id'))
+	input_fields = template.get('input_fields')
+	output_fields = template.get('output_fields')
+
+	# always use the first output field
+	output_field = output_fields[0].get('name')
+
+	# Check if each input field is present in 'task.document'
+	for field in input_fields:
+		field_name = field['name']
+		if field_name not in task.document:
+			raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+
+	# replace single strings with lists
+	task.document = process_input_fields(task.document, input_fields)
+
+	if "gpt" in task.document.get('model'):
+		openai.api_key = task.document.get('openai_token')
+
+		template_text = remove_fields_and_extras(template.get('text'))
+
+		if template_text:
+			jinja_template = env.from_string(template_text)
+			prompt = jinja_template.render(task.document)
+		else:
+			raise NonRetriableError("Couldn't find template text.")
+
+		system_prompt = task.document.get('system_prompt', "You are in a pirate play. Act along.")
+
+		user_history = task.document.get('user_history', [])
+
+		chat_messages = [
+			{"role": "system", "content": system_prompt},
+		]
+
+		# Iterate through the user history
+		for idx, message in enumerate(user_history):
+			# Determine the role (user or assistant) based on the index
+			role = "user" if idx % 2 == 0 else "assistant"
+
+			# Create a message object and append it to the chat_messages list
+			chat_messages.append({
+				"role": role,
+				"content": message
+			})
+		chat_messages.append({"role": "user", "content": prompt})
+
+		retries = 3
+		# try a few times
+		for _try in range(retries):
+			completion = openai.ChatCompletion.create(
+				model = task.document.get('model'),
+				messages = chat_messages
+			)
+
+			answer = completion.choices[0].message.get('content')
+
+			if answer:
+				task.document[output_field] = answer
+				return task
+
+		else:				
+			raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")    
+	
+	else:
+		raise NonRetriableError("The aichat processor expects a supported model.")
+
+
 # complete dictionaries
 @processer
 def aidict(node: Dict[str, any], task: Task) -> Task:
