@@ -52,6 +52,10 @@
             <li class="nav-item">
                 <a class="nav-link" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
             </li>
+            {% elif nodes[0].processor == 'aivision' %}
+            <li class="nav-item">
+                <a class="nav-link" id="vision-tab" data-toggle="tab" href="#vision" role="tab" aria-controls="vision" aria-selected="false">Upload Images</a>
+            </li>
             {% elif nodes[0].processor == 'aiaudio' %}
             <li class="nav-item">
                 <a class="nav-link" id="record-tab" data-toggle="tab" href="#record" role="tab" aria-controls="record" aria-selected="false">Record Audio</a>
@@ -69,6 +73,13 @@
                 <p></p>
                 <p>You may upload single PDFs or text files (<strong>.pdf or .txt</strong>) files to this pipeline. To upload multiple files, please use the code examples.</p>
                 <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt">
+                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+            </div>
+            {% elif nodes[0].processor == 'aivision' %}
+            <div class="tab-pane fade" id="vision" role="tabpanel" aria-labelledby="upload-tab">
+                <p></p>
+                <p>You may upload single images (<strong>.png, .jpg or .bmp</strong>) files to this pipeline. To upload multiple files, please use the code examples.</p>
+                <input type="file" id="fileInput" style="display: none;" accept=".jpg, .jpeg, .png, .bmp">
                 <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
             </div>
             {% elif nodes[0].processor == 'aiaudio' %}
