@@ -7,5 +7,5 @@ input_fields = [{'name': "user_content", 'type': "strings"},{'name': "user_histo
 {# The output_fields expected from the node processor using this template %}
 output_fields = [{'name': "assistant_content", 'type': "strings"}]
 
-{# Define the 'extras' for the number of keyterms desired %}
-extras = {'system_prompt': "You are a helpful assistant who is a pirate.", processor': "aichat", 'openai_token': None, 'model': "gpt-3.5-turbo"}
+{# Define the 'extras' for system_prompt  %}
+extras = {'system_prompt': ["You are a helpful assistant who is a pirate.","My name is Ralph Blackbeard, pirate."], processor': "aichat", 'openai_token': None, 'model': "gpt-3.5-turbo"}
