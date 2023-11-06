@@ -235,10 +235,6 @@ span.log-expand {
   cursor: pointer;
 }
 
-.logEntry {
-  height: 360px;
-}
-
 /* Code block styles */
 .code-block {
   background-color: #f5f5f5;

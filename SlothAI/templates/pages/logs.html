@@ -85,6 +85,17 @@ $(document).ready(function() {
             tdLog.find('pre').text(cleanedData);
         }
 
+
+        // Loop through all <pre> elements
+        $('pre.logEntry').each(function() {
+            var pre = $(this);
+            var currentHeight = pre.height();
+            
+            if (currentHeight > 360) {
+                pre.css('height', '360px');
+            }
+        });
+        
         let inactivityTimer;
         function reloadPage() { window.location.reload(); }
         function startInactivityTimer() { inactivityTimer = setTimeout(reloadPage, 60000); }
