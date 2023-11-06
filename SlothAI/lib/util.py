@@ -61,6 +61,9 @@ def upload_to_storage(uid, filename, uploaded_file):
     bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
     blob = bucket.blob("%s/%s" % (uid, filename))
 
+    # load content type
+    content_type = uploaded_file.content_type
+
     # upload file to storage
     uploaded_file.stream.seek(0)
     blob.upload_from_file(uploaded_file.stream, content_type=content_type)
@@ -68,7 +71,7 @@ def upload_to_storage(uid, filename, uploaded_file):
     # Construct and return the full bucket URI
     bucket_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
     return bucket_uri
-
+    
 
 def upload_to_storage_requests(uid, filename, data, content_type):
     # Set up bucket on Google Cloud
