@@ -56,7 +56,12 @@ $(document).ready(function() {
     $("table tbody tr").each(function() {
         var tdLog = $(this).find("td[data-log");
         var rawData = tdLog.data('log');
+
         var cleanedData = rawData.slice(2, -1);
+        cleanedData = cleanedData.replace(/\\\\n/g, " ");
+        cleanedData = cleanedData.replace(/\\'/g, "'");
+        cleanedData = cleanedData.replace(/\\"/g, "'");
+
         var jsonDataObj;
 
         try {
@@ -67,7 +72,7 @@ $(document).ready(function() {
                 }
             }
         } catch (error) {
-            console.log("error")
+            console.log("error");
             jsonDataObj = { "ParsingError": "Error parsing JSON" };
         }
 
@@ -103,31 +108,6 @@ $(document).ready(function() {
             }
         });
     });
-
-    // Iterate through table rows
-    $("table tbody tr").each(function() {
-        var tdLog = $(this).find("td[data-log"); // Find the <td> with data-log attribute
-
-        // Extract the log data from the data attribute
-        var rawData = tdLog.data('log');
-
-        // Remove the 'b' prefix and single quotes
-        var cleanedData = rawData.slice(2, -1);
-
-        // Parse the JSON data for the current row
-        var jsonDataObj = JSON.parse(cleanedData);
-
-        // Remove key-value pairs with keys containing 'token'
-        for (var key in jsonDataObj) {
-          if (key.toLowerCase().includes('token')) {
-            delete jsonDataObj[key];
-          }
-        }
-
-        // Display the formatted JSON without 'token' entries in the "Log" column
-        tdLog.html('<pre style="font-size: 10px;">' + JSON.stringify(jsonDataObj, null, 2) + '</pre>');
-    });
-
 
     // is it a travesty that I didn't write any of this?
     let inactivityTimer; // Initialize a timer variable
