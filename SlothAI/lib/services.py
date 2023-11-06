@@ -1,9 +1,21 @@
 
-from SlothAI.lib.tasks import Task, TaskState
+from SlothAI.lib.tasks import Task, TaskState, TaskNotFoundError, NonRetriableError
 from SlothAI.lib.storage import AbstractTaskStore
 from SlothAI.lib.queue import AbstractTaskQueue
 
 from typing import Dict, List
+
+class InvalidStateForDelete(NonRetriableError):
+    def __init__(self, state):
+        super().__init__(f"Task state must be complete, canceled, or failed to delete. Got state {state}.")
+
+class InvalidStateForCancel(NonRetriableError):
+    def __init__(self, state):
+        super().__init__(f"Task state must be running to cancel delete. Got state {state}.")
+
+class InvalidStateForProcess(NonRetriableError):
+    def __init__(self, state):
+        super().__init__(f"Task state must be running to be processed. Got state {state}.")
 
 class TaskService:
 
@@ -29,6 +41,8 @@ class TaskService:
         self.task_store.update(task_id, **kwargs)
 
     def fetch_tasks(self, **kwargs) -> Dict[str, any]:
+        # TODO: fetch task should probably return a Task object /  model, not a
+        # dict
         return self.task_store.fetch(**kwargs)
 
     def delete_older_than(self, hours=0, minutes=0, seconds=0):
@@ -90,3 +104,30 @@ class TaskService:
 
     def delete_task_by_id(self, task_id):
         return self.task_store.delete(task_id=task_id)
+    
+    def is_valid_state_for_cancel(self, state: str):
+        if state == TaskState.RUNNING.value:
+            return True
+        return False
+
+    def cancel_task(self, user_id, task_id):
+        tasks = self.fetch_tasks(user_id=user_id, task_id=task_id)
+        if len(tasks) == 0:
+            raise TaskNotFoundError(task_id)
+        
+        if len(tasks) > 1:
+            raise NonRetriableError("Logic error: multiple tasks in the task store with the same id")
+
+        if self.is_valid_state_for_cancel(tasks[0]['state']):
+            self.task_store.update(
+                task_id=task_id,
+                state=TaskState.CANCELED
+            )
+        else:
+            raise InvalidStateForCancel(tasks[0]['state'])
+        
+
+    def is_valid_state_for_process(self, state: str):
+        if state == TaskState.RUNNING.value:
+            return True
+        return False

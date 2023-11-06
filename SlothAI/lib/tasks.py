@@ -385,6 +385,10 @@ class UserNotFoundError(ResourceNotFoundError):
 	def __init__(self, user_id):
 		super().__init__(f"user with id {user_id} not found.")
 
+class TaskNotFoundError(ResourceNotFoundError):
+	def __init__(self, task_id):
+		super().__init__(f"task with id {task_id} not found.")
+
 class NodeNotFoundError(ResourceNotFoundError):
 	def __init__(self, node_id):
 		super().__init__(f"node with id {node_id} not found")

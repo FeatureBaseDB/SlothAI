@@ -39,6 +39,8 @@ from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
 from SlothAI.lib.util import fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document, load_from_storage, random_string
 
+import SlothAI.lib.services as services
+
 env = Environment()
 env.globals['random_word'] = random_word
 env.globals['random_sentence'] = random_sentence
@@ -531,6 +533,8 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 
 	batch_size = node.get('extras', {}).get('batch_size', None)
 
+	task_service = app.config['task_service']
+
 	# batch_size must be in extras
 	if not batch_size:
 		raise NonRetriableError("split_task processor: batch_size must be specified in extras!")
@@ -543,7 +547,7 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 	# this call is currently required to update split status
 	
 	try:
-		task_stored = app.config['task_service'].fetch_tasks(task_id=task.id)
+		task_stored = task_service.fetch_tasks(task_id=task.id)
 		task_stored = task_stored[0]
 		task.split_status = task_stored['split_status']
 	except Exception as e:
@@ -579,6 +583,12 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 	# split the data and re-task
 	try:
 		for i in range(new_task_count):
+
+			task_stored = task_service.fetch_tasks(task_id=task.id)[0] # not safe
+
+			if not task_service.is_valid_state_for_process(task_stored['state']):
+				raise services.InvalidStateForProcess(task_stored['state'])
+
 			batch_data = {}
 			for field in outputs:
 				batch_data[field] = task.document[field][:batch_size]
@@ -598,13 +608,17 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 			)
 
 			# create new task and queue it		
-			app.config['task_service'].create_task(new_task)
+			task_service.create_task(new_task)
 
 			# commit status of split on original task
 			task.split_status = (i + 1) * batch_size
-			app.config['task_service'].update_task(task_id=task.id, split_status=task.split_status)
+			task_service.update_task(task_id=task.id, split_status=task.split_status)
 
 			app.logger.info(f"Split Task: spawning task {i + 1} of projected {new_task_count}. It's ID is {new_task.id}")
+
+	except services.InvalidStateForProcess as e:
+		app.logger.warn(f"Task with ID {task.id} was being split. State was changed during that process.")
+		raise e
 
 	except Exception as e:
 		app.logger.warn(f"Task with ID {task.id} was being split. An exception was raised during that process.")
