@@ -235,7 +235,7 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
 		else:
 			raise NonRetriableError("Couldn't find template text.")
 
-		system_prompt = task.document.get('system_prompt', "You are in a pirate play. Act along.")
+		system_prompt = task.document.get('system_prompt', "You are a helpful assistant.")
 
 		user_history = task.document.get('user_history', [])
 
