@@ -27,6 +27,7 @@ label {
 #editor { 
   height: 50vw;
   width: 80vw;
+  font-size: 13px;
 }
 
 /* Button styles */
