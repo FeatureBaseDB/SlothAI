@@ -156,7 +156,11 @@ def pipeline_view(pipe_id):
 
     # build an example POST usin generative AI
     head_input_fields = _nodes[0].get('input_fields', [])
-    head_field_names = [field.get('name') for field in head_input_fields]
+    try:
+        head_field_names = [field.get('name') for field in head_input_fields]
+    except:
+        head_input_fields = []
+
     head_processor = _nodes[0].get('processor')
 
     # Create a dictionary to store the template substitution values
