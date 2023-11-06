@@ -2,7 +2,7 @@ import json
 
 from google.cloud import ndb
 
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, jsonify
 from flask import redirect, url_for
 from flask import request
 from flask import current_app as app
@@ -282,6 +282,13 @@ def template_detail(template_id="new"):
     return render_template(
         'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random, template_examples=template_examples, empty_template=empty_template
     )
+
+
+@site.route('/logs', methods=["DELETE"])
+@flask_login.login_required
+def delete_logs():
+    Log.delete_all(current_user.uid)
+    return jsonify({"result": "success"})
 
 
 @site.route('/tasks')

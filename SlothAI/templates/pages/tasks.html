@@ -7,44 +7,57 @@
 
 {% block content %}
 <!-- Main Content -->
-<div class="content container mt-5 pt-5">
+<div class="content container mt-5 pt-4">
     <h2 class="page_heading">Tasks</h2>
 
-    {% if tasks %}
-    <table id="tasksTable" class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>User ID</th>
-                <th>Pipeline</th>
-                <th>Node</th>
-                <th>Created At</th>
-                <th>State</th>
-                <th>Error</th>
-                <th>Retries</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for task in tasks %}
+    <div class="rounded-lg border p-3 table-responsive">
+        <h4 class="mb-3">Your Tasks</h4>
+        <p>Task are started by sending data to a pipeline's ingestion endpoint. Tasks are cleared after an hour.</p>
+        <div class="text-left">
+            <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
+                <i class="fas fa-sync-alt"></i> Reload
+            </button>
+            {% if tasks %}
+            <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear completed tasks." class="btn btn-secondary">
+                <i class="fas fa-ban"></i> Completed
+            </button>
+            <button id="clearErrors" type="button" data-toggle="tooltip" data-placement="top" title="Clear failed tasks." class="btn btn-secondary">
+                <i class="fas fa-ban"></i> Errors
+            </button>
+            {% endif %}
+        </div>
+        <p></p>     
+        {% if tasks %}
+        <table id="tasksTable" class="table table-striped">
+            <thead>
                 <tr>
-                    <td>{{ task.task_id }}</td>
-                    <td>{{ task.user_id }}</td>
-                    <td>{{ task.pipe_id }}</td>
-                    <td>{{ task.current_node_id }}</td>
-                    <td>{{ task.created_at }}</td>
-                    <td>{{ task.state }}</td>
-                    <td>{{ task.error }}</td>
-                    <td>{{ task.retries }}</td>
+                    <th>ID</th>
+                    <th>Pipeline</th>
+                    <th>Node</th>
+                    <th>Created At</th>
+                    <th>State</th>
+                    <th>Error</th>
+                    <th>Retries</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>There are no active tasks. Start ingestion to see tasks here.</p>
-    {% endif %}
-    <button class="reload-button btn btn-success" onclick="location.reload()">
-        <i class="fas fa-sync-alt"></i> Reload
-    </button>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                    <tr>
+                        <td>{{ task.task_id }}</td>
+                        <td>{{ task.pipe_id }}</td>
+                        <td>{{ task.current_node_id }}</td>
+                        <td>{{ task.created_at }}</td>
+                        <td>{{ task.state }}</td>
+                        <td>{{ task.error }}</td>
+                        <td>{{ task.retries }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>There are no active tasks. Start ingestion to see tasks here.</p>
+        {% endif %}
+    </div>
 </div>
 
 {% endblock %}
@@ -53,8 +66,40 @@
 <script type="text/javascript">
 $(document).ready(function() {
 
-    // sort table
-    $('#tasksTable').DataTable({});
+    // Function to store sorting order in a cookie
+    function storeSortingOrderInCookie(order) {
+        document.cookie = "sortingOrder=" + JSON.stringify(order) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
+    }
+
+    // Function to load sorting order from the cookie and set the table order
+    function loadSortingOrderFromCookie() {
+        var cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('sortingOrder='));
+        
+        if (cookieValue) {
+            var order = JSON.parse(cookieValue.split('=')[1]);
+            if (order) {
+                table.order(order).draw();
+            }
+        }
+    }
+
+    // Sort table
+    var table = $('#tasksTable').DataTable({});
+
+    var headers = table.columns().header().toArray();
+
+    $(headers).on('click', function () {
+        var order = table.order();
+        console.log(order); // This will print the current sort order.
+        
+        // Store the sorting order in a cookie
+        storeSortingOrderInCookie(order);
+    });
+
+    // Load sorting order from cookie on page load
+    loadSortingOrderFromCookie();
 
     // is it a travesty that I didn't write any of this?
     let inactivityTimer; // Initialize a timer variable
@@ -63,6 +108,36 @@ $(document).ready(function() {
     function reloadPage() {
       window.location.reload();
     }
+
+    $('#clearCompleted').click(function() {
+        // Send the DELETE request to the server.
+        $.ajax({
+            url: '/tasks?state=completed',
+            type: 'DELETE',
+            success: function(response) {
+                toastr.success("Completed tasks cleared.");
+                window.location.reload();
+            },
+            error: function(xhr, status, error) {
+                toastr.error("Error clearing tasks.");
+            }
+        });
+    });
+
+    $('#clearErrors').click(function() {
+        // Send the DELETE request to the server.
+        $.ajax({
+            url: '/tasks?state=failed',
+            type: 'DELETE',
+            success: function(response) {
+                toastr.success("Failed tasks cleared.");
+                window.location.reload();
+            },
+            error: function(xhr, status, error) {
+                toastr.error("Error clearing tasks.");
+            }
+        });
+    });
 
     // Function to start the inactivity timer
     function startInactivityTimer() {
@@ -82,7 +157,10 @@ $(document).ready(function() {
     // Start the initial timer
     startInactivityTimer();
     // Probably not.
-
+    
+    $(function () {
+        $("button").tooltip();
+    });
 });
 </script>
 {% endblock %}

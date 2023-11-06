@@ -35,10 +35,6 @@ button {
   border-radius: 0;
 }
 
-table tr td:last-child button {
-    margin-top: 6px;
-}
-
 #buttonSortable {
   list-style-type: none;
   margin: 0;
@@ -72,7 +68,6 @@ table tr td:last-child button {
 
 table {
   margin-top: 14px;
-  font-size:0.9rem;
 }
 
 /* Link styles */
@@ -178,15 +173,16 @@ div.login_form h2 {
   .sidebar a span {
     display: none;
   }
-
-  .content {
-    margin-left: 10%;
-  }
 }
 
-@media (min-width: 1461px) {
+@media (min-width: 1342px) {
   .content {
-    margin-left: 220px; /* Set the maximum margin-left for wider screens */
+    margin-left: 200px; /* Set the maximum margin-left for wider screens */
+  }
+}
+@media (min-width: 1005px) {
+  #templatesTable_wrapper {
+    width: 1005px !important;
   }
 }
 
@@ -247,10 +243,6 @@ span.command-copy {
   /* Add any other styling you desire for the callout here */
 }
 
-#dynamicFieldsContainer input {
-    margin-bottom: 10px;
-}
-
 #templateText {
     height: 60vh; /* Use vh units for the height */
     resize: none;
@@ -264,10 +256,6 @@ span.command-copy {
   color: white !important;
 }
 
-.dataTables_filter {
-  margin-bottom: 8px;
-}
-
-.dataTables_length {
-  padding-top: 8px;
+.dataTables_wrapper .dataTables_filter {
+  padding-bottom: 8px;
 }

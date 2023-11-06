@@ -609,6 +609,14 @@ class Log(flask_login.UserMixin, ndb.Model):
 
     @classmethod
     @ndb_context_manager
+    def delete_all(cls, user_id):
+        entities = cls.query(cls.user_id == user_id).fetch()
+        if entities:
+            for entity in entities:
+                entity.key.delete()
+
+    @classmethod
+    @ndb_context_manager
     def delete_older_than(cls, hours=0, minutes=0, seconds=0):
         threshold = datetime.datetime.utcnow() - \
             datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)

@@ -6,28 +6,43 @@
 {% endblock %}
 
 {% block content %}
-<div class="content container mt-5 pt-5">
+<div class="content container mt-5 pt-4">
     <h2 class="page_heading">Callback Logs</h2>
-    <p>When you use the default callback, logs of the document at that point in the pipeline will be shown here. Logs expire after 1 hour.</p>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Log</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for log in logs %}
+
+    <div class="rounded-lg border p-3 table-responsive">
+        <h4 class="mb-3">Your Logs</h4>
+        <p>When you use the default callback, logs of the document at that point in the pipeline will be shown here. Logs expire after 1 hour.</p>
+        <div class="text-left">
+            <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
+                <i class="fas fa-sync-alt"></i> Reload
+            </button>
+            {% if logs %}
+            <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear completed tasks." class="btn btn-secondary">
+                <i class="fas fa-ban"></i> Logs
+            </button>
+            {% endif %}
+        </div>
+        <p></p>  
+
+        {% if logs %}
+        <table class="table table-striped">
+            <thead>
                 <tr>
-                    <td>{{ log.created }}</td>
-                    <td data-log="{{ log.line }}"></td>
+                    <th>Date</th>
+                    <th>Log</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <button class="reload-button btn btn-success">
-        <i class="fas fa-sync-alt"></i> Reload
-    </button>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                    <tr>
+                        <td>{{ log.created }}</td>
+                        <td data-log="{{ log.line }}"></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
 
@@ -72,6 +87,21 @@ $(document).ready(function() {
         document.addEventListener('keydown', resetInactivityTimer);
 
         startInactivityTimer();
+    });
+
+    $('#clearCompleted').click(function() {
+        // Send the DELETE request to the server.
+        $.ajax({
+            url: '/logs',
+            type: 'DELETE',
+            success: function(response) {
+                toastr.success("Logs cleared.");
+                window.location.reload();
+            },
+            error: function(xhr, status, error) {
+                toastr.error("Error clearing logs.");
+            }
+        });
     });
 
     // Iterate through table rows
@@ -126,6 +156,10 @@ $(document).ready(function() {
     startInactivityTimer();
     // Probably not.
     
+    $(function () {
+        $("button").tooltip();
+    });
+
 });
 </script>
 {% endblock %}

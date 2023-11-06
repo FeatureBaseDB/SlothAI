@@ -40,7 +40,7 @@ class TaskService:
                     error=task.error,
                     retries=task.retries,
                     current_node_id=task.next_node(),
-                    state=TaskState.FAILDED
+                    state=TaskState.FAILED
                 )
 
     def queue_task(self, task: Task):
@@ -73,7 +73,7 @@ class TaskService:
         '''
         if state == TaskState.CANCELED.value:
             return True
-        if state == TaskState.FAILDED.value:
+        if state == TaskState.FAILED.value:
             return True
         if state == TaskState.COMPLETED.value:
             return True

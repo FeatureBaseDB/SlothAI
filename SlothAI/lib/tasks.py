@@ -25,7 +25,7 @@ from enum import Enum
 class TaskState(Enum):
 	RUNNING = 'running'
 	COMPLETED = 'completed'
-	FAILDED = 'failed'
+	FAILED = 'failed'
 	CANCELED = 'canceled'
 
 	@classmethod
@@ -35,7 +35,7 @@ class TaskState(Enum):
 		elif state_as_string == "complete":
 			return self.COMPLETED
 		elif state_as_string == "failed":
-			return self.FAILDED
+			return self.FAILED
 		else:
 			raise Exception("invalid state_as_string")
 

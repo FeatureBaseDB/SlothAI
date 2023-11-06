@@ -48,6 +48,7 @@ def process_tasks(cron_key):
 		
 	return f"successfully completed node", 200
 
+
 @tasks.route('/tasks', methods=['DELETE'])
 @flask_login.login_required
 def delete_tasks():
@@ -60,7 +61,7 @@ def delete_tasks():
 		states = [
 			TaskState.COMPLETED.value,
 			TaskState.CANCELED.value,
-			TaskState.FAILDED.value
+			TaskState.FAILED.value
 		]
 	else:
 		for state in states:
@@ -72,6 +73,7 @@ def delete_tasks():
 		return "Issue deleting tasks", 500
 		
 	return "OK", 200
+
 
 @tasks.route('/tasks/<task_id>', methods=['DELETE'])
 @flask_login.login_required

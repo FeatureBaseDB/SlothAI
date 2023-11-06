@@ -6,19 +6,20 @@
 {% endblock %}
 
 {% block content %}
-<div class="content container mt-5 pt-5">
+<div class="content container mt-5 pt-4">
     {% if nodes %}
     <!-- Main Content -->
     <h2 class="page_heading">Nodes</h2>
 
-    <div class="rounded-lg border p-3">
+    <div class="rounded-lg border p-3 table-responsive">
         <h4 class="mb-3">Your Nodes</h4>
         <p>Nodes are templates paired with processors and may be added to pipelines.</p>
         <div class="text-left">
             <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal"><i class="fas fa-plus"></i> Create Node</button>
         </div>
         <p></p>
-        <table id="nodesTable" class="table table-striped">
+        <div>
+        <table width="100%" id="nodesTable" class="table table-striped">
             <thead>
                 <tr>
                     <th>Node</th>
@@ -26,7 +27,7 @@
                     <th>Inputs</th>
                     <th>Outputs</th>
                     <th>Extras</th>
-                    <th>Action</th>
+                    <th>Edit</th>
                 </tr>
             </thead>
             <tbody id="nodeTable">
@@ -62,14 +63,17 @@
                     </td>
 
                     <td>
-                        <a data-toggle="tooltip" data-placement="top" title="{{ node.get('template').get('name') }}" class="btn btn-secondary"  href="/templates/{{ node.get('template_id') }}"><i class="fas fa-pen"></i></a>
-                        <button class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></button>
-                        <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;"><span class="sr-only"></span></div>
+                        <div class="btn-group">
+                            <a data-toggle="tooltip" data-placement="top" title="{{ node.get('template').get('name') }}" class="btn btn-secondary" href="/templates/{{ node.get('template_id') }}"><i class="fas fa-pen"></i></a>
+                            <button class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></button>
+                            <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
     {% else %}
         {% if templates %}
@@ -241,12 +245,7 @@ $(document).ready(function() {
             "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
             "order": [[0, "asc"]],
             "pageLength": 25,
-            "responsive": true,
-            "columnDefs": [
-                    { responsivePriority: 1, targets: 1 },
-                    { responsivePriority: 2, targets: 3 },
-                    { responsivePriority: 2, targets: 4 }   
-                ]
+            "responsive": true
         });
     }
     // Run changeButtonColors and changeBadgeColors functions using Promises
