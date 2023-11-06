@@ -12,7 +12,7 @@
 extras = {"processor": "jinja2"}
 
 {# Input field definition to take in the number of words to generate. #}
-input_fields = [{'name': 'num_words', 'type': 'int'}]
+input_fields = [{'name': 'num_words', 'type': 'ints'}]
 
 {# Define the output_fields expected from the node: #}
 output_fields = [{'name': "words", 'type': "stringset"}]
@@ -20,7 +20,7 @@ output_fields = [{'name': "words", 'type': "stringset"}]
 {# Create a dictionary that contains the 'words' stringset: #}
 {
     "words": [
-        {% for _ in range(min(num_words | default(5), 25)) %}
+        {% for _ in range(num_words[0] | default(5)) %}
             "{{ random_word() }}"{% if not loop.last %},{% endif %}
         {% endfor %}
     ]
