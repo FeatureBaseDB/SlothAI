@@ -4,6 +4,6 @@
 input_fields = [{'name': "filename", 'type': "string"},{'name': "content_type", 'type': "string"}]
 
 {# The output_fields expected from the node processor using this template %}
-output_fields = [{'name': "objects", 'type': "strings"}]
+output_fields = [{'name': "objects", 'type': "stringset"}]
 
 extras = {"model": "objects"}

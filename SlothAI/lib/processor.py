@@ -405,6 +405,10 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 
 	user = User.get_by_uid(uid=task.user_id)
 	uid = user.get('uid')
+
+	if not task.document.get('filename') or not task.document.get('content_type'):
+		raise NonRetriableError("Document must contain 'filename' and 'content_type'.")
+
 	filename = task.document.get('filename')
 	content_type = task.document.get('content_type')
 
@@ -415,7 +419,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 	    content_type = content_type[0]
 
 	# Check if the mime type is supported for PNG, JPG, and BMP
-	supported_content_types = ['image/png', 'image/jpeg', 'image/bmp']
+	supported_content_types = ['image/png', 'image/jpeg', 'image/bmp', 'image/jpg']
 
 	for supported_type in supported_content_types:
 		if supported_type in content_type:
@@ -435,7 +439,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 	labels = [label.description.lower() for label in response.label_annotations]
 
 	# update the document with objects
-	task.document[output_field] = labels
+	task.document[output_field] = [labels]
 
 	return task
 

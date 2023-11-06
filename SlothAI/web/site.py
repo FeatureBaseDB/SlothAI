@@ -178,7 +178,7 @@ def pipeline_view(pipe_id):
         substitution_values['mime_type'] = "application/pdf"
     else:
         substitution_values.update(ai_dict)
-    print(substitution_values)
+
     # failsafe for setting content type and filename for a few processor templates
     substitution_values.setdefault('content_type', "application/pdf")
     substitution_values.setdefault('filename', "animate.pdf")
@@ -192,6 +192,7 @@ def pipeline_view(pipe_id):
     curl_template = load_template(f'{head_processor}_curl')
 
     if not python_template or not curl_template:
+        print("template not found")
         python_template = load_template('jinja2_python')
         curl_template = load_template('jinja2_curl')
 
