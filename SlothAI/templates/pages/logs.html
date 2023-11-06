@@ -17,7 +17,7 @@
                 <i class="fas fa-sync-alt"></i> Reload
             </button>
             {% if logs %}
-            <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear completed tasks." class="btn btn-secondary">
+            <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear logs." class="btn btn-secondary">
                 <i class="fas fa-ban"></i> Logs
             </button>
             {% endif %}
@@ -95,7 +95,7 @@ $(document).ready(function() {
                 pre.css('height', '360px');
             }
         });
-        
+
         let inactivityTimer;
         function reloadPage() { window.location.reload(); }
         function startInactivityTimer() { inactivityTimer = setTimeout(reloadPage, 60000); }
