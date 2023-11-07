@@ -55,7 +55,6 @@ template_examples = [
     {"name": "POST data to URI", "template_name": "json_to_uri", "processor_type": "read_uri"},
     {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
     {"name": "Split tasks", "template_name": "split_tasks", "processor_type": "split_task"},
-    {"name": "Read image and convert objects to labels", "template_name": "image_to_labels", "processor_type": "read_file"},
     {"name": "Read from a URI and convert to text", "template_name": "uri_to_text", "processor_type": "read_uri"},
     {"name": "Generate keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
     {"name": "Generate a question from text and keyterms", "template_name": "text_keyterms_to_question", "processor_type": "aidict"},
