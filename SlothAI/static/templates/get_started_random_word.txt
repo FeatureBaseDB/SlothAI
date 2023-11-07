@@ -20,9 +20,9 @@ input_fields = []
 {# Define the output_fields expected from the node: #}
 output_fields = [{'name': "words", 'type': "stringset"}]
 
-{# Create a dictionary that contains the 'words' stringset: #}
+{# Create a dictionary that contains the 'words' stringset (list of a list of strings): #}
 {
-    "words": [
+    "words": [[
         {% if num_words is defined %}
             {% set word_count = num_words %}
         {% else %}
@@ -31,5 +31,5 @@ output_fields = [{'name': "words", 'type': "stringset"}]
         {% for _ in range(word_count) %}
             "{{ random_word() }}"{% if not loop.last %},{% endif %}
         {% endfor %}
-    ]
+    ]]
 }
