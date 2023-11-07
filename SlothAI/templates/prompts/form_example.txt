@@ -1,7 +1,7 @@
 # form an example
 1. We have a pipeline with the following input_fields which use the `$head_processor` processor:
 """
-$head_input_fields
+$head_field_names
 """
 2. Consider the 'type' of each 'name' input_field. ints are arrays of integers, strings are arrays of strings and so on.
 3. If it is an array, you do not "" quote it. You put the array by itself using [], with strings in it, or ints, etc.

@@ -14,4 +14,5 @@ response = requests.post(url, data=json_data, headers={'Content-Type': 'applicat
 if response.status_code == 200:
     print(response.text)
 else:
+    print(response.text)
     print(response.status_code)
