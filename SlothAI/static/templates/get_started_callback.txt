@@ -11,4 +11,4 @@ extras = {'processor': "callback", 'callback_uri': "[user_callback]", 'callback_
 
 {# Any output fields we define will be passed to the callback endpoint. #}
 {# If output fields is empty, all data will be sent to the callback endpoint. #}
-output_fields = [{'name': "words", 'type': "strings"}]
+output_fields = [{'name': "words", 'type': "stringset"}]
