@@ -128,14 +128,14 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 			jinja_template = env.from_string(template_text)
 			jinja = jinja_template.render(task.document)
 	except Exception as e:
-		raise NonRetriableError("jinja2 processor: unable to render jinja")
-			
+		raise NonRetriableError(f"jinja2 processor: unable to render jinja: {e}")
+
 	try:
 		jinja_json = json.loads(jinja)
 		for k,v in jinja_json.items():
 			task.document[k] = v
 	except Exception as e:
-		raise NonRetriableError("jinja2 processor: unable to load jinja output as JSON.")
+		raise NonRetriableError("jinja2 processor: unable to load jinja output as JSON. Try throwing a {} at the bottom.")
 
 	return task
 
