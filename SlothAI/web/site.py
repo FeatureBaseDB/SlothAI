@@ -163,7 +163,7 @@ def pipeline_view(pipe_id):
 
     if not head_field_names:
         head_field_names = ["extra_field (strings)"]
-    print(head_field_names)
+
     head_processor = _nodes[0].get('processor')
 
     # Create a dictionary to store the template substitution values
@@ -176,7 +176,6 @@ def pipeline_view(pipe_id):
         "head_field_names": head_field_names
     }
 
-    print(substitution_values)
     # set protocol
     if "localhost" in request.host:
         substitution_values['protocol'] = "http"

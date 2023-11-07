@@ -156,7 +156,7 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
         prompt = template.substitute(document)
     except Exception as ex:
         return {}
-    print(prompt)
+
     completion = openai.ChatCompletion.create(
         model = model,
         messages = [
