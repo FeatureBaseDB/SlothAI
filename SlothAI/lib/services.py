@@ -1,8 +1,8 @@
 
 from SlothAI.lib.tasks import Task, TaskState, TaskNotFoundError, NonRetriableError
-from SlothAI.lib.storage import AbstractTaskStore
+from SlothAI.lib.storage import AbstractTaskStore, AbstractTemplateStore
 from SlothAI.lib.queue import AbstractTaskQueue
-
+from SlothAI.lib.template import Template
 from typing import Dict, List
 
 class InvalidStateForDelete(NonRetriableError):
@@ -131,3 +131,80 @@ class TaskService:
         if state == TaskState.RUNNING.value:
             return True
         return False
+
+
+class MissingTemplateKey(Exception):
+    def __init__(self, key: str) -> None:
+        super().__init__(f"Missing template key: {key}")
+
+class InvalidTemplateInputFields(Exception):
+    def __init__(self, error: str) -> None:
+        super().__init__(f"Invalid template input_fields: {error}")
+
+class InvalidTemplateOutputFields(Exception):
+    def __init__(self, error: str) -> None:
+        super().__init__(f"Invalid template input_fields: {error}")
+
+class InvalidTemplateExtras(Exception):
+    def __init__(self, error: str) -> None:
+        super().__init__(f"Invalid template input_fields: {error}")
+
+class TemplateService:
+    
+    def __init__(self, template_store: AbstractTemplateStore):
+        self.template_store = template_store
+
+    def create_template(self, name, user_id, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
+        return self.template_store.create(
+            name=name,
+            user_id=user_id,
+            text=text,
+            input_fields=input_fields,
+            output_fields=output_fields,
+            extras=extras,
+            processor=processor,
+        )
+
+    def update_template(self, template_id, name=None, user_id=None, text=None, input_fields=None, output_fields=None, extras=None, processor=None):
+        return self.template_store.update(
+            template_id=template_id,
+            name=name,
+            user_id=user_id,
+            text=text,
+            input_fields=input_fields,
+            output_fields=output_fields,
+            extras=extras,
+            processor=processor,
+        )
+    
+    def fetch_template(self, **kwargs: Dict[str, any]) -> Dict[str, any]:
+        # TODO: fetch task should probably return a Task object /  model, not a
+        # dict
+        return self.template_store.fetch(**kwargs)
+    
+    def get_template(self, **kwargs: Dict[str, any]) -> Dict[str, any]:
+        return self.template_store.get(**kwargs)
+    
+    def delete_template(self, **kwargs: Dict[str, any]) -> Dict[str, any]:
+        return self.template_store.delete(**kwargs)
+    
+    def create_template_from_dict(self, template_dict: Dict[str, any]):
+
+        if 'name' not in template_dict:
+            raise MissingTemplateKey('name')
+        if 'user_id' not in template_dict:
+            raise MissingTemplateKey('user_id')
+        if 'text' not in template_dict:
+            raise MissingTemplateKey('text')
+
+        template = Template.from_dict(template_dict)
+
+        return self.create_template(
+            name=template.name,
+            user_id=template.user_id,
+            text=template.text,
+            input_fields=template.input_fields,
+            output_fields=template.output_fields,
+            extras=template.extras,
+            processor=template.processor,
+        )

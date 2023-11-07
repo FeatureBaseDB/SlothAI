@@ -6,6 +6,8 @@ import socket
 import ast
 import copy
 import io
+import zlib
+import base64
 
 import openai
 
@@ -211,70 +213,6 @@ def deep_scrub(data):
             deep_scrub(item)
 
 
-def remove_fields_and_extras(template):
-    # Remove extras definition
-    extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)
-    template = extras_pattern.sub('', template)
-
-    # Remove input_fields and output_fields definitions
-    input_pattern = re.compile(r'input_fields\s*=\s*(\[.*?\])', re.DOTALL)
-    output_pattern = re.compile(r'output_fields\s*=\s*(\[.*?\])', re.DOTALL)
-
-    template = input_pattern.sub('', template)
-    template = output_pattern.sub('', template)
-
-    return template
-
-
-def fields_text_from_template(template):
-    # Regular expressions to find input and output fields in the template
-    input_pattern = re.compile(r'input_fields\s*=\s*(\[.*?\])', re.DOTALL)
-    output_pattern = re.compile(r'output_fields\s*=\s*(\[.*?\])', re.DOTALL)
-
-    input_match = input_pattern.search(template)
-    output_match = output_pattern.search(template)
-
-    input_content = input_match.group(1) if input_match else None
-    output_content = output_match.group(1) if output_match else None
-
-    return input_content, output_content
-
-
-def fields_from_template(template):
-    input_fields = []
-    output_fields = []
-
-    input_content, output_content = fields_text_from_template(template)
-
-    try:
-        input_fields = ast.literal_eval(input_content) if input_content else None
-        output_fields = ast.literal_eval(output_content) if output_content else None
-    except Exception as ex:
-        return None, None, {"error": f"{ex}", "message": "Evaluation of inputs/outputs failed."}
-
-    return input_fields, output_fields, False
-
-
-def extras_from_template(template):
-    # only uses the last pattern. leaving these here for testing.
-    # extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)
-    # extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*}', re.DOTALL)
-    # extras_pattern = re.compile(r'extras\s*=\s*{.*?}', re.DOTALL)
-    # extras_pattern = re.compile(r'extras\s*=\s*\{(?:\s*".*?"\s*:\s*".*?"\s*,?)*}', re.DOTALL)
-    extras_pattern = re.compile(r'extras\s*=\s*{((?:[^{}]|{{[^{}]*}})*)}', re.DOTALL)
-    
-    extras_matches = extras_pattern.findall(template)
-
-    try:
-        extras_content = ast.literal_eval("{" + extras_matches[0] + "}")
-        if not isinstance(extras_content, dict):
-            return None, {"error": "Extras is not a dictionary", "message": "Evaluation of extras failed."}
-        return extras_content, False
-    except Exception as ex:
-        print(ex)
-        return None, {"error": f"{ex}", "message": "Evaluation of extras failed."}
-
-
 # handles merging the extras in from template, user and system definitions
 def merge_extras(template_extras, node_extras):
     # Make a copy of template_extras to avoid modifying it directly
@@ -469,3 +407,13 @@ def jinja_from_template(template):
         jinja = jinja.replace(extras_content, '')
 
     return jinja
+
+
+def compress_text(text):
+    compressed_bytes = zlib.compress(text.encode('utf-8'))
+    return base64.b64encode(compressed_bytes).decode('utf-8')
+
+def decompress_text(compressed_text):
+    compressed_bytes = base64.b64decode(compressed_text.encode('utf-8'))
+    decompressed_bytes = zlib.decompress(compressed_bytes)
+    return decompressed_bytes.decode('utf-8')

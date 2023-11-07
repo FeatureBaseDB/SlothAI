@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Dict
 import datetime
 
+from SlothAI.lib.util import random_string, compress_text, decompress_text
+
 from google.cloud import ndb
 
 class AbstractTaskStore(ABC):
@@ -160,3 +162,168 @@ class NDBTaskStore(ndb.Model):
 
         return True
     
+class AbstractTemplateStore(ABC):
+	@abstractmethod
+	def create(cls, name, user_id, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
+		pass
+
+	@abstractmethod
+	def update(cls, template_id, user_id, name, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
+		pass
+
+	@abstractmethod
+	def fetch(cls, **kwargs: Dict[str, any]):
+		pass
+
+	@abstractmethod
+	def get(cls, **kwargs: Dict[str, any]):
+		pass
+
+	@abstractmethod
+	def delete(cls, **kwargs: Dict[str, any]):
+		pass
+
+
+_sentinel = object()
+
+class NDBTemplateStore(ndb.Model):
+    template_id = ndb.StringProperty()
+    name = ndb.StringProperty()
+    uid = ndb.StringProperty()
+    text = ndb.StringProperty()
+    input_fields = ndb.JsonProperty()
+    output_fields = ndb.JsonProperty()
+    extras = ndb.JsonProperty()
+    processor = ndb.StringProperty()
+    created = ndb.DateTimeProperty()
+
+    @classmethod
+    def _get_kind(cls):
+         return 'Template'
+
+    @classmethod
+    @ndb_context_manager
+    def create(cls, name, user_id, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
+        current_utc_time = datetime.datetime.utcnow()
+        existing_template = cls.query(cls.name == name, cls.uid == user_id).get()
+
+        if not existing_template:
+            template_id = random_string(13)
+            template = cls(
+                template_id=template_id,
+                name=name,
+                uid=user_id,
+                text=compress_text(text),
+                input_fields=input_fields,
+                output_fields=output_fields,
+                extras=extras,
+                processor=processor,
+                created=current_utc_time,
+            )
+            template.put()
+            return template.to_dict()
+        else:
+            return existing_template.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def update(cls, template_id, user_id=_sentinel, name=_sentinel, text=_sentinel, input_fields=_sentinel, output_fields=_sentinel, extras=_sentinel, processor=_sentinel):
+        template = cls.query(cls.template_id == template_id, cls.uid == user_id).get()
+        if not template:
+            print("didn't find template")
+            return None
+
+        # Update fields only if the new values are not None
+        if name is not _sentinel:
+            template.name = name
+        if user_id is not _sentinel:
+             template.uid = user_id
+        if text is not _sentinel:
+            template.text = compress_text(text)  # Assuming you want to always compress
+        if input_fields is not _sentinel:
+            template.input_fields = input_fields
+        if output_fields is not _sentinel:
+            template.output_fields = output_fields
+        if extras is not _sentinel:
+            template.extras = extras
+        if processor is not _sentinel:
+            template.processor = processor
+
+        template.put()
+
+        return template.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def fetch(cls, **kwargs: Dict[str, any]):
+        query_conditions = []
+
+        if 'processor' in kwargs and 'user_id' in kwargs:
+            query_conditions.append(cls.processor == kwargs['processor'], cls.uid == kwargs['user_id'])
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'user_id' in kwargs:
+            query_conditions.append(cls.uid == kwargs['user_id'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).fetch()
+        else:
+            entities = None
+
+        templates = []
+        for entity in entities:
+            template = entity.to_dict()
+            template['text'] = decompress_text(entity.text)  # Decompress the stored text
+            templates.append(template)
+
+        return templates
+
+    @classmethod
+    @ndb_context_manager
+    def get(cls, **kwargs: Dict[str, any]):
+        query_conditions = []
+
+        if 'processor' in kwargs and 'user_id' in kwargs:
+            query_conditions.append(cls.processor == kwargs['processor'], cls.uid == kwargs['user_id'])
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'user_id' in kwargs:
+            query_conditions.append(cls.uid == kwargs['user_id'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            template = cls.query(query).get()
+
+        if template:
+            template_dict = template.to_dict()
+            template_dict['text'] = decompress_text(template.text)  # Decompress the stored text
+            return template_dict
+        else:
+            return None
+
+    @classmethod
+    @ndb_context_manager
+    def delete(cls, **kwargs: Dict[str, any]):
+        query_conditions = []
+
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'user_id' in kwargs:
+            query_conditions.append(cls.uid == kwargs['user_id'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entity = cls.query(query).get()
+
+        if entity:
+            entity.key.delete()
+            return True
+        else:
+            return False

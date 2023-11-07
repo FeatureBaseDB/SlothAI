@@ -11,8 +11,7 @@ import flask_login
 from flask_login import current_user
 
 from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template
-from SlothAI.web.models import Pipeline, Node, Template, Log
-from SlothAI.lib.tasks import Task
+from SlothAI.web.models import Pipeline, Node, Log
 
 site = Blueprint('site', __name__)
 
@@ -90,7 +89,8 @@ def pipelines():
     hostname = request.host
     pipelines = Pipeline.fetch(uid=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
-    templates = Template.fetch(uid=current_user.uid)
+    template_service = app.config['template_service']
+    templates = template_service.fetch_template(user_id=current_user.uid)
 
     # add input and output fields, plus templates
     _nodes = []
@@ -117,7 +117,8 @@ def pipeline_view(pipe_id):
     # get the user and their tables
     username = current_user.name
     token = current_user.api_token
-    templates = Template.fetch(uid=current_user.uid)
+    template_service = app.config['template_service']
+    templates = template_service.fetch_template(user_id=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
 
     pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
@@ -222,7 +223,8 @@ def nodes():
     username = current_user.name
     nodes = Node.fetch(uid=current_user.uid)
 
-    templates = Template.fetch(uid=current_user.uid)
+    template_service = app.config['template_service']
+    templates = template_service.fetch_template(user_id=current_user.uid)
 
     template_lookup = {template['template_id']: template['name'] for template in templates}
 
@@ -256,8 +258,9 @@ def nodes():
 @flask_login.login_required
 def templates():
     username = current_user.name
-    templates = Template.fetch(uid=current_user.uid)
-    
+    template_service = app.config['template_service']
+    templates = template_service.fetch_template(user_id=current_user.uid)
+
     if not templates:
         return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
 
@@ -274,12 +277,13 @@ def template_detail(template_id="new"):
     username = current_user.name
     api_token = current_user.api_token
     dbid = current_user.dbid
-    
-    template = Template.get(uid=current_user.uid,template_id=template_id)
-    
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=template_id, user_id=current_user.uid)
+        
     # test if there are more templates
     has_templates = False
-    templates = Template.fetch(uid=current_user.uid)
+    template_service = app.config['template_service']
+    templates = template_service.fetch_template(user_id=current_user.uid)
     if templates:
         has_templates = True
 

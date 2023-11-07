@@ -302,7 +302,7 @@ $(document).ready(function() {
         $("#nodeTemplateContainer").hide();
 
         $.ajax({
-            url: '/templates/list',
+            url: '/templates',
             type: 'GET',
             success: function(response) {
                 templateSelect.append($('<option>', {

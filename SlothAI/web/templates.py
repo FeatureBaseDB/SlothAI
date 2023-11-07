@@ -1,28 +1,26 @@
-import re
-import ast
-
-from google.cloud import ndb
+from flask import current_app as app
 
 from flask import Blueprint, flash, jsonify, request
 
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.util import random_name, fields_from_template, extras_from_template
-from SlothAI.web.models import Template, Node
+from SlothAI.lib.util import random_name
+from SlothAI.web.models import Node
+
+from datetime import datetime
+
+from SlothAI.lib.template import Template
 
 template = Blueprint('template', __name__)
 
 
 # API HANDLERS
-@template.route('/templates/list', methods=['GET'])
+@template.route('/templates', methods=['GET'])
 @flask_login.login_required
 def templates_list():
-    # get the user and their tables
-    username = current_user.name
-    api_token = current_user.api_token
-    dbid = current_user.dbid
-    templates = Template.fetch(uid=current_user.uid)
+    template_service = app.config['template_service']
+    templates = template_service.fetch_template(user_id=current_user.uid)
     return jsonify(templates)
 
 
@@ -32,8 +30,8 @@ def get_template(template_id):
     # Get the user and their tables
     username = current_user.name
     
-    # Fetch the template by template_id
-    template = Template.get(uid=current_user.uid, template_id=template_id)
+    template_service = app.config['template_service']
+    template = template_service.get_template(user_id=current_user.uid, template_id=template_id)
 
     if template:
         return jsonify(template)
@@ -45,52 +43,50 @@ def get_template(template_id):
 @template.route('/templates/<template_id>/update', methods=['POST'])
 @flask_login.login_required
 def template_update(template_id):
-    template = Template.get(uid=current_user.uid, template_id=template_id)
 
-    if template:
-        if request.is_json:
-            json_data = request.get_json()
-
-            # Check if 'template' key exists in json_data and use it to update the template
-            if 'template' in json_data and isinstance(json_data['template'], dict):
-                template_data = json_data['template']
-
-                input_fields, output_fields, error = fields_from_template(template_data.get('text'))                
-                if error:
-                    return jsonify({"error": "Invalid JSON", "message": "The 'input_fields' and 'output_fields' definitions must evaluate. Check your syntax."}), 400
-
-                extras, error = extras_from_template(template_data.get('text'))
-
-                if error:
-                    return jsonify({"error": "Invalid JSON", "message": "The 'extras' definition must evaluate. Check your syntax."}), 400
-
-                nodes = Node.fetch(template_id=template_id)
-
-                if nodes and not sorted(template.get('extras').items()) == sorted(extras.items()):
-                    return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node."}), 500
-
-                # Call the update function with the data from 'template' dictionary
-                updated_template = Template.update(
-                    template_id=template_id,
-                    uid=current_user.uid,
-                    name=template_data.get('name', template.get('name')),
-                    text=template_data.get('text', template.get('text')),
-                    input_fields=input_fields,
-                    output_fields=output_fields,
-                    extras=extras,
-                    processor=template_data.get('processor', template.get('processor'))
-                )
-
-                if updated_template:
-                    return jsonify(updated_template)
-                else:
-                    return jsonify({"error": "Update failed", "message": "Failed to update the template."}), 500
-            else:
-                return jsonify({"error": "Invalid JSON", "message": "'template' key with dictionary data is required in the request JSON."}), 400
-        else:
-            return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
-    else:
+    # verify the the template with this id has exists in persistent storage.
+    template_service = app.config['template_service']
+    template = template_service.get_template(user_id=current_user.uid, template_id=template_id)
+    if not template:
         return jsonify({"error": "Not found", "message": "The requested template was not found."}), 404
+
+    # do some checking of the payload
+    if not request.is_json:
+        return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
+    
+    request_data = request.get_json()
+    # Check if 'template' key exists in json_data and use it to update the template
+    if not ('template' in request_data and isinstance(request_data['template'], dict)):
+        return jsonify({"error": "Invalid JSON", "message": "'template' key with dictionary data is required in the request JSON."}), 400
+    template_payload = request_data['template']
+    
+    # update template obj based on payload
+    allowed_keys = {'name', 'text', 'created', 'user_id'}
+    for key in allowed_keys:
+        if key in template_payload:
+            template[key] = template_payload[key]
+
+    template = Template.from_dict(template)
+
+    nodes = Node.fetch(template_id=template_id)
+    if nodes and not sorted(template.get('extras').items()) == sorted(template.extras.items()):
+        return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node."}), 500
+
+    updated_template = template_service.update_template(
+        template_id=template_id,
+        user_id=template.user_id,
+        name=template.name,
+        text=template.text,
+        input_fields=template.input_fields,
+        output_fields=template.output_fields,
+        extras=template.extras,
+        processor=template.processor,
+    )
+
+    if updated_template:
+        return jsonify(updated_template)
+    else:
+        return jsonify({"error": "Update failed", "message": "Failed to update the template."}), 500
 
 
 @template.route('/templates/generate_name', methods=['GET'])
@@ -109,42 +105,47 @@ def generate_name():
 @flask_login.login_required
 def template_create():
     uid = current_user.uid
+    template_service = app.config['template_service']
 
-    if request.is_json:
-        json_data = request.get_json()
-       
-        if 'template' in json_data and isinstance(json_data['template'], dict):
-            template_data = json_data['template']
-
-            input_fields, output_fields, error = fields_from_template(template_data.get('text'))                
-            if error:
-                return jsonify({"error": error.get('error'), "message": error.get('message')}), 400
-
-            extras, error = extras_from_template(template_data.get('text'))
-            if error:
-                return jsonify({"error": error.get('error'), "message": error.get('message')}), 400
-
-            processor = extras.get('processor', template_data.get('processor', 'jinja2'))
-            print(processor)
-            created_template = Template.create(
-                name=template_data.get('name'),
-                uid=uid,
-                text=template_data.get('text'),
-                input_fields=input_fields,
-                output_fields=output_fields,
-                extras=extras,
-                processor=processor
-            )
-
-            if created_template:
-                flash("Template created.")
-                return jsonify(created_template), 201
-            else:
-                return jsonify({"error": "Creation failed", "message": "Failed to create the template."}), 500
-        else:
-            return jsonify({"error": "Invalid JSON", "message": "'template' key with dictionary data is required in the request JSON."}), 400
-    else:
+    if not request.is_json:
         return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
+
+    json_data = request.get_json()
+    
+    if not ('template' in json_data and isinstance(json_data['template'], dict)):
+        return jsonify({"error": "Invalid JSON", "message": "'template' key with dictionary data is required in the request JSON."}), 400
+
+    template_data = json_data['template']
+    if 'text' not in template_data:
+        return jsonify({"error": "Invalid Request", "message": "'template' object must contain 'text' key"}), 400
+    if 'name' not in template_data:
+        return jsonify({"error": "Invalid Request", "message": "'template' object must contain 'name' key"}), 400
+
+    if 'user_id' not in template_data:
+        template_data['user_id'] = uid
+    if 'created' not in template_data:
+        template_data['created'] = datetime.utcnow()
+
+
+    template = Template.from_dict(template_data)
+    if 'processor' in template_data:
+        template.processor = template_data['processor']
+
+    created_template = template_service.create_template(
+        name=template.name,
+        user_id=template.user_id,
+        text=template.text,
+        input_fields=template.input_fields,
+        output_fields=template.output_fields,
+        extras=template.extras,
+        processor=template.processor,
+    )
+
+    if created_template:
+        flash("Template created.")
+        return jsonify(created_template), 201
+    else:
+        return jsonify({"error": "Creation failed", "message": "Failed to create the template."}), 500
 
 
 
@@ -152,7 +153,8 @@ def template_create():
 @template.route('/templates/<template_id>/delete', methods=['DELETE'])
 @flask_login.login_required
 def template_delete(template_id):
-    template = Template.get(uid=current_user.uid, template_id=template_id)
+    template_service = app.config['template_service']
+    template = template_service.get_template(user_id=current_user.uid, template_id=template_id)
     if template:
         # fetch all nodes
         nodes = Node.fetch(uid=current_user.uid)
@@ -162,9 +164,9 @@ def template_delete(template_id):
 
         if is_in_node:
             return jsonify({"error": "Template is in use in a node.", "message": "This template cannot be deleted until it's removed from the nodes using it."}), 409
+        template_service = app.config['template_service']
+        _ = template_service.delete_template(user_id=current_user.uid, template_id=template.get('template_id'))
 
-        # delete template
-        result = Template.delete(template_id=template.get('template_id'))
         return jsonify({"response": "success", "message": "Template deleted successfully!"}), 200
     else:
         return jsonify({"error": f"Unable to delete template with id {template_id}"}), 501

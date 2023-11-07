@@ -14,8 +14,11 @@ from flask_login import current_user
 from werkzeug.utils import secure_filename
 
 from SlothAI.lib.tasks import Task, TaskState
-from SlothAI.web.models import Pipeline, Node, Template
+from SlothAI.web.models import Pipeline, Node
 from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub, transform_single_items_to_lists
+from SlothAI.lib.template import Template
+
+from SlothAI.web.nodes import node_create
 
 pipeline = Blueprint('pipeline', __name__)
 
@@ -55,9 +58,8 @@ def pipelines_download(pipe_id):
         node = Node.get(uid=current_user.uid, node_id=node_id)
 
         # Retrieve the template for each node
-        template_id = node.get('template_id')
-        template = Template.get(uid=current_user.uid, template_id=template_id)
-
+        template_service = app.config['template_service']
+        template = template_service.get_template(user_id=current_user.uid, template_id=node.get('template_id'))
         # Append the node and its associated template to the nodes list
         nodes.append({
             "node": node,
@@ -254,4 +256,84 @@ def ingest_post(pipeline_id):
     app.config['task_service'].create_task(task)
 
     return jsonify(task.to_dict()), 200
+
+
+
+@pipeline.route('/pipeline/upload', methods=['POST'])
+@flask_login.login_required
+def pipeline_upload():
+    template_service = app.config['template_service']
+    
+    if not request.is_json:
+        return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
+
+    json_data = request.get_json()
+
+    name = json_data.get('name')
+    nodes = json_data.get('nodes')
+    user_id = current_user.uid
+
+    if not name or not nodes:
+        return jsonify({"error": "Invalid JSON Object", "message": "The request body must be valid JSON data and contain a 'name' and 'nodes' key."}), 400
+    
+    if not isinstance(nodes, list):
+        return jsonify({"error": "Invalid JSON Object", "message": f"The value of the 'nodes' key must be a list of node objects. Got: {type(nodes)}"}), 400
+
+    node_ids = []
+    # Make sure all nodes exist
+    for n in nodes:
+        node = n.get('node')
+        template = n.get('template')
+        if not node or not template:
+            return jsonify({"error": "Invalid JSON Object", "message": f"Each node in nodes must contain a 'node' and 'template' key"}), 400
+
+        name = node.get('name')
+        processor = node.get('processor', template.get('processor'))
+
+        if not name:
+            return jsonify({"error": "Invalid JSON Object", "message": f"Nested node object must contain a 'name' key value pair"}), 400
+        if not processor:
+            return jsonify({"error": "Invalid JSON Object", "message": f"Processor not found in template or node"}), 400
+
+        template_extras = template.get('extras')
+        node_extras = node.get('extras')
+        # Check that both or neither are None
+        if not ((template_extras is None and node_extras is None) or (template_extras is not None and node_extras is not None)):
+            return jsonify({"error": "Invalid JSON Object", "message": f"the extras key must either be missing or present for both template and node"}), 400
+
+        if not isinstance(template_extras, dict):
+            return jsonify({"error": "Invalid JSON Object", "message": f"extras must be a JSON object"}), 400
+
+        if not isinstance(node_extras, dict):
+            return jsonify({"error": "Invalid JSON Object", "message": f"extras must be a JSON object"}), 400
+
+        for k,_ in template_extras.items():
+            if k not in node_extras:
+                return jsonify({"error": "Invalid JSON Object", "message": f"Extras keys must match for template and node: found {k} in template but not node"}), 400
+
+        template['user_id'] = current_user.uid
+
+        try:
+            template = template_service.create_template_from_dict(template)
+        except Exception as e:
+            return str(e), 400
+        
+        node = Node.create(
+            name=name,
+            uid=current_user.uid,
+            extras=node_extras,
+            processor=processor,
+            template_id=template['template_id']
+        )
+
+        node_ids.append(node['node_id'])
+
+
+    # update with the create method
+    pipeline = Pipeline.create(user_id, name, node_ids)
+    
+    if not pipeline:
+        return jsonify({"error": "Update failed", "message": "Unable to update pipeline."}), 501
+    
+    return jsonify(pipeline), 200
 

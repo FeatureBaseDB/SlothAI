@@ -18,12 +18,11 @@ from SlothAI.web.custom_commands import custom_commands
 from SlothAI.web.callback import callback
 
 from SlothAI.web.models import User, Log
-# , Task
 
 import config as config 
 
-from SlothAI.lib.services import TaskService
-from SlothAI.lib.storage import NDBTaskStore
+from SlothAI.lib.services import TaskService, TemplateService
+from SlothAI.lib.storage import NDBTaskStore, NDBTemplateStore
 from SlothAI.lib.queue import AppEngineTaskQueue
 
 def create_app(conf='dev'):
@@ -47,10 +46,16 @@ def create_app(conf='dev'):
 
     # client connection
     client = ndb.Client()
+
     ndb_task_store = NDBTaskStore()
+    ndb_template_store = NDBTemplateStore()
     app_engine_queue = AppEngineTaskQueue()
+
     task_service = TaskService(task_store=ndb_task_store, task_queue=app_engine_queue)
+    template_service = TemplateService(template_store=ndb_template_store)
+
     app.config['task_service'] = task_service
+    app.config['template_service'] = template_service
 
     def clean_logs():
         Log.delete_older_than(hours=1)

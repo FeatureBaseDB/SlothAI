@@ -1,11 +1,11 @@
 from google.cloud import ndb
 
 from flask import Blueprint, jsonify, request
-
+from flask import current_app as app
 import flask_login
 from flask_login import current_user
 
-from SlothAI.web.models import Node, Pipeline, Template
+from SlothAI.web.models import Node, Pipeline
 
 from SlothAI.lib.util import merge_extras
 
@@ -72,7 +72,8 @@ def node_create():
 
         if 'node' in json_data and isinstance(json_data['node'], dict) and json_data['node'].get('template_id', '').lower() != 'none':
             node_data = json_data['node']
-            template = Template.get(template_id=node_data.get('template_id'))
+            template_service = app.config['template_service']
+            template = template_service.get_template(template_id=node.get('template_id'))
 
             merged_extras = merge_extras(template.get('extras', {}), node_data.get('extras', {}))
            

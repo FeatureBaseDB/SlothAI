@@ -14,6 +14,7 @@ from itertools import groupby
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
 from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage_requests
+from SlothAI.lib.template import Template
 
 from typing import Dict
 
@@ -33,11 +34,11 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from SlothAI.web.custom_commands import random_word, random_sentence, chunk_with_page_filename, filter_shuffle
-from SlothAI.web.models import User, Node, Template, Pipeline
+from SlothAI.web.models import User, Node, Pipeline
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
-from SlothAI.lib.util import fields_from_template, remove_fields_and_extras, strip_secure_fields, filter_document, load_from_storage, random_string
+from SlothAI.lib.util import strip_secure_fields, filter_document, random_string
 
 import SlothAI.lib.services as services
 
@@ -115,20 +116,20 @@ def process(task: Task) -> Task:
 
 @processer
 def jinja2(node: Dict[str, any], task: Task) -> Task:
-	template = Template.get(template_id=node.get('template_id'))
+
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
-	output_fields = template.get('output_fields')
-	input_fields = template.get('input_fields')
 
-	template_text = remove_fields_and_extras(template.get('text'))
+	template_text = Template.remove_fields_and_extras(template.get('text'))
 
 	try:
 		if template_text:
 			jinja_template = env.from_string(template_text)
 			jinja = jinja_template.render(task.document)
 	except Exception as e:
-		raise NonRetriableError(f"jinja2 processor: unable to render jinja: {e}")
+		raise NonRetriableError(f"jinja2 processor: unable to render jinja: {e}: {e}")
 
 	try:
 		jinja_json = json.loads(jinja)
@@ -142,7 +143,8 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 
 @processer
 def embedding(node: Dict[str, any], task: Task) -> Task:
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	input_fields = template.get('input_fields')
 	output_fields = template.get('output_fields')
 	if not input_fields:
@@ -207,7 +209,8 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 @processer
 def aichat(node: Dict[str, any], task: Task) -> Task:
 	# output and input fields
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	input_fields = template.get('input_fields')
@@ -228,7 +231,7 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
 	if "gpt" in task.document.get('model'):
 		openai.api_key = task.document.get('openai_token')
 
-		template_text = remove_fields_and_extras(template.get('text'))
+		template_text = template_service.remove_fields_and_extras(template.get('text'))
 
 		if template_text:
 			jinja_template = env.from_string(template_text)
@@ -281,7 +284,8 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
 @processer
 def aidict(node: Dict[str, any], task: Task) -> Task:
 	# output and input fields
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	input_fields = template.get('input_fields')
@@ -323,7 +327,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 			# item is not used...but we set iterate_index for the template
 			task.document['iterate_index'] = iterate_index
 
-			template_text = remove_fields_and_extras(template.get('text'))
+			template_text = template_service.remove_fields_and_extras(template.get('text'))
 
 			if template_text:
 				jinja_template = env.from_string(template_text)
@@ -385,7 +389,8 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 @processer
 def aivision(node: Dict[str, any], task: Task) -> Task:
 	# Output and input fields
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
@@ -415,9 +420,9 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 
 	# deal with lists
 	if isinstance(filename, list):
-	    filename = filename[0]
+		filename = filename[0]
 	if isinstance(content_type, list):
-	    content_type = content_type[0]
+		content_type = content_type[0]
 
 	# Check if the mime type is supported for PNG, JPG, and BMP
 	supported_content_types = ['image/png', 'image/jpeg', 'image/bmp', 'image/jpg']
@@ -449,7 +454,8 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 @processer
 def aiimage(node: Dict[str, any], task: Task) -> Task:
 	# Output and input fields
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
@@ -508,7 +514,8 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 
 @processer
 def read_file(node: Dict[str, any], task: Task) -> Task:
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	output_fields = template.get('output_fields')
@@ -607,7 +614,8 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
 @processer
 def callback(node: Dict[str, any], task: Task) -> Task:
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	
@@ -665,7 +673,8 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 
 @processer
 def split_task(node: Dict[str, any], task: Task) -> Task:
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	input_fields = template.get('input_fields')
 	output_fields = template.get('output_fields')
 	if not input_fields:
@@ -776,7 +785,8 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 
 @processer
 def read_uri(node: Dict[str, any], task: Task) -> Task:
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	
 	# OpenAI only for now
 	openai.api_key = task.document.get('openai_token')
@@ -876,7 +886,8 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
 
 @processer
 def aiaudio(node: Dict[str, any], task: Task) -> Task:
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	
 	# OpenAI only for now
 	openai.api_key = task.document.get('openai_token')
@@ -986,7 +997,8 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
 		for i, value in enumerate(tuple):
 			data[fields[i]].append(value)
 
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 	
@@ -1006,7 +1018,8 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 
 	auth = {"dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']}
 
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	_keys = template.get('input_fields') # must be input fields but not enforced
 	keys = [n['name'] for n in _keys]
 	data = get_values_by_json_paths(keys, task.document)
@@ -1150,7 +1163,8 @@ def process_input_fields(task_document, input_fields):
 
 
 def validate_document(node, task: Task, validate: DocumentValidator):
-	template = Template.get(template_id=node.get('template_id'))
+	template_service = app.config['template_service']
+	template = template_service.get_template(template_id=node.get('template_id'))
 	fields = template.get(validate)
 	if fields:
 		missing_key = validate_dict_structure(template.get('input_fields'), task.document)
@@ -1186,21 +1200,6 @@ def clean_extras(extras: Dict[str, any], task: Task):
 				del task.document[k]
 	return task
 
-
-# load template
-def load_template(name="default"):
-	# file path
-	file_path = "./SlothAI/templates/prompts/%s.txt" % (name)
-
-	try:
-		with open(file_path, 'r', encoding='utf-8') as f:
-			template = Template(f.read())
-	except Exception as ex:
-		print(ex)
-		print("exception in loading template")
-		template = None
-
-	return template
 
 def all_equal(iterable):
 	g = groupby(iterable)
