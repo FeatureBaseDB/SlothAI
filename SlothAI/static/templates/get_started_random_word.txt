@@ -7,7 +7,7 @@
 {# 3. Click `Pipelines` and add the random word (jinja) node and the callback template to the pipeline, in that order. #}
 {# 4. Finish adding the Pipeline by giving it a name and clicking the add button. #}
 
-{# extras = {} #}
+{# Extras #}
 {# The extras definition is required in all templates. #}
 {# If you define an extra for num_words here, you may set a value for it #}
 {# If the value is set to None, you will be prompted for the value during node creation #}
