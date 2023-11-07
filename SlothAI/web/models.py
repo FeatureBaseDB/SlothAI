@@ -351,7 +351,6 @@ class Pipeline(ndb.Model):
             pipeline.put()
 
         else:
-            print("updating pipeline")
             pipeline.node_ids = node_ids
             pipeline.put()
 

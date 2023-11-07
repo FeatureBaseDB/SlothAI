@@ -1,18 +1,21 @@
-# POST audio to $pipe_name
+# POST audio file to $pipe_name running $head_processor
 import requests
 import json
 
 # URL
 url = "$protocol://$hostname/pipeline/$pipe_id/task?token=$token"
 
-# Define the file and JSON data
-files = {'document': ('animate.pdf', open('animate.pdf', 'rb'), 'application/pdf')}
-json_data = json.dumps($json_string)
+# Define the file data
+files = {
+    'document': ('meeting.wav', open('meeting.wav', 'rb'), 'audio/wav'),
+    'json': (None, json.dumps({'filename': ["meeting.wav"]}), 'application/json')
+}
 
 # Send the request with both file and JSON data
-response = requests.post(url, files=files, data=json_data, headers={'Content-Type': 'application/json'})
+response = requests.post(url, files=files)
 
 if response.status_code == 200:
     print(response.text)
 else:
+    print(response.text)
     print(response.status_code)

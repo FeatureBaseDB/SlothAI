@@ -60,8 +60,8 @@ template_examples = [
     {"name": "Generate keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
     {"name": "Generate a question from text and keyterms", "template_name": "text_keyterms_to_question", "processor_type": "aidict"},
     {"name": "Generate a summary from text", "template_name": "text_to_summary", "processor_type": "aidict"},
-    {"name": "Generate an image prompt from words", "template_name": "words_to_prompt", "processor_type": "aidict"},
-    {"name": "Generate an image prompt from chunks and a query.", "template_name": "query_chunks_to_prompt", "processor_type": "aidict"},
+    {"name": "Generate image prompt from words", "template_name": "words_to_prompt", "processor_type": "aidict"},
+    {"name": "Generate image prompt from chunks and query", "template_name": "query_chunks_to_prompt", "processor_type": "aidict"},
     {"name": "Generate text sentiment", "template_name": "text_to_sentiment", "processor_type": "aidict"},
     {"name": "Generate answers from chunks and a query", "template_name": "chunks_query_to_answer", "processor_type": "aidict"},
     {"name": "Generate chat from texts", "template_name": "text_to_chat", "processor_type": "aichat"},
@@ -168,18 +168,24 @@ def pipeline_view(pipe_id):
         "pipe_id": pipe_id,
         "pipe_name": pipeline.get('name'),
         "hostname": request.host,
-        "protocol": request.scheme,
         "token": token,
         "head_processor": head_processor,
-        "head_input_fields": ", ".join(head_field_names)
+        "head_input_fields": head_input_fields
     }
+
+    # set protocol
+    if "localhost" in request.host:
+        substitution_values['protocol'] = "http"
+    else:
+        substitution_values['protocol'] = "https"
 
     # Loop over the input fields and add them to the substitution dictionary
     ai_dict = gpt_dict_completion(substitution_values, template = 'form_example')
+
     if not ai_dict:
         ai_dict = {"texts": ["There was a knock at the door, then silence.","Bob was there, wanting to tell Alice about an organization."]}
         substitution_values['filename'] = "animate.pdf"
-        substitution_values['mime_type'] = "application/pdf"
+        substitution_values['content_type'] = "application/pdf"
     else:
         substitution_values.update(ai_dict)
 
@@ -196,7 +202,6 @@ def pipeline_view(pipe_id):
     curl_template = load_template(f'{head_processor}_curl')
 
     if not python_template or not curl_template:
-        print("template not found")
         python_template = load_template('jinja2_python')
         curl_template = load_template('jinja2_curl')
 

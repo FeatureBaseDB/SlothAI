@@ -2,10 +2,21 @@ from flask import Blueprint, render_template
 from flask import current_app as app
 from faker import Faker
 
+import random
+
 import nltk
 tokenizer = nltk.data.load('./SlothAI/static/english.pickle')
 
 custom_commands = Blueprint('custom_commands', __name__)
+
+@custom_commands.app_template_global()
+def filter_shuffle(seq):
+    try:
+        result = list(seq)
+        random.shuffle(result)
+        return result
+    except:
+        return seq
 
 @custom_commands.app_template_global()
 def reverse_word(word):

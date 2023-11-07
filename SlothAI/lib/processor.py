@@ -32,7 +32,7 @@ import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
-from SlothAI.web.custom_commands import random_word, random_sentence, chunk_with_page_filename
+from SlothAI.web.custom_commands import random_word, random_sentence, chunk_with_page_filename, filter_shuffle
 from SlothAI.web.models import User, Node, Template, Pipeline
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
@@ -45,6 +45,7 @@ env = Environment()
 env.globals['random_word'] = random_word
 env.globals['random_sentence'] = random_sentence
 env.globals['chunk_with_page_filename'] = chunk_with_page_filename
+env.filters['shuffle'] = filter_shuffle
 
 class DocumentValidator(Enum):
 	INPUT_FIELDS = 'input_fields'

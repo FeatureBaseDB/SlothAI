@@ -11,7 +11,7 @@
 
     <div class="rounded-lg border p-3 table-responsive">
         <h4 class="mb-3">Your Logs</h4>
-        <p>When you use the default callback, logs of the document at that point in the pipeline will be shown here. Logs expire after 1 hour.</p>
+        <p>When you use the default callback, logs of the document at that point in the pipeline will be shown here. Logs clear after 1 hour.</p>
         <div class="text-left">
             <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
                 <i class="fas fa-sync-alt"></i> Reload
@@ -59,9 +59,13 @@ $(document).ready(function() {
         var rawData = tdLog.data('log');
 
         var cleanedData = rawData.slice(2, -1);
-        cleanedData = cleanedData.replace(/\\\\n/g, " ");
+        cleanedData = cleanedData.replace(/\\\n/g, " ");
+        cleanedData = cleanedData.replace(/\\n/g, " ");
+        cleanedData = cleanedData.replace(/\\\'/g, "'");
         cleanedData = cleanedData.replace(/\\'/g, "'");
+        cleanedData = cleanedData.replace(/\\\"/g, "'");
         cleanedData = cleanedData.replace(/\\"/g, "'");
+        cleanedData = cleanedData.replace(/\\/g, "");
 
         var jsonDataObj;
 

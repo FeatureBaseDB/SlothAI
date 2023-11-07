@@ -7,4 +7,4 @@ input_fields = [{'name': "texts", 'type': "strings"}]
 output_fields = [{'name': "texts_embedding", 'type': "vectors"}]
 
 {# Extras for embedding are vector_size: <size> and model: [instructor_large or instructor_xl] #}
-extras = [{'vector_size': 768}, {'model': 'instructor_xl'}]
+extras = {'vector_size': 768, 'model': "instructor_xl"}

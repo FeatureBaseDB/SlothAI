@@ -1,18 +1,21 @@
-# POST to $pipe_name
+# POST image file to $pipe_name running $head_processor
 import requests
 import json
 
 # URL
-url = "$protocol://$hostname/pipeline/$pipe_id/task?token=$token"
+url = "https://kordless.ngrok.dev/pipeline/dh4uNL7voKOsT/task?token=RigL0Y9qoZKajqKksaQ6eASxiHc4ZDy1eb8Bxt6V"
 
-# Define the file and JSON data
-files = {'document': ('image.png', open('image.png', 'rb'), 'image/png')}
-json_data = json.dumps({'filename': ["image.png"]})
+# Define the file data
+files = {
+    'document': ('pat.jpg', open('pat.jpg', 'rb'), 'image/jpeg'),
+    'json': (None, json.dumps({'filename': ["pat.jpg"]}), 'application/json')
+}
 
 # Send the request with both file and JSON data
-response = requests.post(url, files=files, data=json_data, headers={'Content-Type': 'application/json'})
+response = requests.post(url, files=files)
 
 if response.status_code == 200:
     print(response.text)
 else:
+    print(response.text)
     print(response.status_code)

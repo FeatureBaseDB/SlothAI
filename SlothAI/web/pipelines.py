@@ -223,7 +223,7 @@ def ingest_post(pipeline_id):
             json_data_dict['filename'] = filename
             json_data_dict['content_type'] = uploaded_file.content_type
         except Exception as ex:
-            return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
+            return jsonify({"error": f"Error getting or transforming JSON data."}), 400
     else:
         # If it's not a file upload, try to read JSON data
         try:
@@ -231,9 +231,9 @@ def ingest_post(pipeline_id):
 
             if not isinstance(json_data_dict, dict):
                 return jsonify({"error": "The JSON data is not a dictionary"}), 400
+        
         except Exception as ex:
-            return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
-
+            return jsonify({"error": f"Error getting or transforming JSON data."}), 400
 
     # now we create the task
     task = Task(

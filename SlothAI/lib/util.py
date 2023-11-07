@@ -111,11 +111,8 @@ def load_template(name="default"):
         with open(file_path, 'r', encoding='utf-8') as f:
             template = Template(f.read())
     except Exception as ex:
-        print(ex)
-        print("exception in loading template")
         template = None
     return template
-
 
 
 def gpt_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo"):
@@ -177,7 +174,7 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
     try:
         ai_dict = eval(ai_dict_str)
     except (ValueError, SyntaxError):
-        print("Error: Invalid format in ai_dict_str.")
+        print("Error: Invalid format in ai_dict_str for internal completion use (util.py).")
         ai_dict = {}
 
     return ai_dict

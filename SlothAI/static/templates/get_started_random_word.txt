@@ -9,10 +9,13 @@
 
 {# extras = {} #}
 {# The extras definition is required in all templates. #}
+{# If you define an extra for num_words here, you may set a value for it #}
+{# If the value is set to None, you will be prompted for the value during node creation #}
 extras = {"processor": "jinja2"}
 
 {# Input field definition to take in the number of words to generate. #}
-input_fields = [{'name': 'num_words', 'type': 'ints'}]
+{# Define num_words name and type here, as done in output_fields to take data from the POST #}
+input_fields = []
 
 {# Define the output_fields expected from the node: #}
 output_fields = [{'name': "words", 'type': "stringset"}]
@@ -20,7 +23,12 @@ output_fields = [{'name': "words", 'type': "stringset"}]
 {# Create a dictionary that contains the 'words' stringset: #}
 {
     "words": [
-        {% for _ in range(num_words[0] | default(5)) %}
+        {% if num_words is defined %}
+            {% set word_count = num_words %}
+        {% else %}
+            {% set word_count = 5 %}
+        {% endif %}
+        {% for _ in range(word_count) %}
             "{{ random_word() }}"{% if not loop.last %},{% endif %}
         {% endfor %}
     ]
