@@ -518,7 +518,6 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 	uid = user.get('uid')
 	filename = task.document.get('filename')
 	mime_type = task.document.get('content_type').split(';')[0]
-	print(mime_type)
 
 	if mime_type == "application/pdf":
 		# Get the document
