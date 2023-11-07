@@ -159,7 +159,7 @@ def pipeline_view(pipe_id):
     try:
         head_field_names = [field.get('name') for field in head_input_fields]
     except:
-        head_input_fields = []
+        head_field_names = []
 
     head_processor = _nodes[0].get('processor')
 
