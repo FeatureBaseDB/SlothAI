@@ -442,7 +442,7 @@ $(document).ready(function () {
             url: '/pipeline/' + pipelineId,
             type: 'DELETE',
             success: function (response) {
-                toastr.success('Pipeline deleted..');
+                toastr.success('Pipeline deleted.');
                 $this.closest("tr").remove();
             },
             error: function (error) {
