@@ -1,4 +1,5 @@
 import json
+import datetime
 
 from google.cloud import ndb
 
@@ -68,6 +69,7 @@ template_examples = [
     {"name": "Transcribe audio to text pages", "template_name": "audio_to_text", "processor_type": "aiaudio"},
 ]
 
+
 @site.route('/logs', methods=['GET'])
 @flask_login.login_required
 def logs():
@@ -81,9 +83,25 @@ def logs():
 
 
 @site.route('/', methods=['GET'])
+def home():
+    # set brand
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
+    try:
+        username = current_user.name
+    except:
+        username = "anonymous"
+
+    return render_template('pages/index.html', username=username, brand=brand)
+
+
 @site.route('/pipelines', methods=['GET'])
 @flask_login.login_required
 def pipelines():
+    # set brand
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
+
     # get the user and their tables
     username = current_user.name
     hostname = request.host
@@ -108,7 +126,7 @@ def pipelines():
 
         _nodes.append(node)
 
-    return render_template('pages/pipelines.html', username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
+    return render_template('pages/pipelines.html', brand=brand, username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
 
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
@@ -157,13 +175,12 @@ def pipeline_view(pipe_id):
     # build an example POST usin generative AI
     head_input_fields = _nodes[0].get('input_fields', [])
     try:
-        head_field_names = [f"{field.get('name')} ({field.get('type')})" for field in head_input_fields]
-        print(head_field_names)
+        head_field_names = [f"{field.get('name')} of type {field.get('type')}" for field in head_input_fields]
     except:
-        head_field_names = ["extra_field (strings)"]
+        head_field_names = ["extra_field of type strings"]
 
     if not head_field_names:
-        head_field_names = ["extra_field (strings)"]
+        head_field_names = ["extra_field of type strings"]
 
     head_processor = _nodes[0].get('processor')
 
@@ -313,29 +330,27 @@ def delete_logs():
 @flask_login.login_required
 def tasks():
     tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid)
+    nodes = Node.fetch(uid=current_user.uid)
+    pipelines = Pipeline.fetch(uid=current_user.uid)
 
-    """
-    for entry, task in enumerate(tasks):
-        node = Node.get(uid=current_user.uid, node_id=task.get('current_node_id'))
-        pipeline = Pipeline.get(uid=current_user.uid, pipe_id=task.get('pipe_id'))
+    # add names
+    for index, task in enumerate(tasks):
+        for node in nodes:
+            if node.get('node_id') == task.get('current_node_id'):
+                tasks[index]['node_name'] = node.get('name')
+                break
+        for pipeline in pipelines:
+            if pipeline.get('pipe_id') == task.get('pipe_id'):  
+                tasks[index]['pipeline_name'] = pipeline.get('name')
+                break
 
-        if node:
-            if node.get('name'):
-                tasks[entry]['node_name'] = node.get('name')
-            else:
-                tasks[entry]['node_name'] = task.get('current_node_id')
-        else:
-            tasks[entry]['node_name'] = task.get('current_node_id')
+        # update timestamps
+        created_at_str = task.get('created_at').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        created_at = datetime.datetime.strptime(created_at_str, '%Y-%m-%dT%H:%M:%S.%fZ')
+        timestring = "%Y-%m-%d %H:%M:%SGMT"
+        timestamp = created_at.strftime(timestring)
+        tasks[index]['created'] = timestamp
 
-        if pipeline:
-            if pipeline.get('name'):
-                tasks[entry]['pipeline_name'] = pipeline.get('name')
-            else:
-                tasks[entry]['pipeline_name'] = task.get('pipe_id')
-        else:
-            tasks[entry]['pipeline_name'] = task.get('pipe_id')
-
-    """
     username = current_user.name
     return render_template(
         'pages/tasks.html', tasks=tasks, username=username

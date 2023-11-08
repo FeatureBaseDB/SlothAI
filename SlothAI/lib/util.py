@@ -144,7 +144,7 @@ def gpt_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo")
 
 
 # called only by our stuff
-def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo", alt_token=""):
+def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo-1106", alt_token=""):
     
     # load openai key then drop it from the document
     try:
@@ -159,22 +159,38 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
     except Exception as ex:
         return {}
 
-    completion = openai.ChatCompletion.create(
-        model = model,
-        messages = [
-        {"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."},
-        {"role": "user", "content": prompt}
-        ]
-    )
+    if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
+        system_content = "You write JSON for the user."
+        response_format = {'type': "json_object"}
+    else:
+        system_content = "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."
+        response_format = None
 
-    answer = completion.choices[0].message
+    try:
+        completion = openai.ChatCompletion.create(
+            model = model,
+            response_format = response_format,
+            messages = [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": prompt}
+            ]
+        )
 
-    ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "")
-    ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
-    ai_dict_str = ai_dict_str.strip('ai_dict = ')
+        answer = completion.choices[0].message
+
+        ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "")
+        ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
+        ai_dict_str = ai_dict_str.strip('ai_dict = ')
+    
+    except Exception as ex:
+        print(ex)
+        ai_dict_str = "{}"
 
     try:
         ai_dict = eval(ai_dict_str)
+        if ai_dict.get('ai_dict'):
+            ai_dict = ai_dict.get('ai_dict')
+
     except (ValueError, SyntaxError):
         print("Error: Invalid format in ai_dict_str for internal completion use (util.py).")
         ai_dict = {}

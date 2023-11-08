@@ -335,13 +335,21 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 			else:
 				raise NonRetriableError("Couldn't find template text.")
 
+			if task.document.get('model') == "gpt-3.5-turbo-1106" and "JSON" in prompt:
+				system_content = "You write JSON for the user."
+				response_format = {'type': "json_object"}
+			else:
+				system_content = "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."
+				response_format = None
+				
 			retries = 3
 			# try a few times
 			for _try in range(retries):
 				completion = openai.ChatCompletion.create(
 					model = task.document.get('model'),
+					response_format = response_format,
 					messages = [
-						{"role": "system", "content": "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary. You may use capitalization, where needed."},
+						{"role": "system", "content": system_content},
 						{"role": "user", "content": prompt}
 					]
 				)
@@ -354,6 +362,9 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
 				try:
 					ai_dict = eval(ai_dict_str)
+					if ai_dict.get('ai_dict'):
+						ai_dict = ai_dict('ai_dict')
+
 					for field in output_fields:
 						field_name = field['name']
 
@@ -373,8 +384,9 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 				except (ValueError, SyntaxError, NameError):
 					app.logger.warn(f"The AI failed to build a dictionary. Try #{_try}.")
 					errors.append(f"The aidict processor was unable to evaluate the response from the AI for index: {iterate_index}.")
-			else:				
-				raise NonRetriableError(f"Tried {retries} to get a dictionary from the AI, but failed.")
+			else:
+				print(ai_dict_str)
+				raise NonRetriableError(f"Tried {retries} times to get a dictionary from the AI, but failed.")
 
 		task.document['aidict_errors'] = errors
 		task.document.pop('iterate_index')
@@ -437,8 +449,8 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 
 	client = vision.ImageAnnotatorClient()
 	response = client.annotate_image({
-	    'image': {'source': {'image_uri': image_uri}},
-	    'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
+		'image': {'source': {'image_uri': image_uri}},
+		'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
 	})
 
 	# Get a list of detected labels (objects)

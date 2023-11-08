@@ -7,7 +7,7 @@ input_fields = [{'name': "chunks", 'type': "strings"},{'name': "query", 'type': 
 output_fields = [{'name': "prompts", 'type': "strings"}]
 
 {# Extras - we set the iterate_key to 'query' to allow all chunks into the prompt #}
-extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'processor': 'aidict', 'iterate_field': "query"}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo-1106', 'processor': 'aidict', 'iterate_field': "query"}
 
 {# Process the input string: #}
 # complete dict task by following step by step

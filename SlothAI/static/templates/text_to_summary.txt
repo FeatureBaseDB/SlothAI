@@ -8,7 +8,7 @@ output_fields = [{'name': "summary" ,'type': "strings"}]
 
 {# Define the 'extras' for number of keyterms desired  #}
 {# If multiple input fields are defined for this processor, an iterate_key with a field in input_fields must exist #}
-extras = {'openai_token': None, 'processor': "aidict", 'model': "gpt-3.5-turbo", 'iterate_key': "chunks"}
+extras = {'openai_token': None, 'processor': "aidict", 'model': "gpt-3.5-turbo-1106", 'iterate_key': "chunks"}
 
 {# Process the input string: #}
 # complete dict task

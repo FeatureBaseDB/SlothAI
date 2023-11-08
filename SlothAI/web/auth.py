@@ -27,7 +27,7 @@ auth = Blueprint('auth', __name__)
 def logout():
     logout_user()
     flash("You are logged out.")
-    return redirect(url_for('site.pipelines'))
+    return redirect(url_for('site.home'))
 
 
 @auth.route('/remove_all_caution')
@@ -90,7 +90,7 @@ def login():
             next=next_url
         )
     except Exception:
-        return redirect(url_for('site.pipelines'))
+        return redirect(url_for('site.home'))
 
 
 # LOGIN POST
