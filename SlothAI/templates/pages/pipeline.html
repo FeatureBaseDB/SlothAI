@@ -259,6 +259,16 @@ $(document).ready(function() {
     var node_buttons = $('button[data-node_id]');
     setPopovers();
 
+    $('button').on('mouseleave', function () {
+        const that = this;
+        // Delay hiding the popover to allow time for the mouse to enter the popover
+        setTimeout(function () {
+            if (!$('.popover:hover').length) {
+                $(that).popover('hide'); // Hide the popover if the mouse is not over it
+            }
+        }, 100);
+    });
+    
     // make the buttons sortable
     $("#buttonSortable").sortable({
         revert: true,

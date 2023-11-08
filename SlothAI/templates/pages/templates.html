@@ -31,7 +31,7 @@
             <tbody id="templateTable">
                 {% for template in templates %}
                     <td><button class="btn btn-secondary" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-pen"></i> {{ template.name }}</button></td>
-                    <td><button class="btn btn-secondary"><i class="fas fa-microchip"></i> {{ template.processor }}</button></td>
+                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors" title="{{ template.name }}" data-content="{{ processors | selectattr('value', 'equalto', template.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i> {{ template.processor }}</a></td>
                     <td>
                         {% if template is not none and template.get('input_fields') is not none %}
                             {% for input_field in template['input_fields'] %}
@@ -120,7 +120,6 @@ $(document).ready(function() {
       trigger: 'focus'
     });
 
-
     function processString(inputString) {
       if (inputString.includes(':')) {
         const parts = inputString.split(':');
@@ -192,7 +191,20 @@ $(document).ready(function() {
         sortTable();
     });
 
-
+    $('.btn').on('mouseleave', function () {
+        const that = this;
+        // Delay hiding the popover to allow time for the mouse to enter the popover
+        setTimeout(function () {
+            if (!$('.popover:hover').length) {
+                $(that).popover('hide'); // Hide the popover if the mouse is not over it
+            }
+        }, 100);
+    });
+    
+    // tooltip activate
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    })
 });
 </script>
 {% endblock %}

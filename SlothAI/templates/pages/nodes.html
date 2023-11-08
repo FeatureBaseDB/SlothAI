@@ -248,6 +248,7 @@ $(document).ready(function() {
             "responsive": true
         });
     }
+    
     // Run changeButtonColors and changeBadgeColors functions using Promises
     const buttonColorsPromise = new Promise((resolve) => {
         changeButtonColors();
@@ -283,7 +284,18 @@ $(document).ready(function() {
         const color = `hsl(${hash % 360}, 70%, 60%)`;
         return color;
     }
-    
+
+    $('.btn').on('mouseleave', function () {
+        const that = this;
+        // Delay hiding the popover to allow time for the mouse to enter the popover
+        setTimeout(function () {
+            if (!$('.popover:hover').length) {
+                $(that).popover('hide'); // Hide the popover if the mouse is not over it
+            }
+        }, 100);
+    });
+
+
     $("#addTemplateButton").on("click", function() {
         window.location.href = "/templates/new";
     });

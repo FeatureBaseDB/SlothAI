@@ -205,7 +205,16 @@ $(document).ready(function () {
         const color = getColorFromName(name);
         button.style.backgroundColor = color;
         button.style.borderColor = color;
+    });
 
+    $('button').on('mouseleave', function () {
+        const that = this;
+        // Delay hiding the popover to allow time for the mouse to enter the popover
+        setTimeout(function () {
+            if (!$('.popover:hover').length) {
+                $(that).popover('hide'); // Hide the popover if the mouse is not over it
+            }
+        }, 100);
     });
 
     // create buttons in the list
@@ -248,7 +257,7 @@ $(document).ready(function () {
             'data-toggle': 'popover',
             'data-trigger': 'focus',
             'data-html': true,
-            'data-placement': 'bottom',
+            'data-placement': 'right',
             'data-content': container.html(),
         });
         button.css('background-color', getColorFromName(name));
@@ -337,7 +346,7 @@ $(document).ready(function () {
             content: container.html(),
             trigger: 'focus',
             html: true,
-            placement: 'bottom',
+            placement: 'right',
         });
     });
 
@@ -397,6 +406,9 @@ $(document).ready(function () {
         buttonGroup.append(createButton(getNodeInfo(selectedNode).name, "Node Input", getNodeInfo(selectedNode).input_fields));
         buttonGroup.append(createButton(getNodeInfo(selectedNode).template_name, "Template", getNodeInfo(selectedNode).extras, true));
         buttonGroup.append(createButton(getNodeInfo(selectedNode).processor, "Processor Output", getNodeInfo(selectedNode).output_fields));
+        buttonGroup.on('mouseleave', function() {
+            buttonGroup.find('[data-toggle="popover"]').popover('hide');
+        });
         buttonGroup.append(deleteButton);
 
         // append to the existing list
