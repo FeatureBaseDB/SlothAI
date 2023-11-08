@@ -14,19 +14,19 @@
     <div class="rounded-lg border p-3 table-responsive">
         <h4 class="mb-3">Your Pipelines</h4>
         <p>Pipelines process your data and are built from nodes. Data from the pipeline can be sent to a callback processor or written to a table.</p>
-                <div class="text-left">
-                    <form id="uploadForm" method="post" enctype="multipart/form-data">
-                        <input id="fileInput" type="file" name="file" style="display: none;" />
-                            <button id="uploadPipeline" type="button" class="btn btn-info">
-                                <i class="fas fa-upload"></i> Upload
-                            </button>
-                        <input type="submit" value="Submit" hidden/>
-                    </form>
-                    <button id="createPipeline" type="button" class="btn btn-success">
-                        <i class="fas fa-plus"></i> Create Pipeline
-                    </button>
-                </div>
-        <p></p>
+        <div class="text-left">
+            <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: inline;">
+                <input id="fileInput" type="file" name="file" style="display: none;" />
+                <button id="uploadPipeline" type="button" class="btn btn-info" style="float: left;">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+                <input type="submit" value="Submit" hidden/>
+            </form>
+            <button id="createPipeline" type="button" class="btn btn-success" style="margin-left: 4px; float: left;">
+                <i class="fas fa-plus"></i> Create Pipeline
+            </button>
+        </div>
+
         <table id="pipelineTable" class="table table-striped">
             <thead>
                 <tr>
@@ -70,11 +70,20 @@
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Create a Pipeline</h4>
         <p>Click on the "Create Pipeline" button to create a new Pipeline. Pipelines run documents through a list of node processors.</p>
-
-        <button id="createPipeline" type="button" class="btn btn-success">
-            <i class="fas fa-plus"></i> Create Pipeline
-        </button>
-        <p></p>
+        <div class="text-left">
+            <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: inline;">
+                <input id="fileInput" type="file" name="file" style="display: none;" />
+                <button id="uploadPipeline" type="button" class="btn btn-info" style="float: left;">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+                <input type="submit" value="Submit" hidden/>
+            </form>
+            <button id="createPipeline" type="button" class="btn btn-success" style="margin-left: 4px; float: left;">
+                <i class="fas fa-plus"></i> Create Pipeline
+            </button>
+        </div>
+        <br/>
+        <br/>
         <p>Once you have a pipeline, you will send it data with a curl statement similar to this one:</p>
         <div class="code-block">curl -X POST \
     -H "Content-Type: application/json" \
@@ -239,7 +248,7 @@ $(document).ready(function () {
             'data-toggle': 'popover',
             'data-trigger': 'focus',
             'data-html': true,
-            'data-placement': 'top',
+            'data-placement': 'bottom',
             'data-content': container.html(),
         });
         button.css('background-color', getColorFromName(name));
@@ -328,7 +337,7 @@ $(document).ready(function () {
             content: container.html(),
             trigger: 'focus',
             html: true,
-            placement: 'top',
+            placement: 'bottom',
         });
     });
 
@@ -466,54 +475,45 @@ $(document).ready(function () {
             });
         }
     });
+    $('#uploadPipeline').on('click', function() {
+        // Trigger the file input click event
+        $('#fileInput').click();
+    });
+
+    $('#fileInput').on('change', function() {
+        var file = this.files[0];
+
+        if (file) {
+            // Read the file as text
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    // Try to parse the file content as JSON
+                    var json = JSON.parse(event.target.result);
+
+                    // Send the JSON to the Flask backend using jQuery's $.ajax
+                    $.ajax({
+                        url: '/pipeline/upload',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(json), // Send the JSON content
+                        success: function(data) {
+                            toastr.success("Pipeline uploaded!");
+                            window.location.reload();
+                        },
+                        error: function(jqXHR, textStatus, errorThrown) {
+                            toastr.error(jqXHR.responseJSON.message);
+                        }
+                    });
+                } catch (e) {
+                    // Handle JSON parsing error
+                    console.error("File content is not valid JSON:", e);
+                }
+            };
+            reader.readAsText(file); // Read the file content
+        }
+    });
+
 });
 </script>
-
-<input type="file" id="fileInput" style="display: none;" />
-
-<script type="text/javascript">
-document.getElementById('uploadPipeline').addEventListener('click', function() {
-    // Trigger the file input click event
-    document.getElementById('fileInput').click();
-});
-
-document.getElementById('fileInput').addEventListener('change', function() {
-    var file = this.files[0];
-
-    if (file) {
-        // Read the file as text
-        var reader = new FileReader();
-        reader.onload = function(event) {
-            try {
-                // Try to parse the file content as JSON
-                var json = JSON.parse(event.target.result);
-
-                // Send the JSON to the Flask backend
-                fetch('/pipeline/upload', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(json), // Send the JSON content
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Handle response data here
-                    window.location.reload();
-                })
-                .catch(error => {
-                    // Handle errors here
-                    toastr.error(error.responseJSON.message);
-                });
-            } catch (e) {
-                // Handle JSON parsing error
-                console.error("File content is not valid JSON:", e);
-            }
-        };
-        reader.readAsText(file); // Read the file content
-    }
-});
-</script>
-
-    
 {% endblock %}

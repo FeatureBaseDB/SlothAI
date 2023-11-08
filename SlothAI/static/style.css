@@ -30,6 +30,10 @@ label {
   font-size: 13px;
 }
 
+#pipelineTable_wrapper {
+  padding-top: 16px;
+}
+
 /* Button styles */
 button {
   -webkit-appearance: none;

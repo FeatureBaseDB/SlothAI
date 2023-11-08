@@ -6,10 +6,23 @@
     {% block description %}
     <meta name="description" content='A FeatureBase for your Models.' />
     {% endblock %}
+
     {% block title %}
     <title>{{ app_name }}</title>
     <meta property='og:title' content='FeatureBaseAI' />
     {% endblock %}
+
+    <meta property="og:image" content="https://ai.featurebase.com/static/sloth.png" />
+    <meta property="og:description" content="Blazingly Fast AI Pipelines" />
+    <meta property="og:url" content="https://ai.featurebase.com/" />
+    <meta property="og:title" content="FeatureBaseAI" />
+
+    <meta name="twitter:card" content="summary_large_image" /> <!-- This specifies a large image card -->
+    <meta name="twitter:site" content="@FeatureBase" /> <!-- Replace with your Twitter handle -->
+    <meta name="twitter:title" content="FeatureBaseAI" />
+    <meta name="twitter:description" content="Blazingly Fast AI Pipelines" />
+    <meta name="twitter:image" content="https://ai.featurebase.com/static/sloth.png" />
+
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -19,6 +32,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    
     {% block style %}
     {% endblock %}
 </head>

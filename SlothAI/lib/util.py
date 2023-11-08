@@ -221,7 +221,10 @@ def deep_scrub(data):
     if isinstance(data, dict):
         for key in list(data.keys()):
             if any(word in key.lower() for word in ['secret', 'password', 'token']):
-                data[key] = "REDACTED"
+                # only redact things that aren't templated
+                if data.get(key):
+                    if not data[key].startswith("[") and not data[key].endswith("]"):
+                        data[key] = "REDACTED"
             else:
                 deep_scrub(data[key])
     elif isinstance(data, list):
