@@ -12,7 +12,7 @@
 
     <div class="rounded-lg border p-3 table-responsive">
         <h4 class="mb-3">Your Tasks</h4>
-        <p>Task are started by sending data to a pipeline's ingestion endpoint. Tasks are cleared after an hour.</p>
+        <p>Task are started by sending data to a pipeline's ingestion endpoint. Tasks are cleared after an hour. If there is an error, the last node that completed successfully is listed.</p>
         <div class="text-left">
             <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
                 <i class="fas fa-sync-alt"></i> Reload
@@ -34,22 +34,20 @@
                     <th>ID</th>
                     <th>Pipeline</th>
                     <th>Node</th>
-                    <th>Created At</th>
+                    <th>Created</th>
                     <th>State</th>
                     <th>Error</th>
-                    <th>Retries</th>
                 </tr>
             </thead>
             <tbody>
                 {% for task in tasks %}
                     <tr>
                         <td>{{ task.task_id }}</td>
-                        <td>{{ task.pipe_id }}</td>
-                        <td>{{ task.current_node_id }}</td>
-                        <td>{{ task.created_at }}</td>
+                        <td>{{ task.pipeline_name }}</td>
+                        <td>{{ task.node_name }}</td>
+                        <td>{{ task.created }}</td>
                         <td>{{ task.state }}</td>
                         <td>{{ task.error }}</td>
-                        <td>{{ task.retries }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
