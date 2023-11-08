@@ -71,13 +71,16 @@ template_examples = [
 @site.route('/logs', methods=['GET'])
 @flask_login.login_required
 def logs():
+    # set brand
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
     # get the user and their tables
     username = current_user.name
     hostname = request.host
 
     logs = Log.fetch(uid=current_user.uid)
 
-    return render_template('pages/logs.html', username=username, hostname=hostname, logs=logs)
+    return render_template('pages/logs.html', brand=brand, username=username, hostname=hostname, logs=logs)
 
 
 @site.route('/', methods=['GET'])
@@ -130,6 +133,8 @@ def pipelines():
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
 @flask_login.login_required
 def pipeline_view(pipe_id):
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
     # get the user and their tables
     username = current_user.name
     token = current_user.api_token
@@ -228,12 +233,14 @@ def pipeline_view(pipe_id):
     curl_code = curl_template.substitute(substitution_values)
 
     # render the page
-    return render_template('pages/pipeline.html', username=username, pipeline=pipeline, nodes=_nodes, all_nodes=nodes,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string)
+    return render_template('pages/pipeline.html', brand=brand, username=username, pipeline=pipeline, nodes=_nodes, all_nodes=nodes,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string)
 
 
 @site.route('/nodes', methods=['GET'])
 @flask_login.login_required
 def nodes():
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
     # get the user and their tables
     username = current_user.name
     nodes = Node.fetch(uid=current_user.uid)
@@ -265,13 +272,15 @@ def nodes():
         _nodes.append(node)
 
     return render_template(
-        'pages/nodes.html', username=username, dev=app.config['DEV'], nodes=_nodes, name_random=name_random, templates=templates, processors=processors
+        'pages/nodes.html', username=username, brand=brand, dev=app.config['DEV'], nodes=_nodes, name_random=name_random, templates=templates, processors=processors
     )
 
 
 @site.route('/templates')
 @flask_login.login_required
 def templates():
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
     username = current_user.name
     template_service = app.config['template_service']
     templates = template_service.fetch_template(user_id=current_user.uid)
@@ -280,7 +289,7 @@ def templates():
         return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
 
     return render_template(
-        'pages/templates.html', username=username, templates=templates, processors=processors
+        'pages/templates.html', username=username, brand=brand, templates=templates, processors=processors
     )
 
 
@@ -288,6 +297,8 @@ def templates():
 @site.route('/templates/<template_id>', methods=['GET'])
 @flask_login.login_required
 def template_detail(template_id="new"):
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
     # get the user and their tables
     username = current_user.name
     api_token = current_user.api_token
@@ -313,7 +324,7 @@ def template_detail(template_id="new"):
     empty_template = '{# New Template #}\n\n{# Extras are required. #}\nextras = {"static_extra": "hello", "user_extra": None}'
 
     return render_template(
-        'pages/template.html', username=username, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random, template_examples=template_examples, empty_template=empty_template
+        'pages/template.html', username=username, brand=brand, dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random, template_examples=template_examples, empty_template=empty_template
     )
 
 
@@ -327,6 +338,8 @@ def delete_logs():
 @site.route('/tasks')
 @flask_login.login_required
 def tasks():
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
     tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
     pipelines = Pipeline.fetch(uid=current_user.uid)
@@ -351,7 +364,7 @@ def tasks():
 
     username = current_user.name
     return render_template(
-        'pages/tasks.html', tasks=tasks, username=username
+        'pages/tasks.html', tasks=tasks, username=username, brand=brand
     )
 
 
@@ -359,13 +372,15 @@ def tasks():
 @site.route('/settings', methods=['GET'])
 @flask_login.login_required
 def settings():
+    if app.config['BRAND']:
+        brand = app.config['BRAND']
     # get the user and their tables
     username = current_user.name
     api_token = current_user.api_token
     dbid = current_user.dbid
 
     return render_template(
-        'pages/settings.html', username=username, api_token=api_token, dbid=dbid
+        'pages/settings.html', username=username, brand=brand, api_token=api_token, dbid=dbid
     )
 
 
