@@ -14,14 +14,18 @@
     <div class="rounded-lg border p-3 table-responsive">
         <h4 class="mb-3">Your Pipelines</h4>
         <p>Pipelines process your data and are built from nodes. Data from the pipeline can be sent to a callback processor or written to a table.</p>
-        <div class="text-left">
-            <button id="uploadPipeline" type="button" class="btn btn-info">
-                <i class="fas fa-upload"></i> Upload
-            </button>
-            <button id="createPipeline" type="button" class="btn btn-success">
-                <i class="fas fa-plus"></i> Create Pipeline
-            </button>
-        </div>
+                <div class="text-left">
+                    <form id="uploadForm" method="post" enctype="multipart/form-data">
+                        <input id="fileInput" type="file" name="file" style="display: none;" />
+                            <button id="uploadPipeline" type="button" class="btn btn-info">
+                                <i class="fas fa-upload"></i> Upload
+                            </button>
+                        <input type="submit" value="Submit" hidden/>
+                    </form>
+                    <button id="createPipeline" type="button" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Create Pipeline
+                    </button>
+                </div>
         <p></p>
         <table id="pipelineTable" class="table table-striped">
             <thead>
@@ -464,4 +468,52 @@ $(document).ready(function () {
     });
 });
 </script>
+
+<input type="file" id="fileInput" style="display: none;" />
+
+<script type="text/javascript">
+document.getElementById('uploadPipeline').addEventListener('click', function() {
+    // Trigger the file input click event
+    document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', function() {
+    var file = this.files[0];
+
+    if (file) {
+        // Read the file as text
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                // Try to parse the file content as JSON
+                var json = JSON.parse(event.target.result);
+
+                // Send the JSON to the Flask backend
+                fetch('/pipeline/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(json), // Send the JSON content
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Handle response data here
+                    window.location.reload();
+                })
+                .catch(error => {
+                    // Handle errors here
+                    toastr.error(error.responseJSON.message);
+                });
+            } catch (e) {
+                // Handle JSON parsing error
+                console.error("File content is not valid JSON:", e);
+            }
+        };
+        reader.readAsText(file); // Read the file content
+    }
+});
+</script>
+
+    
 {% endblock %}
