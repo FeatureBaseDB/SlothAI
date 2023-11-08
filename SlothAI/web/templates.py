@@ -126,10 +126,7 @@ def template_create():
     if 'created' not in template_data:
         template_data['created'] = datetime.utcnow()
 
-
     template = Template.from_dict(template_data)
-    if 'processor' in template_data:
-        template.processor = template_data['processor']
 
     created_template = template_service.create_template(
         name=template.name,
