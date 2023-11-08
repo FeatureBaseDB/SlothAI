@@ -16,7 +16,7 @@ template = Blueprint('template', __name__)
 
 
 # API HANDLERS
-@template.route('/templates', methods=['GET'])
+@template.route('/templates/list', methods=['GET'])
 @flask_login.login_required
 def templates_list():
     template_service = app.config['template_service']
