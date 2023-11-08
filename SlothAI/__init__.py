@@ -12,8 +12,8 @@ from SlothAI.web.cron import cron
 from SlothAI.web.tasks import tasks
 
 from SlothAI.web.pipelines import pipeline
-from SlothAI.web.nodes import node
-from SlothAI.web.templates import template
+from SlothAI.web.nodes import node_handler
+from SlothAI.web.templates import template_handler
 from SlothAI.web.custom_commands import custom_commands
 from SlothAI.web.callback import callback
 
@@ -110,8 +110,8 @@ def create_app(conf='dev'):
         app.register_blueprint(cron)
         app.register_blueprint(tasks)
         app.register_blueprint(pipeline)
-        app.register_blueprint(node)
-        app.register_blueprint(template)
+        app.register_blueprint(node_handler)
+        app.register_blueprint(template_handler)
         app.register_blueprint(custom_commands)
         app.register_blueprint(callback)
 

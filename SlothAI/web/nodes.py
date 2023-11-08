@@ -6,13 +6,13 @@ import flask_login
 from flask_login import current_user
 
 from SlothAI.web.models import Node, Pipeline
-
+from SlothAI.lib.template import Template
 from SlothAI.lib.util import merge_extras
 
-node = Blueprint('node', __name__)
+node_handler = Blueprint('node_handler', __name__)
 
 # API HANDLERS
-@node.route('/nodes/list', methods=['GET'])
+@node_handler.route('/nodes/list', methods=['GET'])
 @flask_login.login_required
 def nodes_list():
     # get the user and their tables
@@ -24,7 +24,7 @@ def nodes_list():
     return jsonify(nodes)
 
 
-@node.route('/nodes/<node_id>/detail', methods=['GET'])
+@node_handler.route('/nodes/<node_id>/detail', methods=['GET'])
 @flask_login.login_required
 def get_node(node_id):
     # Get the user and their tables
@@ -39,7 +39,7 @@ def get_node(node_id):
         return jsonify({"error": "Not found", "message": "The requested node was not found."}), 404
 
 
-@node.route('/nodes/validate/openai', methods=['POST'])
+@node_handler.route('/nodes/validate/openai', methods=['POST'])
 @flask_login.login_required
 def validate_openai():
     uid = current_user.uid
@@ -60,9 +60,8 @@ def validate_openai():
     return jsonify({"result": "Token validated. Adding new node..."}), 200
 
 # TODO ADD NODE UPDATE
-
-@node.route('/nodes', methods=['POST'])
-@node.route('/nodes/create', methods=['POST'])
+@node_handler.route('/nodes', methods=['POST'])
+@node_handler.route('/nodes/create', methods=['POST'])
 @flask_login.login_required
 def node_create():
     uid = current_user.uid
@@ -72,8 +71,9 @@ def node_create():
 
         if 'node' in json_data and isinstance(json_data['node'], dict) and json_data['node'].get('template_id', '').lower() != 'none':
             node_data = json_data['node']
+
             template_service = app.config['template_service']
-            template = template_service.get_template(template_id=node.get('template_id'))
+            template = template_service.get_template(template_id=node_data.get('template_id'))
 
             merged_extras = merge_extras(template.get('extras', {}), node_data.get('extras', {}))
            
@@ -95,8 +95,8 @@ def node_create():
         return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
 
 
-@node.route('/nodes/<node_id>', methods=['DELETE'])
-@node.route('/nodes/<node_id>/delete', methods=['DELETE'])
+@node_handler.route('/nodes/<node_id>', methods=['DELETE'])
+@node_handler.route('/nodes/<node_id>/delete', methods=['DELETE'])
 @flask_login.login_required
 def node_delete(node_id):
     node = Node.get(uid=current_user.uid, node_id=node_id)

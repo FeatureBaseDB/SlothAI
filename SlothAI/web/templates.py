@@ -12,11 +12,11 @@ from datetime import datetime
 
 from SlothAI.lib.template import Template
 
-template = Blueprint('template', __name__)
+template_handler = Blueprint('template_handler', __name__)
 
 
 # API HANDLERS
-@template.route('/templates/list', methods=['GET'])
+@template_handler.route('/templates/list', methods=['GET'])
 @flask_login.login_required
 def templates_list():
     template_service = app.config['template_service']
@@ -24,7 +24,7 @@ def templates_list():
     return jsonify(templates)
 
 
-@template.route('/templates/<template_id>/detail', methods=['GET'])
+@template_handler.route('/templates/<template_id>/detail', methods=['GET'])
 @flask_login.login_required
 def get_template(template_id):
     # Get the user and their tables
@@ -39,8 +39,8 @@ def get_template(template_id):
         return jsonify({"error": "Not found", "message": "The requested template was not found."}), 404
 
 
-@template.route('/templates/<template_id>', methods=['POST'])
-@template.route('/templates/<template_id>/update', methods=['POST'])
+@template_handler.route('/templates/<template_id>', methods=['POST'])
+@template_handler.route('/templates/<template_id>/update', methods=['POST'])
 @flask_login.login_required
 def template_update(template_id):
 
@@ -89,7 +89,7 @@ def template_update(template_id):
         return jsonify({"error": "Update failed", "message": "Failed to update the template."}), 500
 
 
-@template.route('/templates/generate_name', methods=['GET'])
+@template_handler.route('/templates/generate_name', methods=['GET'])
 @flask_login.login_required
 def generate_name():
     # get short name
@@ -100,8 +100,8 @@ def generate_name():
     return jsonify({"name": name_random})
 
 
-@template.route('/templates', methods=['POST'])
-@template.route('/templates/create', methods=['POST'])
+@template_handler.route('/templates', methods=['POST'])
+@template_handler.route('/templates/create', methods=['POST'])
 @flask_login.login_required
 def template_create():
     uid = current_user.uid
@@ -148,9 +148,8 @@ def template_create():
         return jsonify({"error": "Creation failed", "message": "Failed to create the template."}), 500
 
 
-
-@template.route('/templates/<template_id>', methods=['DELETE'])
-@template.route('/templates/<template_id>/delete', methods=['DELETE'])
+@template_handler.route('/templates/<template_id>', methods=['DELETE'])
+@template_handler.route('/templates/<template_id>/delete', methods=['DELETE'])
 @flask_login.login_required
 def template_delete(template_id):
     template_service = app.config['template_service']
