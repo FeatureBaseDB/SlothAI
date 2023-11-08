@@ -307,9 +307,11 @@ def pipeline_upload():
         if not isinstance(node_extras, dict):
             return jsonify({"error": "Invalid JSON Object", "message": f"extras must be a JSON object"}), 400
 
-        for k,_ in template_extras.items():
-            if k not in node_extras:
+        for k, v in template_extras.items():
+            if k != "processor" and k not in node_extras:
                 return jsonify({"error": "Invalid JSON Object", "message": f"Extras keys must match for template and node: found {k} in template but not node"}), 400
+            if v == "REDACTED" or node_extras[k] == "REDACTED":
+                return jsonify({"error": "Invalid request", "message": "Extras for node or template contain the value REDACTED. Change this to a valid value."}), 400
 
         template['user_id'] = current_user.uid
 
