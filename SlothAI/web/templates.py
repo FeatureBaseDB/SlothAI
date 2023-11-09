@@ -66,21 +66,21 @@ def template_update(template_id):
         if key in template_payload:
             template[key] = template_payload[key]
 
-    template = Template.from_dict(template)
+    _template = Template.from_dict(template)
 
     nodes = Node.fetch(template_id=template_id)
-    if nodes and not sorted(template.get('extras').items()) == sorted(template.extras.items()):
+    if nodes and not sorted(template.get('extras')) == sorted(_template.extras):
         return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node."}), 500
 
     updated_template = template_service.update_template(
         template_id=template_id,
-        user_id=template.user_id,
-        name=template.name,
-        text=template.text,
-        input_fields=template.input_fields,
-        output_fields=template.output_fields,
-        extras=template.extras,
-        processor=template.processor,
+        user_id=_template.user_id,
+        name=_template.name,
+        text=_template.text,
+        input_fields=_template.input_fields,
+        output_fields=_template.output_fields,
+        extras=_template.extras,
+        processor=_template.processor,
     )
 
     if updated_template:
