@@ -1,17 +1,29 @@
 import flask_login
 
-from flask import Flask, render_template, make_response
+from flask import Flask, render_template, make_response, request
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from google.cloud import ndb
 
 from SlothAI.web.site import site
 from SlothAI.web.auth import auth
 from SlothAI.web.cron import cron
-from SlothAI.web.table import table
 from SlothAI.web.tasks import tasks
-from SlothAI.web.models import User
+
+from SlothAI.web.pipelines import pipeline
+from SlothAI.web.nodes import node_handler
+from SlothAI.web.templates import template_handler
+from SlothAI.web.custom_commands import custom_commands
+from SlothAI.web.callback import callback
+
+from SlothAI.web.models import User, Log
 
 import config as config 
+
+from SlothAI.lib.services import TaskService, TemplateService
+from SlothAI.lib.storage import NDBTaskStore, NDBTemplateStore
+from SlothAI.lib.queue import AppEngineTaskQueue
 
 def create_app(conf='dev'):
 
@@ -34,6 +46,31 @@ def create_app(conf='dev'):
 
     # client connection
     client = ndb.Client()
+
+    ndb_task_store = NDBTaskStore()
+    ndb_template_store = NDBTemplateStore()
+    app_engine_queue = AppEngineTaskQueue()
+
+    task_service = TaskService(task_store=ndb_task_store, task_queue=app_engine_queue)
+    template_service = TemplateService(template_store=ndb_template_store)
+
+    app.config['task_service'] = task_service
+    app.config['template_service'] = template_service
+
+    def clean_logs():
+        Log.delete_older_than(hours=1)
+        # app.logger.info('ran background process to delete old callback logs')
+
+    def clean_tasks():
+        task_service.delete_older_than(hours=1)
+        # app.logger.info('ran background process to delete old tasks')
+    
+    scheduler = BackgroundScheduler()
+    _ = scheduler.add_job(clean_logs, 'interval', minutes=5)
+    _ = scheduler.add_job(clean_tasks, 'interval', minutes=5)
+
+    scheduler.start()
+
 
     @login_manager.request_loader
     def load_request(request):
@@ -72,7 +109,11 @@ def create_app(conf='dev'):
         app.register_blueprint(auth)
         app.register_blueprint(cron)
         app.register_blueprint(tasks)
-        app.register_blueprint(table)
+        app.register_blueprint(pipeline)
+        app.register_blueprint(node_handler)
+        app.register_blueprint(template_handler)
+        app.register_blueprint(custom_commands)
+        app.register_blueprint(callback)
 
     login_manager.blueprint_login_views = {
         'site': "/login",
@@ -83,12 +124,13 @@ def create_app(conf='dev'):
         pass
     @app.errorhandler(404)
     def f404_notfound(e):
-        response = make_response(
-            render_template(
-                'pages/404_notfound.html'
-            )
-        )
-        return response, 404
+        # Check if the request URL contains "/static/templates/"
+        if "/static/templates/" in request.path:
+            return "Not found.", 404
+        else:
+            # Render the 404 HTML page for other URLs
+            response = make_response(render_template('pages/404_notfound.html'))
+            return response, 404
 
     return app
     # flask --app SlothAI run --port 8080 --debug

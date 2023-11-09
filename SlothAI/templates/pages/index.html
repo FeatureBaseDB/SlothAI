@@ -1,0 +1,141 @@
+{% extends "pages/base.html" %}
+
+{% block title %}
+<title>{{ app_name }}</title>
+{% endblock %}
+
+{% block description %}
+<meta name="description" content='FeatureBaseAI' />
+{% endblock %}
+
+{% block content %}
+    <div style="padding-top: 125px;"></div>
+
+    <div style="background-color: #332168; color: white; text-align: center; padding-top: 83px; padding-bottom: 83px;">
+      <div class="container">
+        <div class="row align-items-center justify-content-center">
+          <div class="col-md-6">
+            <img src="/static/sloth.png" width="420" class="rounded" style="border: 8px solid white;">
+
+          </div>
+          <div width="420" class="col-md-6 text-left">
+            <h1 style="font-family: Roboto; font-weight: 700; font-size: 48px; opacity: 100%;">Blazingly Fast <br/> AI Pipelines</h1>
+            <p class="lead">Powered by <a href="https://github.com/FeatureBaseDb/SlothAI" style="color: white;">SlothAI</a> and <a href="https://cloud.featurebase.com/" style="color: white;">FeatureBase Cloud</a>.</p>
+            <div style="padding-bottom: 23px;">
+              <a href="/pipelines" class="btn btn-outline-light" type="button">Get Started</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding-top: 79px;"></div>
+
+  	<div style="background-color: #EEE; border-top: 2px dotted #BBB; border-bottom: 2px dotted #BBB; padding-top: 83px; padding-bottom: 83px;">
+  	  <div style="max-width: 900px;" class="container">
+  	    <div class="row">
+  	      <div style="padding-right: 100px;" class="col-lg-12">
+  	        <h1 style="font-family: 'Roboto'; font-size: 40px; opacity: 100%;">Build <strong>Strong</strong> AI Applications</h1>
+  	        <p class="lead">Harness AI's potential with FeatureBaseAI, a gateway to constructing efficient AI pipelines that transform your data and the way you do business. Explore a world of use cases where tasks like PDF content extraction, audio transcription search, audio document rewriting for customer support augmentation, and PDF ingestion for dynamic product guides are streamlined and accelerated by the <a href="https://github.com/FeatureBaseDb/SlothAI">SlothAI</a> Open Source framework.</p>
+
+            <h2>One Database to Rule Them All</h2>
+            <p class="lead">FeatureBaseAI is built from the ground up to focus on a single managed datastore, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. FeatureBase is the only database in the world to effortlessly manage all three functions, allowing users, including AI, to execute complex SQL queries against their data. No more hassling with separate vector and SQL database setups!</p>
+
+            <img src="/static/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
+            <h2 style="padding-top: 30px;">Use Cases</h2>
+            <p class="lead">Downloads coming soon!</p>
+            <h3 style="padding-top: 30px;">Retreival Augmented Generation</h3>
+            <p class="lead">Accelerate your AI's learning curve with RAG-based pipelines. Tap into and upload a vast data reservoir of PDFs and text files to help refine and ground your AI's responses to achieve unparalleled accuracy for all sorts of use cases. Use OpenAI's <a href="https://platform.openai.com/docs/guides/embeddings">text-embedding-ada-002</a> embeddings, or our free embeddings using <a href="https://instructor-embedding.github.io/">Instructor</a>, to make your content AI ready.</p>
+
+            <h3 style="padding-top: 30px;">Intelligent Enterprise Search</h3>
+            <p class="lead">Revolutionize data discovery within your organization! Build a cutting-edge search pipeline that goes beyond the norm, seamlessly integrating machine learning to provide swift and precise information retrieval and augmentation. Indexing PDFs and web pages becomes a breeze, empowering your team to effortlessly navigate and extract valuable insights.</p>
+            <p class="lead">In enterprise search, the integration of vector search and embeddings takes your queries beyond normal search queries. This means more accurate, contextually relevant results by understanding the semantic relationships within your data. Elevate your search pipeline precision with the power of vectors and creation of keywords and categories for organizing data.</p>
+
+            <h3 style="padding-top: 30px;">Effortless ELT</h3>
+            <p class="lead">Organizations grapple with the task of efficiently managing and moving data. Traditional ETL models fall short, underscoring the demand for a user-friendly, open-source solution for constructing ELTP data pipelines. With FeatureBaseAI, you can build transformational pipelines which leverage AI to load and transform your data seamlessly, and they can utilizing asynchronous tasks for unparalleled performance.</p>
+            <p class="lead">Augmentation of missing data and incorporation of new data can be done with conversational language in SlothAI's templating system, enhancing capabilities for advanced reporting use cases.</p>
+
+            <h3 style="padding-top: 30px;">Storytelling</h3>
+            <p class="lead">Build a dynamic stories based on historic customer data and interactions. Take data from dashboards, PDFs, Slack, and more and use AI to make things more explainable to more people. Analyze alerting systems for faster time to resolution, create dynamic content for websites, instructions for use of a product, or even blurbs for homepages, like this one. Yup, you guessed it, this is dynamic content at its finest.</p>
+
+  	        <div style="padding-bottom: 23px;">
+  	          {% if uid != "anonymous" %}
+  	          <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
+  	          {% else %}
+  	          <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
+  	          {% endif %}
+  	        </div>
+  	      </div>
+  	    </div>
+  	  </div>
+  	</div>
+
+    <div style="padding-top: 79px;"></div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='trianglify.bundle.js') }}"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  function generateGradient(startColor, endColor, steps) {
+      let start = {
+          'r': parseInt(startColor.slice(1, 3), 16),
+          'g': parseInt(startColor.slice(3, 5), 16),
+          'b': parseInt(startColor.slice(5, 7), 16)
+      };
+
+      let end = {
+          'r': parseInt(endColor.slice(1, 3), 16),
+          'g': parseInt(endColor.slice(3, 5), 16),
+          'b': parseInt(endColor.slice(5, 7), 16)
+      };
+
+      let diff = {
+          'r': end.r - start.r,
+          'g': end.g - start.g,
+          'b': end.b - start.b
+      };
+
+      let stepsHex = [];
+
+      for (let i = 0; i <= steps; i++) {
+          let r = Math.round(start.r + (diff.r / steps) * i).toString(16).padStart(2, '0');
+          let g = Math.round(start.g + (diff.g / steps) * i).toString(16).padStart(2, '0');
+          let b = Math.round(start.b + (diff.b / steps) * i).toString(16).padStart(2, '0');
+
+          stepsHex.push(`#${r}${g}${b}`);
+      }
+
+      return stepsHex;
+  }
+
+  let gradient = generateGradient("#ffffff", "#291c6a", 255);
+
+  function tri() {
+    // Create the Trianglify pattern
+    const pattern = trianglify({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      xColors: gradient,
+      yColors: 'match'
+    }); $('#f1f2f3').remove();
+
+    // Serialize the SVG object to a String
+    var m = new XMLSerializer().serializeToString(pattern.toSVG());
+
+    // Perform the base64 encoding of the String
+    var k = window.btoa(m);
+
+    // Set the background image property, including the encoding type header
+    $("body").css("background-image", 'url("data:image/svg+xml;base64,' + k + '")');
+  }
+
+  // build and maintain image background
+  tri();
+  $(window).resize(function() {
+    tri();
+  });
+});
+</script>
+{% endblock %}

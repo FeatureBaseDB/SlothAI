@@ -1,111 +1,128 @@
 import json
-from flask import Blueprint
-from flask import request
+import traceback
+
+from flask import Blueprint, request
 from flask import current_app as app
-from SlothAI.lib.util import random_string, handle_quotes
-from SlothAI.lib.ai import ai
-from SlothAI.lib.database import featurebase_query, create_table, table_exists, get_columns, add_column
-from SlothAI.lib.tasks import box_required, get_task_schema, retry_task, process_data_dict_for_insert
-from SlothAI.web.models import User, Table
+from flask_login import current_user
+
+from SlothAI.lib.processor import process
+from SlothAI.lib.tasks import Task, RetriableError, NonRetriableError, TaskState, TaskNotFoundError
+import SlothAI.lib.services as services
+# from SlothAI.web.models import Task as TaskModel
+
+import flask_login
+from flask_login import current_user
 
 tasks = Blueprint('tasks', __name__)
 
-@tasks.route('/tasks/process/<cron_key>/<uid>', methods=['POST'])
-def start_tasks(cron_key, uid):
-	# validate call with a key
-	if cron_key != app.config['CRON_KEY']:
-		print(f"ERROR: invalid cron_key. dropping task.")
-		return f"Not authenticated. Flushing request.", 200
+@tasks.route('/tasks/process/<cron_key>', methods=['POST'])
+def process_tasks(cron_key):
 
-	# verify user
-	user = User.get_by_uid(uid)
-	if not user:
-		print(f"ERROR: user not found. dropping task.")
-		return f"Not authenticated. Flushing request.", 200
+	try:
+		# validate call with a key
+		if cron_key != app.config['CRON_KEY']:
+			raise NonRetriableError("invalid cron key")
 
-	# Parse the task payload sent in the request.
-	task_payload = request.get_data(as_text=True)
-	document = json.loads(task_payload)
+		task_service = app.config['task_service']
 
-	# check we have the table still (user could delete since ingestion)
-	table = Table.get_by_uid_tid(uid, document.get('tid'))
-	if not table:
-		print(f"ERROR: table with id {document.get('tid')} not found. dropping task.")
-		return f"Can't find the table specified. Flushing request.", 200
+		# Parse the task payload sent in the request.
+		task = Task.from_json(request.get_data(as_text=True))
 
-	# models requiring boxes get deferred
-	defer, selected_box = box_required(table.get('models'))
-	if defer:
-		return f"Starting GPUs...", 418 # return resource starting 
-
-	# grab the IP for locally run models and stuff it into the document
-	if selected_box:
-		document['ip_address'] = selected_box.get('ip_address')
-
-	#  (੭｡╹▿╹｡)੭
-	# popping ai methods called by name from document.embedding -> lib/ai.py
-	models = document.get('models', []).copy()
-	for _model in models:
-		# rework this soon to get the model flavor not in the name
-		document = ai(_model.get('ai_model', None), _model, document)
-		if 'error' in document:
-			return f"got error in {_model}: {document['error']}", 400
+		task_stored = task_service.fetch_tasks(task_id=task.id)
+		if len(task_stored) == 0:
+			raise TaskNotFoundError(task.id)
 		
-		document['models'].remove(_model)
+		if len(task_stored) != 1:
+			raise Exception("Logic error: multiple tasks with same id")
+				
+		if task_stored[0]['state'] != TaskState.RUNNING.value:
+			raise services.InvalidStateForProcess(task_stored.state.value)
 
-	# at this point we should have data for every text element for every model.
-	auth = {"dbid": user.get('dbid'), "db_token": user.get('db_token')}
-	tbl_exists, document['error'] = table_exists(document.get('name'), auth)
-	if document.get("error", None):
-		retry_task(document)
-		return "retrying", 200
+		task = process(task)
 
-	if not tbl_exists:
-		document = get_task_schema(document)
-		if document.get("error", None):
-			print(f"ERROR: {document['error']}. dropping task.")
-			return document['error'], 200
+		node = task.remove_node()
+		if len(task.nodes) > 0:
+			task_service.queue_task(task)			
+		else:
+			task_service.update_task(task_id=task.id, state=TaskState.COMPLETED)
+
+		app.logger.info(f"successfully processed task with id {task.id} on node with id {node} in pipeline with id {task.pipe_id}")
+
+	except RetriableError as e:
+		task.error = str(e)
+		app.logger.error(f"processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: retrying task.")
+		task_service.retry_task(task)
+	except services.InvalidStateForProcess as e:
+		# state likely changed during processing a task, don't requeue
+		# TODO: this could be drop task but drop_task should accept a final state.
+		return "invalid state for processing", 200
+	except Exception as e:
+		traceback.print_exc()
+		task.error = str(e)
+		app.logger.error(f"processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: dropping task.")
+		task_service.drop_task(task)
 		
-		# new tables always have id keys
-		schema = "(_id id, " + ", ".join([f"{fld} {typ}" for fld, typ in document.get('schema', {}).items()]) + ")"
-		
-		document['error'] = create_table(document.get('name'), schema, auth)
-		if document.get("error", None):
-			retry_task(document)
-			return "retrying", 200
-
-	column_type_map, document['error'] = get_columns(document.get('name'), auth)
-	if document.get("error", None):
-		retry_task(document)
-		return "retrying", 200
-	
-	columns = [k for k in column_type_map.keys()]
-
-	# add columns if data key cannot be found as an existing column
-	for key in document['data'].keys():
-		if key not in columns:
-			if not document.get("schema", None):
-				document = get_task_schema(document)
-				if document.get("error", None):
-					print(f"ERROR: {document['error']}. dropping task.")
-					return document['error'], 200
-			document['error'] = add_column(document.get('name'), {'name': key, 'type': document["schema"][key]}, auth)
-			if document['error']:
-				retry_task(document)
-				return "retrying", 200
-			column_type_map[key] = document["schema"][key]
+	return f"successfully completed node", 200
 
 
-	records = []
-	columns = ['_id'] + list(document['data'].keys())
-
-	columns, records = process_data_dict_for_insert(document['data'], column_type_map, document.get('name'))
-
-	sql = f"INSERT INTO {document.get('name')} ({','.join(columns)}) VALUES {','.join(records)};"
-	print(sql[:200])
-	_, document['error'] = featurebase_query({"sql": sql, "dbid": user.get('dbid'), "db_token": user.get('db_token')})
-	if document.get("error", None):
-		retry_task(document)
-		return "retrying", 200
+@tasks.route('/tasks', methods=['DELETE'])
+@flask_login.login_required
+def delete_tasks():
+	'''
+	DELETE /tasks?state=running&state=complete
+	'''
+	task_service = app.config['task_service']
+	states = request.args.getlist('state')
+	if not states:
+		states = [
+			TaskState.COMPLETED.value,
+			TaskState.CANCELED.value,
+			TaskState.FAILED.value
+		]
 	else:
-		return "success", 200
+		for state in states:
+			if not task_service.is_valid_state_for_delete(state):
+				return f"Invalid state: {state}", 400
+	
+	ok = task_service.delete_tasks_by_states(user_id=current_user.uid, states=states)
+	if not ok:
+		return "Issue deleting tasks", 500
+		
+	return "OK", 200
+
+
+@tasks.route('/tasks/<task_id>', methods=['DELETE'])
+@flask_login.login_required
+def delete_task(task_id):
+	task_service = app.config['task_service']
+	tasks = task_service.fetch_tasks(task_id=task_id)
+	if len(tasks) == 0:
+		return "Task not found", 404
+	
+	# user can only delete task they own
+	if tasks[0].user_id != current_user.uid:
+		return "Task not found", 404
+	
+	if tasks[0].state == TaskState.RUNNING.value:
+		return "Cannot delete a task in running state. Cancel the task first, then try again", 403
+
+	ok = task_service.delete_task_by_id(task_id=task_id)
+	if not ok:
+		return "Issue deleting task", 500
+	
+	return f"OK", 200
+
+@tasks.route('/tasks/<task_id>/cancel', methods=['POST'])
+@flask_login.login_required
+def cancel_task(task_id):
+	task_service = app.config['task_service']
+	try:
+		task_service.cancel_task(task_id=task_id, user_id=current_user.uid)
+	except TaskNotFoundError as e:
+		return "Task not found", 404
+	except services.InvalidStateForCancel as e:
+		return str(e), 403
+	except Exception as e:
+		return str(e), 500
+	
+	return f"OK", 200

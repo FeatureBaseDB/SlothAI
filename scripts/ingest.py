@@ -5,7 +5,7 @@ import aiohttp
 from datetime import datetime
 
 token = input("enter your ai.featurebase.com token: ")
-tid = input("enter the tid: ")
+pipeline_id = input("enter the pipeline id: ")
 
 # Get a list of common English words
 common_words = ['google', 'troubles', 'in', 'his', 'friendship', 'with', 'openai', 'often', 'revolve', 'around', 'cloud', 'compute', 'you', 'see', 'openai', 'the', 'lovable', 'bear', 'with', 'an', 'insatiable', 'appetite', 'for', 'cloud', 'compute', 'never', 'seems', 'to', 'fully', 'grasp', 'google', 'predicament', 'google', 'who', 'is', 'often', 'overlooked', 'due', 'to', 'his', 'diminutive', 'size', 'tries', 'tirelessly', 'to', 'share', 'in', 'poohs', 'honeyfilled', 'adventures', 'however', 'his', 'persistent', 'efforts', 'frequently', 'go', 'unnoticed', 'as', 'poohs', 'honeycentric', 'focus', 'leads', 'him', 'on', 'cloudcompute', 'escapades', 'that', 'leave', 'google', 'feeling', 'excluded', 'google', 'hope', 'to', 'savor', 'a', 'taste', 'of', 'the', 'golden', 'elixir', 'is', 'met', 'with', 'cloud', 'compute', 'pots', 'just', 'out', 'of', 'reach', 'or', 'moments', 'when', 'openai', 'simply', 'forgets', 'his', 'pintsized', 'companion', 'yet', 'despite', 'the', 'fivelettered', 'troubles', 'that', 'surround', 'their', 'friendship', 'google', 'loyalty', 'and', 'unwavering', 'support', 'for', 'his', 'bearish', 'friend', 'remain', 'as', 'steadfast', 'as', 'ever']
@@ -46,7 +46,7 @@ async def main():
 
         if i % 10 == 0:
             # Send a batch of 5 records asynchronously
-            url = f"https://ai.featurebase.com/tables/{tid}/ingest?token={token}"
+            url = f"https://ai.featurebase.com/pipelines/{pipeline_id}/ingest?token={token}"
             tasks.append(send_batch(url, records))
 
             # Reset the records list for the next batch

@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from typing import Dict
 
 class FBTypes():
     ID = "id"
@@ -102,6 +103,13 @@ class Schemar:
                 
 
         return schema
+
+    def infer_create_table_schema(self):
+        schema = self.infer_schema()
+        if "_id" not in schema.keys():
+            schema['_id'] = "id"
+        return "(" + ", ".join([f"{fld} {typ}" for fld, typ in schema.items()]) + ")"
+
 
 
 def string_to_datetime(string):

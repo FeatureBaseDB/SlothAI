@@ -1,103 +1,70 @@
 # SlothAI: A Model Pipeline Manager
-SlothAI provides a simple and ansycronous methodology to implement document-based pipelines (chains) for various machine learning models. It is designed to be fast as hell.
+SlothAI is an Open Source system designed for asynchronous AI inferences, with a user-friendly interface for editing templates that manage pipeline flows. It utilizes containers and task queues for data processing tasks.
+
+SlothAI is designed for speed.
 
 <img src="https://github.com/FeatureBaseDB/SlothAI/blob/SlothAI/SlothAI/static/sloth.png?raw=true" width="240"/>
 
-SlothAI is implemented in Python to run on AppEngine containers, and takes advantage of Cloud Task queues. SlothAI uses queues to asynchronously run inferencing on documents.
+In SlothAI, pipelines are built with templates and nodes that transform data fields sent to the pipeline. These nodes supports deserialization of calls to AI models, which greatly increase the speed of indexing and querying large amounts of data.
+
+You can try out SlothAI at [FeatureBaseAI](https://ai.featurebase.com/). SlothAI uses [FeatureBase Cloud](https://cloud.featurebase.com/) for storage.
 
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
 ## But, Why?
-SlothAI is similar to LangChain, AutoChain, Auto-GPT, Ray and other machine learning frameworks that provide software opinionated model chains and model method management. Unlike these other solutions, SlothAI addresses asynchronous inferencing while making it easy to edit templates and manage pipeline flows.
+SlothAI distinguishes itself from other frameworks like LangChain, AutoChain, Auto-GPT, and Ray by focusing on scalable asynchronous inferences coupled with an intuitive UI that simplifies the editing of templates and the management of pipeline flows. SlothAI makes template editing and debugging fun and easy.
 
-SlothAI's strategy for simplicity and scale is based on opinionated storage and compute layers. SlothAI requires using a SQL engine that can run both binary set operations and vector similarity. It runs tasks on that data inside containers using task queues, or manages the calls to GPU boxes for running larger model inferencing.
+SlothAI use a SQL engine (FeatureBase) capable of point lookups, binary set operations, and vector similarity for its storage and compute layers. Tasks are executed within containers via task queues, and for more demanding inference tasks, it orchestrates calls to GPU boxes, streamlining the process of running large model inferences.
 
-## Pipeline Strategy
-SlothAI creates *ingest pipelines* which contain *models*. Models run in sequence during ingestion. Their output is sent to a database table layer, which is currently FeatureBase. 
+Individual movements of a sloth are measured and intentional, mirroring the pace of synchronous ETL processes when seen alone. SlothAI's true capability, akin to the combined might of sloths, becomes apparent when it functions asynchronously, parallelizing inference steps to increase the speed of data transformations.
 
-**NOTE:** The opinionated reason for using FeatureBase is due to its ability to process SQL to a) retrieve normal "tabular" data, b) run fast set operations (feature sets) using FB's binary tree storage layer, and c) run vector comparisons using FB's tuple storage layer. Subsequent updates to this repo will implement other storage layers, such as PostgreSQL with pgvector support and binary tree operations.
+In the world of data, async ETL's strength is not in the speed of a single process, but in the collective and orchestrated efforts that move mountains of data with remarkable agility.
 
-SlothAI also creates instances of *query pipelines*, which connect to a table and then batch resulting document data into a series of *ingest pipelines*. This combination of pipeline types allows for a wide variety of use cases.
+## Template Strategy
+Templates are at the core of SlothAI's design. There's no need to dig through directories or code lines to find the right template. In SlothAI, templates are easily accessible the UI and central to building powerful pipelines.
 
-**NOTE:** SlothAI uses dynamic templates which are stored on Github for version control. It also uses dynamic AI methods stored on Github, or ones synthesized by the LLM, to process the templates. A *schemer* model is used to update the templates from the schema detected in the POST payload.
+SlothAI provides a wide selection of basic templates for interfacing with various types of models, enabling nodes to crawl the web, read documents, listen to audio files, extract objects from images, generate images, embed text for searching, store data, and more. Templates are built using Jinja2, which enables running code within the template itself as data is being processed, ensuring a smooth and integrated workflow.
+
+Templates are the essence of SlothAI's strategy for effective communication with large language models. Templates may transform prompts to LLMs, format data for embeddings, and be used to create custom SQL queries for data retrieval.
+
+## Storage Opinions
+SlothAI is opinionated, inasmuch that it uses FeatureBase for its SQL processing to handle tabular data retrieval, set operations with a binary tree storage, and vector comparisons with a tuple storage layer. These features, together in one storage layer, are necessary to deliver datasets to machine learning models for prompt augmentation and training data management.
+
+We are working on adding a storage layer for PostgreSQL with pgvector support, and work is underway on a PostgreSQL FeatureBase module for set operations, which will be available in the near future.
+
+## Pipelines
+SlothAI allows for building powerful ingest pipelines comprising nodes that serve as ETL (Extract, Transform, Load) functions, altering and enriching data fields as they pass through. Each node is capable of executing a transformation, extending one field into multiple fields. 
+
+These nodes are arranged to process machine learning model workloads in sequence during data ingestion. The pipelines facilitate rapid ETL by enabling de-serialization by splitting task operations on data.
+
+Query pipelines extend this concept, where data enters through POST requests and exits transformed datasets ready for loading, whether into databases or forwarded to the user via callbacks. Pipelines can be easily integrated with other services or automation tools.
 
 ### Sample Ingestion Graph
-The following graph outlines an *ingestion pipeline* for new data that extracts keyterms, embeds the text and keyterms together, then forms a question about the text and keyterms using GPT-3.5-turbo:
+The following graph outlines a typical RAG-based *ingestion pipeline* for data which extracts keyterms, embeds the text and keyterms together, then forms a question about the text and keyterms using GPT-3.5-turbo. The results are saved into FeatureBase for query interactions:
 
-<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/pipeline_graph.png" width="360"/>
-
-**NOTE:** An alternate strategy would be to form the questions from a given text fragment from a larger document by first storing the vectors and keyterms in FB, then running a query pipeline on the resulting dataset to allow for similarity search across all ingested documents, instead of just the text fragment and keyterms.
-
-### Sample Query Graph
-The following graph outlines a *query pipeline* for processing documents stored with keyterms, embeddings and questions. The output is an "answer" for the question posed, which is then stored in a new table:
-
-<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/query_graph.png" width="360"/>
-
-In the above graph, the *slothy-answers* pipeline represents a series of *models* run on the batch requests, as seen above in the *ingest pipeline*.
-
-## Sample Ingestion and Results
-A sample ingestion pipeline use with instructor-xl embedding model & gpt-3.5-turbo to extract keyterms:
-
-```
-curl -X POST \
--H "Content-Type: application/json" \
--d '{"text":["There was a knock at the door, then silence."]}' \
-"https://ai.featurebase.com/tables/L5IaljmIaox2H8r5U/ingest?token=9V1swMnuv0yonoywKqwtQ5_gD9"
-
-# results can be returned with JSON or queried with SQL:
-fbsql> SELECT _id, keyterms, text, embedding FROM test;
-
-+---------+------------+-------------------+------------+
-|   _id   |  keyterms  |       text        |  embedding |
-+---------+------------+-------------------+------------+
-| Oqhff1  |['knock','do| There was a knock | [0.02333,0.|
-+---------+------------+-------------------+------------+
-```
-
-The instructor embedding model returns and stores a dense vector with a size of 768 elements:
-
-```
--0.05440837,-0.016896732,-0.04767465,0.0016255669,0.0348847,0.0144764315,-0.0159672,-0.002682281,-0.04491195,0.025720688,0.044070743, etc.
-```
-
-This can be used to do similarity searches with SQL:
-```
-fbsql> select questions, text, cosine_distance(select embedding from demo where _id=2, embedding) as distance from demo order by distance desc;
-
-To CSV:
-questions,text,distance
-What kind of watch is mentioned in the document?,Mechanical Watch,0.26853132
-What happened after there was a knock at the door?,"There was a knock at the door, then silence.",0.25531703
-Who has died?,Stephen Hawking has died,0.24436438
-What is the content of the document?,GPT-4,0.24306345
-What is the document reflecting on?,"Reflecting on one very, very strange year at Uber",0.23889714
-Who has died?,Bram Moolenaar has died,0.2298429
-Who has passed away?,Steve Jobs has passed away.,0.22849554
-What is the title of the message?,A Message to Our Customers,0.20595884
-What did Replit do to the user's open-source project?,Replit used legal threats to kill my open-source project,0.17009544
-What was the outcome of the fair use case involving Google copying the Java SE API?,Google’s copying of the Java SE API was fair use [pdf],0.16320163
-What organization issued a DMCA takedown to YouTube-dl?,YouTube-dl has received a DMCA takedown from RIAA,0
-```
+<img src="" width="360"/>
 
 ## Development Notes
-* Embeddings, keyterm extraction, and question forming models are supported.
-* Creation of ingestion pipelines is supported.
-* Versioning for templates and model methods, query pipeline creation, and vector balancing are under development.
-* Support for new model deployment occurs in the Laminoid project.
-* Storage layer for PostgreSQL/pgvector is in planning.
-* Alternate auth methods are being considered.
+* Processor support for reading text or PDFs, audio files, image files, or use of custom data models.
+* Embeddings and generative completion processing is supported.
+* Vector search is supported and vector balancing is provided using set operations.
+* Templates and pipelines may be exported for version control or sharing.
+* Powerfully simple UI provides pipeline creation and debugging in one view.
+* Set storage layer for PostgreSQL/pgvector is in the works.
 
 ## Authentication
-Authentication is currently limited to FeatureBase tokens ONLY. You must have a [FeatureBase cloud](https://cloud.featurebase.com/) account to use the application.
+Authentication is currently limited to FeatureBase Cloud tokens ONLY. You must have a [FeatureBase Cloud](https://cloud.featurebase.com/) account to use the application.
 
 Security to the Laminoid controller is done through box tokens assigned to network tags in Google Compute. This secures the deployment somewhat, but could be better.
+
+It would be quite easy to add email authentication to the system, so this project could be run in a VPC-like setup.
 
 ## Configuration
 Create a `config.py` configuration file in the root directory. Use `config.py.example` to populate.
 
 Keys, tokens and IPs are created as needed.
 
-### Dependencies
+### Dependencies - Conda
 Install conda and activate a new environment:
 
 ```
@@ -110,6 +77,12 @@ Install the requirements:
 ```
 pip3 install -r requirements
 ```
+
+### Dependencies - FeatureBase
+You will need a FeatureBase cloud account. It's free and requires your email address: https://cloud.featurebase.com/. We're poor, but we do have one friendly guy who may contact you. He's quite smart.
+
+### Dependencies - Google Cloud
+You'll need a whole bunch of Google Cloud things done. Enabling AppEngine, Compute, Cloud Tasks, domain names, firewalls and setting up credentials will eventually be documented here.
 
 ## Install
 
@@ -129,6 +102,12 @@ Create an AppEngine task queue (from the name in `config.py`):
 
 ```
 gcloud tasks queues create sloth-spittle --location=us-central1 
+```
+
+Create a storage bucket for user files:
+
+```
+gsutil mb gs://[BUCKET_NAME]
 ```
 
 To deploy for local development:

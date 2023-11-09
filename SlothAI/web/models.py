@@ -1,4 +1,6 @@
 import datetime
+import zlib
+import base64
 
 from google.cloud import ndb
 
@@ -11,318 +13,641 @@ import config as config
 # client connection
 client = ndb.Client()
 
-timestring = "%Y-%m-%dT%H:%M:%SZ"
+# Create a context manager decorator
+def ndb_context_manager(func):
+    def wrapper(*args, **kwargs):
+        with ndb.Client().context():
+            result = func(*args, **kwargs)
+        return result  # Return the result outside the context
+    return wrapper
 
-# transactions secure queries
 class Transaction(ndb.Model):
-	uid = ndb.StringProperty() # owner
-	tid = ndb.StringProperty()
-	created = ndb.DateTimeProperty()
+    uid = ndb.StringProperty()
+    tid = ndb.StringProperty()
+    created = ndb.DateTimeProperty()
 
-	@classmethod
-	def get_old(cls, timestamp):
-		with client.context():
-			return cls.query(cls.created < timestamp)
+    @classmethod
+    @ndb_context_manager
+    def get_old(cls, timestamp):
+        entities = cls.query(cls.created < timestamp).fetch()
+        return [entity.to_dict() for entity in entities]
 
-	@classmethod
-	def get_by_tid(cls, tid):
-		with client.context():
-			return cls.query(cls.tid == tid).get()
+    @classmethod
+    @ndb_context_manager
+    def get_by_tid(cls, tid):
+        entity = cls.query(cls.tid == tid).get()
+        return entity.to_dict() if entity else None
 
-	@classmethod
-	def create(cls, tid=None, uid=None):
-		with client.context():
-			cls(
-				tid = tid,
-				uid = uid,
-				created = datetime.datetime.utcnow()
-			).put()
-			return cls.query(cls.tid == tid).get()
-
-
-class Models(ndb.Model):
-	mid = ndb.StringProperty()
-	name = ndb.StringProperty()
-	kind = ndb.StringProperty()
-	ai_model = ndb.StringProperty()
-	field = ndb.StringProperty()
-	gpu = ndb.StringProperty()
-
-	@classmethod
-	def get_by_mid(cls, mid):
-		with client.context():
-			return cls.query(cls.mid == mid).get().to_dict()
-
-	@classmethod
-	def get_by_kind(cls, kind):
-		with client.context():
-			entities = cls.query(cls.kind == kind).fetch()
-			return [entity.to_dict() for entity in entities]
-	@classmethod
-	def get_all(cls):
-		with client.context():
-			entities = cls.query().fetch()
-			return [entity.to_dict() for entity in entities]
-
-	@classmethod
-	def get_by_name(cls, name):
-		if not name:
-			return None
-		with client.context():
-			return cls.query(cls.name == name).get().to_dict()
-			
-	@classmethod
-	def get_by_name_ai_model(cls, name, ai_model):
-		if not name or ai_model:
-			return None
-		with client.context():
-			return cls.query(cls.name == name, cls.ai_model == ai_model).get().to_dict()
+    @classmethod
+    @ndb_context_manager
+    def create(cls, tid=None, uid=None):
+        table = cls(
+            tid=tid,
+            uid=uid,
+            created=datetime.datetime.utcnow()
+        )
+        table.put()
+        return table.to_dict()
 
 
-class Table(ndb.Model):
-	tid = ndb.StringProperty()
-	uid = ndb.StringProperty()
-	name = ndb.StringProperty()
-	models = ndb.JsonProperty()
-	schema = ndb.JsonProperty()
-	openai_token = ndb.StringProperty()
+class Template(ndb.Model):
+    template_id = ndb.StringProperty()
+    name = ndb.StringProperty()
+    uid = ndb.StringProperty()
+    text = ndb.StringProperty()
+    input_fields = ndb.JsonProperty()
+    output_fields = ndb.JsonProperty()
+    extras = ndb.JsonProperty()
+    processor = ndb.StringProperty()
+    created = ndb.DateTimeProperty()
 
-	@classmethod
-	def create(cls, uid, name, models, openai_token):
-		with ndb.Client().context():
-			print(models)
-			print("in create")
-			current_utc_time = datetime.datetime.utcnow()
-			table = cls.query(cls.uid == uid,cls.name == name).get()
-			if not table:
-				tid = random_string(size=17)
-				table = cls(tid=tid, uid=uid, name=name, models=models, openai_token=openai_token)
-				table.put()
+    @staticmethod
+    def compress_text(text):
+        compressed_bytes = zlib.compress(text.encode('utf-8'))
+        return base64.b64encode(compressed_bytes).decode('utf-8')
 
-			return table.to_dict()
+    @staticmethod
+    def decompress_text(compressed_text):
+        compressed_bytes = base64.b64decode(compressed_text.encode('utf-8'))
+        decompressed_bytes = zlib.decompress(compressed_bytes)
+        return decompressed_bytes.decode('utf-8')
+
+    @classmethod
+    @ndb_context_manager
+    def create(cls, name, uid, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
+        current_utc_time = datetime.datetime.utcnow()
+        existing_template = cls.query(cls.name == name, cls.uid == uid).get()
+
+        if not existing_template:
+            template_id = random_string(13)
+            template = cls(
+                template_id=template_id,
+                name=name,
+                uid=uid,
+                text=cls.compress_text(text),
+                input_fields=input_fields,
+                output_fields=output_fields,
+                extras=extras,
+                processor=processor,
+                created=current_utc_time,
+            )
+            template.put()
+            return template.to_dict()
+        else:
+            return existing_template.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def update(cls, template_id, uid, name, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
+        template = cls.query(cls.template_id == template_id, cls.uid == uid).get()
+        if not template:
+            print("didn't find template")
+            return None
+
+        template.name = name
+        template.text = cls.compress_text(text)
+        template.input_fields = input_fields
+        template.output_fields = output_fields
+        template.extras = extras
+        template.processor = processor
+
+        template.put()
+
+        return template.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def fetch(cls, **kwargs):
+        query_conditions = []
+
+        if 'processor' in kwargs and 'uid' in kwargs:
+            query_conditions.append(cls.processor == kwargs['processor'], cls.uid == kwargs['uid'])
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).fetch()
+        else:
+            entities = None
+
+        templates = []
+        for entity in entities:
+            template = entity.to_dict()
+            template['text'] = cls.decompress_text(entity.text)  # Decompress the stored text
+            templates.append(template)
+
+        return templates
 
 
-	@classmethod
-	def delete(cls, tid):
-		with ndb.Client().context():
-			table = cls.query(cls.tid == tid).get()
-			if table:
-				table.key.delete()
-				return True
-			else:
-				return False
+    @classmethod
+    @ndb_context_manager
+    def get(cls, **kwargs):
+        query_conditions = []
 
-	@classmethod
-	def remove_by_uid(cls, uid):
-		with ndb.Client().context():
-			tables = cls.query(cls.uid == uid).fetch()
-			for table in tables:
-				table.key.delete() 
-			
-			return True
-			
-	@classmethod
-	def get_all_by_uid(cls, uid):
-		_tables = []
-		with ndb.Client().context():
-			tables = cls.query(cls.uid == uid).fetch()
+        if 'processor' in kwargs and 'uid' in kwargs:
+            query_conditions.append(cls.processor == kwargs['processor'], cls.uid == kwargs['uid'])
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
 
-			for table in tables:
-				_tables.append(table.to_dict())
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            template = cls.query(query).get()
 
-			if tables:
-				return _tables
-			else:
-				return False
-
-	@classmethod
-	def get_by_uid_name(cls, uid, name):
-		with ndb.Client().context():
-			table = cls.query(cls.uid == uid, cls.name == name).get()
-		if table:
-			return table.to_dict()
-		else:
-			return False
-
-	@classmethod
-	def get_by_uid_tid(cls, uid, tid):
-		with ndb.Client().context():
-			table = cls.query(cls.uid == uid, cls.tid == tid).get()
-		if table:
-			return table.to_dict()
-		else:
-			return False
+        if template:
+            template_dict = template.to_dict()
+            template_dict['text'] = cls.decompress_text(template.text)  # Decompress the stored text
+            return template_dict
+        else:
+            return None
 
 
+    @classmethod
+    @ndb_context_manager
+    def delete(cls, **kwargs):
+        query_conditions = []
+
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entity = cls.query(query).get()
+
+        if entity:
+            entity.key.delete()
+            return True
+        else:
+            return False
+
+
+class Node(ndb.Model):
+    node_id = ndb.StringProperty()
+    name = ndb.StringProperty()
+    uid = ndb.StringProperty()
+    created = ndb.DateTimeProperty()
+    processor = ndb.StringProperty()
+    template_id = ndb.StringProperty()
+    extras = ndb.JsonProperty() # holds model flavor, tokens, etc.
+    
+    @classmethod
+    @ndb_context_manager
+    def create(cls, name, uid, extras, processor, template_id):
+        current_utc_time = datetime.datetime.utcnow()
+        node = cls.query(cls.name == name, cls.uid == uid).get()
+
+        if not node:
+            if template_id:
+                # ensure we have the template
+                template = Template.query(Template.template_id == template_id).get()
+                if not template:
+                    template_id = None
+            else:
+                template_id = None
+
+            node_id = random_string(13)
+            node = cls(
+                node_id=node_id,
+                name=name,
+                uid=uid,
+                extras=extras,
+                created=current_utc_time,
+                processor=processor,
+                template_id=template_id
+            )
+            node.put()
+
+        return node.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def update(cls, node_id, name, extras, processor, template_id):
+        node = cls.query(cls.node_id == node_id).get()
+        if not node:
+            return None
+
+        if template_id:
+            template = Template.query(Template.template_id == template_id).get()
+            if not template:
+                template_id = None
+        else:
+            template_id = None
+
+        node.name = name
+        node.extras = extras
+        node.processor = processor
+        node.template_id = template_id
+
+        node.put()
+
+        return node.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def get(cls, **kwargs):
+        query_conditions = []
+
+        if 'node_id' in kwargs:
+            query_conditions.append(cls.node_id == kwargs['node_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            node = cls.query(query).get()
+        
+        if query_conditions and node:
+            return node.to_dict()
+        else:
+            return None
+
+    @classmethod
+    @ndb_context_manager
+    def fetch(cls, **kwargs):
+        query_conditions = []
+
+        if 'node_id' in kwargs:
+            query_conditions.append(cls.node_id == kwargs['node_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
+        if 'template_id' in kwargs:
+            query_conditions.append(cls.template_id == kwargs['template_id'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).fetch()
+        else:
+            entities = []
+
+        nodes = []
+        for entity in entities:
+            _entity = entity.to_dict()
+            nodes.append(_entity)
+        return nodes
+
+    @classmethod
+    @ndb_context_manager
+    def delete(cls, **kwargs):
+        query_conditions = []
+
+        if 'node_id' in kwargs:
+            query_conditions.append(cls.node_id == kwargs['node_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).get()
+        else:
+            entities = None
+
+        if entities:
+            entities.key.delete()
+            return True
+        else:
+            return False
+
+
+class Pipeline(ndb.Model):
+    pipe_id = ndb.StringProperty()
+    uid = ndb.StringProperty()
+    name = ndb.StringProperty()
+    node_ids = ndb.JsonProperty()
+    created = ndb.DateTimeProperty()
+
+    @classmethod
+    @ndb_context_manager
+    def create(cls, uid, name, node_ids):
+        current_utc_time = datetime.datetime.utcnow()
+        pipeline = cls.query(cls.uid == uid, cls.name == name).get()
+
+        if not pipeline:
+            pipe_id = random_string(13)
+            pipeline = cls(
+                pipe_id=pipe_id,
+                uid=uid,
+                name=name,
+                node_ids=node_ids,
+                created=current_utc_time
+            )
+            pipeline.put()
+
+        else:
+            pipeline.node_ids = node_ids
+            pipeline.put()
+
+        return pipeline.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def get(cls, **kwargs):
+        query_conditions = []
+
+        if 'pipe_id' in kwargs:
+            query_conditions.append(cls.pipe_id == kwargs['pipe_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            pipeline = cls.query(query).get()
+
+        if query_conditions and pipeline:
+            return pipeline.to_dict()
+        else:
+            return None
+
+    @classmethod
+    @ndb_context_manager
+    def fetch(cls, **kwargs):
+        query_conditions = []
+
+        if 'pipe_id' in kwargs:
+            query_conditions.append(cls.node_id == kwargs['pipe_id'])
+        if 'name' in kwargs:
+            query_conditions.append(cls.name == kwargs['name'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.uid == kwargs['uid'])
+
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).fetch()
+        else:
+            entities = None
+
+        pipelines = []
+        for entity in entities:
+            _entity = entity.to_dict()
+            pipelines.append(_entity)
+
+        return pipelines
+
+    @classmethod
+    @ndb_context_manager
+    def delete_by_pipe_id(cls, pipe_id):
+        pipe = cls.query(cls.pipe_id == pipe_id).get()
+        if pipe:
+            pipe.key.delete()
+            return True
+        return False
+
+# this needs to go to Laminoid
 class Box(ndb.Model):
-	box_id = ndb.StringProperty()
-	ip_address = ndb.StringProperty()
-	zone = ndb.StringProperty()
-	status = ndb.StringProperty(default='NEW') # PROVISIONING, STAGING, RUNNING, STOPPING, SUSPENDING, SUSPENDED, REPAIRING, and TERMINATED
-	expires = ndb.DateTimeProperty()
-	runs_models = ndb.JsonProperty() # models it runs
+    box_id = ndb.StringProperty()
+    ip_address = ndb.StringProperty()
+    zone = ndb.StringProperty()
+    status = ndb.StringProperty(default='NEW')  # PROVISIONING, STAGING, RUNNING, STOPPING, SUSPENDING, SUSPENDED, REPAIRING, and TERMINATED
+    created = ndb.DateTimeProperty()
+    runs = ndb.JsonProperty()  # models it runs
 
-	@classmethod
-	def create(cls, box_id, ip_address, zone, status):
-		with ndb.Client().context():
-			# update or create box
-			current_utc_time = datetime.datetime.utcnow()
-			expiration_time = current_utc_time + datetime.timedelta(days=7)  # Expiry in 7 days
-			box = cls.query(cls.box_id == box_id).get()
-			if not box:
-				box = cls(box_id=box_id, ip_address=ip_address, zone=zone, status=status, expires=expiration_time)
-			else:
-				box.ip_address = ip_address
-				box.status = status
+    @classmethod
+    @ndb_context_manager
+    def create(cls, box_id, ip_address, zone, status):
+        current_utc_time = datetime.datetime.utcnow()
+        expiration_time = current_utc_time + datetime.timedelta(days=7)  # Expiry in 7 days
 
-			box.put()
+        box = cls.query(cls.box_id == box_id).get()
+        if not box:
+            box = cls(box_id=box_id, ip_address=ip_address, zone=zone, status=status, created=current_utc_time)
+        else:
+            box.ip_address = ip_address
+            box.status = status
 
-			return cls.query(cls.box_id == box_id).get()
+        box.put()
+        return box.to_dict()
 
-	@classmethod
-	def delete(cls, box_id):
-		with ndb.Client().context():
-			box = cls.query(cls.box_id == box_id).get()
-			if box:
-				box.key.delete()
-				return True
-			else:
-				return False
+    @classmethod
+    @ndb_context_manager
+    def delete(cls, box_id):
+        box = cls.query(cls.box_id == box_id).get()
+        if box:
+            box.key.delete()
+            return True
+        return False
 
-	@classmethod
-	def get_boxes(cls):
-		with ndb.Client().context():
-			boxes = cls.query().fetch()
-			return [box.to_dict() for box in boxes]
+    @classmethod
+    @ndb_context_manager
+    def get_boxes(cls):
+        boxes = cls.query().fetch()
+        return [box.to_dict() for box in boxes]
 
-	@classmethod
-	def start_box(cls, box_id, status="START"):
-		with ndb.Client().context():
-			box = cls.query(cls.box_id == box_id).get()
-			box.status = status
-			box.put()
-			return box.to_dict()
+    @classmethod
+    @ndb_context_manager
+    def start_box(cls, box_id, status="START"):
+        box = cls.query(cls.box_id == box_id).get()
+        if box:
+            box.status = status
+            box.put()
+            return box.to_dict()
+        return None
 
-	@classmethod
-	def stop_box(cls, box_id, status="STOP"):
-		with ndb.Client().context():
-			box = cls.query(cls.box_id == box_id).get()
-			box.status = status
-			box.put()
-			return box.to_dict()
+    @classmethod
+    @ndb_context_manager
+    def stop_box(cls, box_id, status="STOP"):
+        box = cls.query(cls.box_id == box_id).get()
+        if box:
+            box.status = status
+            box.put()
+            return box.to_dict()
+        return None
 
-# user inherits from flask_login and ndb
+
 class User(flask_login.UserMixin, ndb.Model):
-	uid = ndb.StringProperty() # user_id
-	name = ndb.StringProperty() # assigned name
-	created = ndb.DateTimeProperty()
-	updated = ndb.DateTimeProperty()
-	expires = ndb.DateTimeProperty()
+    uid = ndb.StringProperty()  # user_id
+    name = ndb.StringProperty()  # assigned name
+    created = ndb.DateTimeProperty()
+    updated = ndb.DateTimeProperty()
+    expires = ndb.DateTimeProperty()
 
-	# auth settings and log
-	dbid = ndb.StringProperty()
-	db_token = ndb.StringProperty()
-	admin = ndb.BooleanProperty()
+    # auth settings and log
+    dbid = ndb.StringProperty()
+    db_token = ndb.StringProperty()
+    admin = ndb.BooleanProperty()
 
-	# status
-	authenticated = ndb.BooleanProperty(default=False)
-	active = ndb.BooleanProperty(default=True)
-	anonymous = ndb.BooleanProperty(default=False)
+    # status
+    authenticated = ndb.BooleanProperty(default=False)
+    active = ndb.BooleanProperty(default=True)
+    anonymous = ndb.BooleanProperty(default=False)
 
-	# API use
-	api_token = ndb.StringProperty()
+    # API use
+    api_token = ndb.StringProperty()
 
-	# flask-login
-	def is_active(self): # all accounts are active
-		return self.active
+    # flask-login
+    def is_active(self):  # all accounts are active
+        return self.active
 
-	def get_id(self):
-		return self.uid
+    def get_id(self):
+        return self.uid
 
-	def is_authenticated(self):
-		return self.authenticated
+    def is_authenticated(self):
+        return self.authenticated
 
-	def is_anonymous(self):
-		return self.anonymous
+    def is_anonymous(self):
+        return self.anonymous
+
+    @classmethod
+    @ndb_context_manager
+    def token_reset(cls, uid):
+        user = cls.query(cls.uid == uid).get()
+        user.api_token = generate_token()
+        user.put()
+        return user.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def create(cls, dbid="", db_token=""):
+        name = random_name(3)
+        uid = random_string(size=17)
+        user = cls(
+            uid=uid,
+            name=name,
+            created=datetime.datetime.utcnow(),
+            updated=datetime.datetime.utcnow(),
+            expires=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            admin=False,
+            dbid=dbid,
+            db_token=db_token,
+            api_token=generate_token()
+        )
+        user.put()
+        return cls.query(cls.dbid == dbid).get().to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def remove_by_uid(cls, uid):
+        user = cls.query(cls.uid == uid).get()
+        if user:
+            user.key.delete()
+            return True
+        return False
+
+    @classmethod
+    @ndb_context_manager
+    def authenticate(cls, uid):
+        user = cls.query(cls.uid == uid).get()
+        user.authenticated = True
+        user.put()
+        return user
+
+    @classmethod
+    @ndb_context_manager
+    def get_by_name(cls, name):
+        result = cls.query(cls.name == name).get()
+        return result.to_dict() if result else None
+
+    @classmethod
+    @ndb_context_manager
+    def get_by_dbid(cls, dbid):
+        result = cls.query(cls.dbid == dbid).get()
+        return result.to_dict() if result else None
+
+    @classmethod
+    @ndb_context_manager
+    def get_by_uid(cls, uid):
+        result = cls.query(cls.uid == uid).get()
+        return result.to_dict() if result else None
+
+    @classmethod
+    @ndb_context_manager
+    def get_by_token(cls, api_token):
+        result = cls.query(cls.api_token == api_token).get()
+        return result.to_dict() if result else None
+
+    @classmethod
+    @ndb_context_manager
+    def reset_token(cls, uid):
+        user = cls.query(cls.uid == uid).get()
+        user.api_token = generate_token()
+        user.put()
+        
+        return user.to_dict() if user else None
 
 
-	@classmethod
-	def token_reset(cls, uid=uid):
-		with client.context():
-			user = cls.query(cls.uid == uid).get()
-			user.api_token = generate_token()
-			user.put()
-			return user.to_dict()
+class Log(flask_login.UserMixin, ndb.Model):
+    log_id = ndb.StringProperty()
+    user_id = ndb.StringProperty()
+    node_id = ndb.StringProperty()
+    pipe_id = ndb.StringProperty()
+    line = ndb.BlobProperty()
+    created = ndb.DateTimeProperty()
 
-	@classmethod
-	def create(cls, dbid="", db_token=""):
-		name = random_name(3)
-		uid = random_string(size=17)
-		with client.context():
-			cls(
-				uid = uid,
-				name = name,
-				created = datetime.datetime.utcnow(),
-				updated = datetime.datetime.utcnow(),
-				expires = datetime.datetime.utcnow() + datetime.timedelta(days=15),
-				admin = False,
-				dbid = dbid,
-				db_token = db_token,
-				api_token = generate_token()
-			).put()
+    @classmethod
+    @ndb_context_manager
+    def create(cls, user_id, node_id, pipe_id, line):
+        id = random_string(size=17)
+        log = cls(
+            log_id=id,
+            user_id=user_id,
+            node_id=node_id,
+            pipe_id=pipe_id,
+            created=datetime.datetime.utcnow(),
+            line=str(line).encode('utf-8')
+        )
+        log.put()
+        return log.to_dict()
 
-			return cls.query(cls.dbid == dbid).get().to_dict()
+    @classmethod
+    @ndb_context_manager
+    def delete_all(cls, user_id):
+        entities = cls.query(cls.user_id == user_id).fetch()
+        if entities:
+            for entity in entities:
+                entity.key.delete()
 
-	@classmethod
-	def remove_by_uid(cls, uid):
-		with ndb.Client().context():
-			user = cls.query(cls.uid == uid).get()
-			if user:
-				user.key.delete() 
-			else:
-				return False
-			return True
+    @classmethod
+    @ndb_context_manager
+    def delete_older_than(cls, hours=0, minutes=0, seconds=0):
+        threshold = datetime.datetime.utcnow() - \
+            datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        entities = cls.query(cls.created < threshold).fetch()
+        if entities:
+            for entity in entities:
+                entity.key.delete()
 
-	@classmethod
-	def authenticate(cls, uid):
-		with client.context():
-			user = cls.query(cls.uid == uid).get()
-			user.authenticated = True
-			user.put()
-			return user
+    @classmethod
+    @ndb_context_manager
+    def fetch(cls, **kwargs):
+        query_conditions = []
 
-	@classmethod
-	def get_by_name(cls, name):
-		with client.context():
-			result = cls.query(cls.name == name).get()
-			if result:
-				return result.to_dict()
-			else:
-				return None
+        if 'log_id' in kwargs:
+            query_conditions.append(cls.log_id == kwargs['log_id'])
+        if 'uid' in kwargs:
+            query_conditions.append(cls.user_id == kwargs['uid'])
+        if 'node_id' in kwargs:
+            query_conditions.append(cls.user_id == kwargs['node_id'])
+        if 'pipe_id' in kwargs:
+            query_conditions.append(cls.user_id == kwargs['pipe_id'])
 
-	@classmethod
-	def get_by_dbid(cls, dbid):
-		with client.context():
-			result = cls.query(cls.dbid == dbid).get()
-			if result:
-				return result.to_dict()
-			else:
-				return None
+        if query_conditions:
+            query = ndb.AND(*query_conditions)
+            entities = cls.query(query).order(-cls.created).fetch()
+        else:
+            entities = None
 
-	@classmethod
-	def get_by_uid(cls, uid):
-		with client.context():
-			result = cls.query(cls.uid == uid).get()
-			if result:
-				return result.to_dict()
-			else:
-				return None
+        logs = []
+        for entity in entities:
+            _entity = entity.to_dict()
+            _entity['line'] = entity.line.decode('utf-8')
+            logs.append(_entity)
 
-	@classmethod
-	def get_by_token(cls, api_token):
-		with client.context():
-			result = cls.query(cls.api_token == api_token).get()
-			if result:
-				return result.to_dict()
-			else:
-				return None
+        return logs

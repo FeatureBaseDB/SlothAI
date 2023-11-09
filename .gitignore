@@ -14,6 +14,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+/documents/*
+!/documents/animate.pdf
+
 # C extensions
 *.so
 
