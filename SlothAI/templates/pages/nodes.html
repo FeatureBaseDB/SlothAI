@@ -248,7 +248,7 @@ $(document).ready(function() {
             "responsive": true
         });
     }
-    
+
     // Run changeButtonColors and changeBadgeColors functions using Promises
     const buttonColorsPromise = new Promise((resolve) => {
         changeButtonColors();
@@ -294,7 +294,6 @@ $(document).ready(function() {
             }
         }, 100);
     });
-
 
     $("#addTemplateButton").on("click", function() {
         window.location.href = "/templates/new";
@@ -571,6 +570,7 @@ $(document).ready(function() {
                         if (!isValid) {
                             toastr.error("Token validation failed");
                             isValidToken = false;
+                            $("#addNodeModalButton").prop("disabled", false);
                         }
                         validationPromise.resolve(isValid);
                     });

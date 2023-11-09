@@ -405,8 +405,6 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
-	output_fields = template.get('output_fields')
-	input_fields = template.get('input_fields')
 
 	# use the first output field
 	try:
@@ -416,6 +414,8 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 		output_field = "objects"
 
 	# Check if each input field is present in 'task.document'
+	input_fields = template.get('input_fields')
+
 	for field in input_fields:
 		field_name = field['name']
 		if field_name not in task.document:
@@ -430,34 +430,48 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 	filename = task.document.get('filename')
 	content_type = task.document.get('content_type')
 
-	# deal with lists
+	# Deal with lists
 	if isinstance(filename, list):
+		if not isinstance(content_type, list):
+			raise NonRetriableError("If filename is a list, content_type must also be a list.")
+		if len(filename) != len(content_type):
+			raise NonRetriableError("Document must contain equal size lists of filename and content-type.")
 		filename = filename[0]
-	if isinstance(content_type, list):
 		content_type = content_type[0]
+	elif isinstance(filename, str) and isinstance(content_type, str):
+		# If both variables are strings, convert them into lists
+		filename = [filename]
+		content_type = [content_type]
+	else:
+		# If none of the conditions are met, raise a NonRetriableError
+		raise NonRetriableError("Both filename and content_type must either be equal size lists or strings.")
 
 	# Check if the mime type is supported for PNG, JPG, and BMP
 	supported_content_types = ['image/png', 'image/jpeg', 'image/bmp', 'image/jpg']
 
-	for supported_type in supported_content_types:
-		if supported_type in content_type:
-			break
-	else:
-		raise NonRetriableError(f"Unsupported file type: {content_type}")
+	for index, file_name in enumerate(filename):
+		content_parts = content_type[index].split(';')[0]
+		if content_parts not in supported_content_types:
+			raise NonRetriableError(f"Unsupported file type for {file_name}: {content_type[index]}")
 
-	image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
+	# loop through the detection filenames
+	for index, file_name in enumerate(filename):
+		# Now run the code for image processing
+		image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
 
-	client = vision.ImageAnnotatorClient()
-	response = client.annotate_image({
-		'image': {'source': {'image_uri': image_uri}},
-		'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
-	})
+		client = vision.ImageAnnotatorClient()
+		response = client.annotate_image({
+			'image': {'source': {'image_uri': image_uri}},
+			'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
+		})
 
-	# Get a list of detected labels (objects)
-	labels = [label.description.lower() for label in response.label_annotations]
+		# Get a list of detected labels (objects)
+		labels = [label.description.lower() for label in response.label_annotations]
 
-	# update the document with objects
-	task.document[output_field] = [labels]
+		# Append the labels list to task.document[output_field]
+		if not task.document.get(output_field):
+			task.document[output_field] = []
+		task.document[output_field].append(labels)
 
 	return task
 
