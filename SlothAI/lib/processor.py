@@ -406,6 +406,9 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
 
+	user = User.get_by_uid(uid=task.user_id)
+	uid = user.get('uid')
+
 	# use the first output field
 	try:
 		output_fields = template.get('output_fields')
@@ -420,9 +423,6 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 		field_name = field['name']
 		if field_name not in task.document:
 			raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
-
-	user = User.get_by_uid(uid=task.user_id)
-	uid = user.get('uid')
 
 	if not task.document.get('filename') or not task.document.get('content_type'):
 		raise NonRetriableError("Document must contain 'filename' and 'content_type'.")
@@ -484,56 +484,87 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
-	output_fields = template.get('output_fields')
+
+	user = User.get_by_uid(uid=task.user_id)
+	uid = user.get('uid')
+
+	output_fields = template.get('output_fields')	
+	# Check that there is no more than one output field
+	if len(output_fields) > 1:
+		raise NonRetriableError("Only one output field is allowed in 'output_fields'.")
+
+	# use the first output field, or set one
+	try:
+		output_field = output_fields[0].get('name')
+	except:
+		output_field = "objects"
+
+	# Check if each input field is present in 'task.document'
 	input_fields = template.get('input_fields')
 
 	# Ensure there is only one input field
 	if len(input_fields) != 1:
 		raise NonRetriableError("Only one input field is allowed in 'input_fields'.")
 
+	for field in input_fields:
+		field_name = field['name']
+		if field_name not in task.document:
+			raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+	
 	input_field = input_fields[0].get('name')
 
-	# Check that there is only one output field
-	if len(output_fields) != 1:
-		raise NonRetriableError("Only one output field is allowed in 'output_fields'.")
+	# Get the value associated with input_field from the document
+	input_value = task.document.get(input_field)
 
-	output_field = output_fields[0].get('name')
+	if isinstance(input_value, str):
+	    # If it's a string, convert it to a list with one element
+	    prompts = [input_value]
+	elif isinstance(input_value, list):
+	    # If it's a list, ensure it contains only strings
+	    if all(isinstance(item, str) for item in input_value):
+	        prompts = input_value
+	    else:
+	        raise NonRetriableError("Input field must be a string or a list of strings.")
+	else:
+	    raise NonRetriableError("Input field must be a string or a list of strings.")
 
 	# Apply [:1000] to the input field as the prompt
-	for prompt in task.document.get(input_field):
-		prompt = prompt[:1000]
-		break
-
-	if not prompt:
-		raise NonRetriableError("Input field is required and should contain the prompt.")
-
-	num_images = task.document.get('num_images', 0)
-	if not num_images:
-		num_images = 1
-
-	if "dall-e" in task.document.get('model'):
-		openai.api_key = task.document.get('openai_token')
-
-		try:
-			response = openai.Image.create(
-				prompt=prompt,
-				n=int(num_images),
-				size="1024x1024"
-			)
-			urls = [[]]
-
-			# Loop over the 'data' list and extract the 'url' from each item
-			for item in response['data']:
-				if 'url' in item:
-					urls[0].append(item['url'])
-
-			task.document[output_field] = urls
-
-		except Exception as ex:
-			# non-retriable error for now but add retriable as needed
-			raise NonRetriableError(f"aiimage processor: exception talking to OpenAI image create: {ex}")
-	else:
+	if not task.document.get(output_field):
 		task.document[output_field] = []
+
+	for prompt in prompts:
+		prompt = prompt[:1000]
+
+		if not prompt:
+			raise NonRetriableError("Input field is required and should contain the prompt.")
+
+		num_images = task.document.get('num_images', 0)
+		if not num_images:
+			num_images = 1
+
+		if "dall-e" in task.document.get('model'):
+			openai.api_key = task.document.get('openai_token')
+
+			try:
+				response = openai.Image.create(
+					prompt=prompt,
+					n=int(num_images),
+					size="1024x1024"
+				)
+				urls = [[]]
+
+				# Loop over the 'data' list and extract the 'url' from each item
+				for item in response['data']:
+					if 'url' in item:
+						urls[0].append(item['url'])
+
+				task.document[output_field].append(urls)
+
+			except Exception as ex:
+				# non-retriable error for now but add retriable as needed
+				raise NonRetriableError(f"aiimage processor: exception talking to OpenAI image create: {ex}")
+		else:
+			task.document[output_field] = [[]]
 
 	return task
 
@@ -544,96 +575,159 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 	template = template_service.get_template(template_id=node.get('template_id'))
 	if not template:
 		raise TemplateNotFoundError(template_id=node.get('template_id'))
-	output_fields = template.get('output_fields')
-	output_field = output_fields[0].get('name')
 
 	user = User.get_by_uid(uid=task.user_id)
 	uid = user.get('uid')
+
+	output_fields = template.get('output_fields')	
+	# Check that there no more than one output field
+	if len(output_fields) > 1:
+		raise NonRetriableError("Only one output field is allowed in 'output_fields'.")
+
+	# use the first output field, or set one
+	try:
+		output_field = output_fields[0].get('name')
+	except:
+		output_field = "texts"
+
 	filename = task.document.get('filename')
-	mime_type = task.document.get('content_type').split(';')[0]
+	content_type = task.document.get('content_type')
 
-	if mime_type == "application/pdf":
-		# Get the document
-		gcs = storage.Client()
-		bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-		blob = bucket.blob(f"{uid}/{filename}")
-		image_content = blob.download_as_bytes()
-
-		# Create a BytesIO object for the PDF content
-		pdf_content_stream = BytesIO(image_content)
-		pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
-		num_pages = len(pdf_reader.pages)
-
-		# processor for document ai
-		opts = ClientOptions(api_endpoint=f"us-documentai.googleapis.com")
-		client = documentai.DocumentProcessorServiceClient(client_options=opts)
-		parent = client.common_location_path(app.config['PROJECT_ID'], "us")
-		processor_list = client.list_processors(parent=parent)
-		for processor in processor_list:
-			name = processor.name
-			break # stupid google objects
-
-		pdf_processor = client.get_processor(name=name)
-
-		texts = []
-
-		# build seperate pages and process each, adding text to texts
-		for page_num in range(num_pages):
-			pdf_writer = PyPDF2.PdfWriter()
-			pdf_writer.add_page(pdf_reader.pages[page_num])
-			page_stream = BytesIO()
-			pdf_writer.write(page_stream)
-
-			# Get the content of the current page as bytes
-			page_content = page_stream.getvalue()
-
-			# load data
-			raw_document = documentai.RawDocument(content=page_content, mime_type="application/pdf")
-
-			# make request
-			request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
-			result = client.process_document(request=request)
-			document = result.document
-
-			# move to texts
-			texts.append(document.text.replace("'","`").replace('"', '``').replace("\n"," ").replace("\r"," ").replace("\t"," "))
-
-			# Close the page stream
-			page_stream.close()
-
-	elif mime_type == "text/plain":
-		# grab document
-		gcs = storage.Client()
-		bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-		blob = bucket.blob(f"{uid}/{filename}")
-		text = blob.download_as_text()
-
-		# split on words
-		words = text.split()
-		chunks = []
-		current_chunk = []
-
-		# set the page chunk size (number of characters per page)
-		page_chunk_size = task.document.get('page_chunk_size', 1536)
-
-		# build the chunks
-		for word in words:
-			current_chunk.append(word)
-			if len(current_chunk) >= page_chunk_size:
-				chunks.append(' '.join(current_chunk))
-				current_chunk = []
-
-		# append any leftovers
-		if current_chunk:
-			chunks.append(' '.join(current_chunk))
-
-		texts = chunks
-
+	# Deal with lists
+	if isinstance(filename, list):
+		if not isinstance(content_type, list):
+			raise NonRetriableError("If filename is a list, content_type must also be a list.")
+		if len(filename) != len(content_type):
+			raise NonRetriableError("Document must contain equal size lists of filename and content-type.")
+	elif isinstance(filename, str) and isinstance(content_type, str):
+		# If both variables are strings, convert them into lists
+		filename = [filename]
+		content_type = [content_type]
 	else:
-		raise NonRetriableError("read_file processor: only supports PDFs or .txt files. Upload with type set to `application/pdf` or `text/plain`.")
+		# If none of the conditions are met, raise a NonRetriableError
+		raise NonRetriableError("Both filename and content_type must either be equal size lists or strings.")
 
-	# update the document
-	task.document[output_field] = texts
+	# Check if the mime type is supported
+	supported_content_types = ['application/pdf', 'text/plain']
+
+	for index, file_name in enumerate(filename):
+		content_parts = content_type[index].split(';')[0]
+		if content_parts not in supported_content_types:
+			raise NonRetriableError(f"Unsupported file type for {file_name}: {content_type[index]}")
+	
+	page_numbers = task.document.get('page_numbers')
+
+	# Process page numbers
+	if page_numbers is not None:
+	    if isinstance(page_numbers, list):
+	        # If page_numbers is a list, convert it to a list of lists with a single list
+	        page_numbers = [page_numbers]
+	    elif not isinstance(page_numbers, list) or any(not isinstance(item, list) for item in page_numbers):
+	        raise NonRetriableError("Page numbers must be a list of lists or a list.")
+	    
+	    # Check if the number of page number lists is the same as the number of filenames
+	    if len(page_numbers) != len(filename):
+	        raise NonRetriableError("The number of page number lists must be the same as the number of filenames.")
+
+	# set the output field
+	if not task.document.get(output_field):
+		task.document[output_field] = []
+
+	# loop over the filenames
+	for index, file_name in enumerate(filename):
+
+		if content_type[index] == "application/pdf":
+			# Get the document
+			gcs = storage.Client()
+			bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+			blob = bucket.blob(f"{uid}/{file_name}")
+			image_content = blob.download_as_bytes()
+
+			# Create a BytesIO object for the PDF content
+			pdf_content_stream = BytesIO(image_content)
+			pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
+
+			index_pages = []
+
+			num_pdf_pages = len(pdf_reader.pages)
+			if page_numbers:
+				for page_number in page_numbers[index]:
+					if page_number < 1:
+						raise NonRetriableError("Page numbers must be whole numbers > 0.")
+					if page_number > num_pdf_pages:
+						raise NonRetriableError(f"Page number ({page_number}) is larger than the number of pages ({num_pdf_pages}).")	
+					index_pages.append(page_number-1)
+			else:
+				for page_number in range(num_pdf_pages):
+					index_pages.append(page_number)
+
+			# processor for document ai
+			opts = ClientOptions(api_endpoint=f"us-documentai.googleapis.com")
+			client = documentai.DocumentProcessorServiceClient(client_options=opts)
+			parent = client.common_location_path(app.config['PROJECT_ID'], "us")
+			processor_list = client.list_processors(parent=parent)
+			for processor in processor_list:
+				name = processor.name
+				break # stupid google objects
+
+			pdf_processor = client.get_processor(name=name)
+
+			texts = []
+
+			# build seperate pages and process each, adding text to texts
+			for page_num in index_pages:
+				pdf_writer = PyPDF2.PdfWriter()
+				pdf_writer.add_page(pdf_reader.pages[page_num])
+				page_stream = BytesIO()
+				pdf_writer.write(page_stream)
+
+				# Get the content of the current page as bytes
+				page_content = page_stream.getvalue()
+
+				# load data
+				raw_document = documentai.RawDocument(content=page_content, mime_type="application/pdf")
+
+				# make request
+				request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
+				result = client.process_document(request=request)
+				document = result.document
+
+				# move to texts
+				texts.append(document.text.replace("'","`").replace('"', '``').replace("\n"," ").replace("\r"," ").replace("\t"," "))
+
+				# Close the page stream
+				page_stream.close()
+
+		elif content_type[index] == "text/plain":
+			# grab document
+			gcs = storage.Client()
+			bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+			blob = bucket.blob(f"{uid}/{file_name}")
+			text = blob.download_as_text()
+
+			# split on words
+			words = text.split()
+			chunks = []
+			current_chunk = []
+
+			# set the page chunk size (number of characters per page)
+			page_chunk_size = task.document.get('page_chunk_size', 1536)
+
+			# build the chunks
+			for word in words:
+				current_chunk.append(word)
+				if len(current_chunk) >= page_chunk_size:
+					chunks.append(' '.join(current_chunk))
+					current_chunk = []
+
+			# append any leftovers
+			if current_chunk:
+				chunks.append(' '.join(current_chunk))
+
+			texts = chunks
+
+		# update the document
+		task.document[output_field].append(texts)
 	
 	return task
 
@@ -1106,68 +1200,6 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 			# good response from the server but query error
 			raise NonRetriableError(err)
 	
-	return task
-
-# remove these
-# ============
-
-def sloth_embedding(input_field: str, output_field: str, model: str, task: Task) -> Task:
-
-	data = {
-		"text": task.document[input_field],
-		"model": model
-		# data = get_values_by_json_paths(keys, task.document)
-		# TODO: could be a nested key
-	}
-
-	defer, selected_box = box_required()
-	if defer:
-		raise RetriableError("sloth virtual machine is being started")
-	
-	url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
-
-	try:
-		# Send the POST request with the JSON data
-		response = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"}, timeout=60)
-	except Exception as ex:
-		raise NonRetriableError(f"Exception raised connecting to sloth virtual machine: {ex}")
-
-	# Check the response status code for success
-	if response.status_code == 200:
-		task.document[output_field] = response.json().get("embeddings")
-	else:
-		raise NonRetriableError(f"request to sloth_embedding virtual machine failed with status code {response.status_code}: {response.text}")
-
-	return task
-
-
-def sloth_keyterms(input_field: str, output_field: str, model: str, task: Task) -> Task:
-
-	data = {
-		"text": task.document[input_field],
-		"model": model
-		# data = get_values_by_json_paths(keys, task.document)
-		# TODO: could be a nested key
-	}
-
-	defer, selected_box = box_required()
-	if defer:
-		raise RetriableError("sloth virtual machine is being started")
-	
-	url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/keyterms"
-
-	try:
-		# Send the POST request with the JSON data
-		response = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"}, timeout=60)
-	except Exception as ex:
-		raise NonRetriableError(f"Exception raised connecting to sloth virtual machine: {ex}")
-
-	# Check the response status code for success
-	if response.status_code == 200:
-		task.document[output_field] = response.json().get("keyterms")
-	else:
-		raise NonRetriableError(f"request to sloth_keyterms virtual machine failed with status code {response.status_code}: {response.text}")
-
 	return task
 
 

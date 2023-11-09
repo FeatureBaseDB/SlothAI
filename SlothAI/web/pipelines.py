@@ -235,7 +235,7 @@ def ingest_post(pipeline_id):
                 return jsonify({"error": "The JSON data is not a dictionary"}), 400
         
         except Exception as ex:
-            return jsonify({"error": f"Error getting or transforming JSON data."}), 400
+            return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
 
     # now we create the task
     task = Task(
