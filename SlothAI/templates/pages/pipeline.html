@@ -27,7 +27,7 @@
             {% for node_id in pipeline.node_ids %}
                 {% for node in nodes %}
                     {% if node.node_id == node_id %}
-                        <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable" style="border-radius: 0 !important;">{{ node.name }}</button></li>
+                        <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable" style="border-radius: 0 !important;"><i class="fas fa-cube"></i><br/>{{ node.name }}</button></li>
                     {% endif %}
                 {% endfor %}
             {% endfor %}
