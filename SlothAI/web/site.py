@@ -50,6 +50,7 @@ template_examples = [
     {"name": "Download file from URI with GET", "template_name": "uri_to_file", "processor_type": "read_uri"},
     {"name": "POST data to URI", "template_name": "json_to_uri", "processor_type": "read_uri"},
     {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
+    {"name": "Split a document into page numbers for split tasks", "template_name": "filename_to_splits", "processor_type": "jinja2"},
     {"name": "Split tasks", "template_name": "split_tasks", "processor_type": "split_task"},
     {"name": "Generate keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
     {"name": "Generate a question from text and keyterms", "template_name": "text_keyterms_to_question", "processor_type": "aidict"},
