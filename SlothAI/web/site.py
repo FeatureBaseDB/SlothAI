@@ -19,10 +19,6 @@ site = Blueprint('site', __name__)
 # client connection
 client = ndb.Client()
 
-@site.route('/sitemap.txt')
-def sitemap():
-    return render_template('pages/sitemap.txt')
-
 # hard coded, for now
 processors = [
     {"value": "jinja2", "label": "Jinja2 Processor"},
@@ -75,10 +71,16 @@ def get_brand(app):
     brand['color'] = app.config['BRAND_COLOR']
     brand['service'] = app.config['BRAND_SERVICE']
     brand['service_url'] = app.config['BRAND_SERVICE_URL']
+    brand['twitter_handle'] = app.config['BRAND_X_HANDLE']
     brand['github_url'] = app.config['BRAND_GITHUB_URL']
     brand['discord_url'] = app.config['BRAND_DISCORD_URL']
     brand['youtube_url'] = app.config['BRAND_YOUTUBE_URL']
     return brand
+
+@site.route('/sitemap.txt')
+def sitemap():
+    brand = get_brand(app)
+    return render_template('pages/sitemap.txt', brand=brand)
 
 
 @site.route('/logs', methods=['GET'])
