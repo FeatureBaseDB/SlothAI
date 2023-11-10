@@ -339,7 +339,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 				system_content = "You write JSON for the user."
 				response_format = {'type': "json_object"}
 			else:
-				system_content = "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."
+				system_content = "You write JSON dictionaries for the user, without using text markup or wrappers.\nYou output things like:\n'''ai_dict={'akey': 'avalue'}'''"
 				response_format = None
 				
 			retries = 3
@@ -385,8 +385,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 					app.logger.warn(f"The AI failed to build a dictionary. Try #{_try}.")
 					errors.append(f"The aidict processor was unable to evaluate the response from the AI for index: {iterate_index}.")
 			else:
-				print(ai_dict_str)
-				raise NonRetriableError(f"Tried {retries} times to get a dictionary from the AI, but failed.")
+				raise NonRetriableError(f"Tried {retries} times to get a dictionary from the AI, but failed. Try using the 'gpt-3.5-turbo-1106' model.")
 
 		task.document['aidict_errors'] = errors
 		task.document.pop('iterate_index')
