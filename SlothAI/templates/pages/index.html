@@ -1,7 +1,7 @@
 {% extends "pages/base.html" %}
 
 {% block title %}
-<title>{{ app_name }}</title>
+<title>{{ brand.get('name') }}</title>
 {% endblock %}
 
 {% block description %}
@@ -19,8 +19,8 @@
 
           </div>
           <div width="420" class="col-md-6 text-left">
-            <h1 style="font-family: Roboto; font-weight: 700; font-size: 48px; opacity: 100%;">Blazingly Fast <br/> AI Pipelines</h1>
-            <p class="lead">Powered by <a href="https://github.com/FeatureBaseDb/SlothAI" style="color: white;">SlothAI</a> and <a href="https://cloud.featurebase.com/" style="color: white;">FeatureBase Cloud</a>.</p>
+            <h1 style="font-family: Roboto; font-weight: 700; font-size: 48px; opacity: 100%;">Blazing Fast <br/> AI Pipelines</h1>
+            <p class="lead">Powered by <a href="{{ brand.get('github_url') }}" style="color: white;">SlothAI</a> and <a href="https://cloud.featurebase.com/" style="color: white;">FeatureBase Cloud</a>.</p>
             <div style="padding-bottom: 23px;">
               <a href="/pipelines" class="btn btn-outline-light" type="button">Get Started</a>
             </div>
@@ -40,7 +40,7 @@
   	        <p class="lead">Harness AI's potential with {{brand.get('name')}}, a gateway to constructing efficient AI pipelines that transform your data and the way you do business. Explore a world of use cases where tasks like PDF content extraction, audio transcription search, audio document rewriting for customer support augmentation, and PDF ingestion for dynamic product guides are streamlined and accelerated by the <a href="https://github.com/kordless/SlothAI">SlothAI</a> Open Source framework.</p>
 
             <h2>One Database to Rule Them All</h2>
-            <p class="lead">{{brand.get('name')}} is built from the ground up to focus on a single managed datastore, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. FeatureBase is the only database in the world to effortlessly manage all three functions, allowing users, including AI, to execute complex SQL queries against their data. No more hassling with separate vector and SQL database setups!</p>
+            <p class="lead">SlothAI is built from the ground up to focus on a single managed datastore, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> is the only database in the world to effortlessly manage all three functions, allowing users, including AI, to execute complex SQL queries against their data. No more hassling with separate vector and SQL database setups!</p>
 
             <img src="/static/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
             <h2 style="padding-top: 30px;">Use Cases</h2>

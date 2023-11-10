@@ -4,33 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% block description %}
-    <meta name="description" content='A FeatureBase for your Models.' />
+    <meta name="description" content='Blazing Fast AI Pipelines' />
     {% endblock %}
 
     {% block title %}
-    <title>{{ app_name }}</title>
-    <meta property='og:title' content='FeatureBaseAI' />
+    <title>{{ brand.get('name') }}</title>
+    <meta property='og:title' content="{{ brand.get('name') }}" />
     {% endblock %}
 
-    <meta property="og:image" content="https://ai.featurebase.com/static/sloth.png" />
-    <meta property="og:description" content="Blazingly Fast AI Pipelines" />
-    <meta property="og:url" content="https://ai.featurebase.com/" />
-    <meta property="og:title" content="FeatureBaseAI" />
-    <meta property="og:site_name" content="FeatureBaseAI">
-    
+    <meta property="og:image" content="{{ url_for('static', filename='sloth.png') }}" />
+    <meta property="og:description" content="Blazing Fast AI Pipelines" />
+    <meta property="og:url" content="{{ brand.get('service_url') }}" />
+    <meta property="og:title" content="{{ brand.get('name') }}" />
+    <meta property="og:site_name" content="{{ brand.get('name') }}">
 
     <meta name="twitter:card" content="summary_large_image" /> <!-- This specifies a large image card -->
-    <meta name="twitter:site" content="@FeatureBase" /> <!-- Replace with your Twitter handle -->
-    <meta name="twitter:title" content="FeatureBaseAI" />
-    <meta name="twitter:description" content="Blazingly Fast AI Pipelines" />
-    <meta name="twitter:image" content="https://ai.featurebase.com/static/sloth.png" />
+    <meta name="twitter:site" content="{{ brand.get('twitter_handle') }}" /> <!-- Replace with your Twitter handle -->
+    <meta name="twitter:title" content="{{ brand.get('name') }}" />
+    <meta name="twitter:description" content="Blazing Fast AI Pipelines" />
+    <meta name="twitter:image" content="{{ url_for('static', filename='sloth.png') }}" />
 
     <link rel="shortcut icon" href="{{ url_for('static', filename=brand.get('favicon')) }}">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
 
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
@@ -43,7 +44,7 @@
 <nav class="navbar navbar-expand-lg fixed-top" style="opacity: 90%;">
     <h2 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">
         <i class="fas fa-chevron-right"></i> <!-- Nice ">" Icon -->
-        {% if brand %}{{brand.get('name')}}{% else %}SlothAI{% endif %}
+        {{brand.get('name')}}
         <a href="{{brand.get('github_url')}}" target="_blank" style="text-decoration: none; color: white; margin-left: 12px;">
             <i class="fab fa-github"></i>
         </a>

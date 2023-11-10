@@ -4,17 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% block description %}
-    <meta name="description" content='A powerful AI pipeline system.' />
+    <meta name="description" content='Blazing Fast AI Pipelines' />
     {% endblock %}
     {% block title %}
-    <title>{{ app_name }}</title>
+    <title>{{ brand.get('name') }}</title>
     <meta property='og:title' content="{{brand.get('name')}}"/>
     {% endblock %}
     <link rel="shortcut icon" href="{{ url_for('static', filename=brand.get('favicon')) }}">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">

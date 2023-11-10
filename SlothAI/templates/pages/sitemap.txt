@@ -1,1 +1,1 @@
-https://ai.featurebase.com/
+{{brand.get('service_url')}}

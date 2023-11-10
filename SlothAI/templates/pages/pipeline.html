@@ -1,8 +1,8 @@
 {% extends "pages/page_base.html" %}
 
 {% block title %}
-<title>{{pipeline.name}} | Pipeline | FeatureBase AI</title>
-<meta property='og:title' content='{{pipeline.name}} | Pipeline | FeatureBase AI'/>
+<title>{{pipeline.name}} | Pipeline | {{brand.get('name')}}</title>
+<meta property='og:title' content="{{pipeline.name}} | Pipeline | {{ brand.get('name') }} "/>
 {% endblock %}
 
 {% block content %}
