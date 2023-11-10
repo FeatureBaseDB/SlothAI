@@ -40,6 +40,10 @@ button {
   border-radius: 0;
 }
 
+.min-button {
+  min-width: 80px;
+}
+
 #buttonSortable {
   list-style-type: none;
   margin: 0;
@@ -69,6 +73,10 @@ button {
   color: #fff; /* Change text color on hover */
   cursor: pointer; /* Use a regular pointer cursor on hover */
   transition: background-color 0.3s, color 0.3s; /* Add a transition effect */
+}
+
+.btn-group .delete-button {
+  border-radius: 0 4px 4px 0 !important;
 }
 
 table {
@@ -105,13 +113,13 @@ div.login_form h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px; /* Adjust the maximum width as needed */
-  font-size: 0.9em;
+  font-size: 0.8em;
   height:  20px;
 }
 
 .badge-dark {
   padding-top: 5px;
-  height: 26px;
+  height: 24px;
 }
 
 .dropdown-menu {         

@@ -17,7 +17,7 @@
         <div class="text-left">
             <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: inline;">
                 <input id="fileInput" type="file" name="file" style="display: none;" />
-                <button id="uploadPipeline" type="button" class="btn btn-info" style="float: left;">
+                <button id="uploadPipeline" type="button" class="btn btn-info btn-upload" style="float: left;">
                     <i class="fas fa-upload"></i> Upload
                 </button>
                 <input type="submit" value="Submit" hidden/>
@@ -39,14 +39,14 @@
                 {% for pipeline in pipelines %}
                 <tr>
                     <td>
-                        <button class="btn btn-secondary" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'"><i class="fas fa-code-branch"></i> {{ pipeline.name }}</button>
+                        <button class="btn btn-secondary" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'"><i class="fas fa-code-branch"></i><br/>{{ pipeline.name }}</button>
                     </td>
                     <td>
                         <div class="btn-group">
                             {% for node_id in pipeline.node_ids %}
                                 {% for node in nodes %}
                                     {% if node.node_id == node_id %}
-                                        <button title="{{ node.processor }}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary"><i class="fas fa-cube"></i> {{ node.name }}</button>
+                                        <button title="{{ node.processor }}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary button-node"><i class="fas fa-cube"></i><br/>{{ node.name }}</button>
                                     {% endif %}
                                 {% endfor %}
                             {% endfor %}
@@ -54,7 +54,7 @@
                     </td>
                     <td>
                         <div class="btn-group">
-                            <button data-toggle="tooltip" data-placement="top" title="Download {{ pipeline.name }}" class="download-button btn btn-primary" data-pipe_name="{{ pipeline.name }}" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-download"></i></button>
+                            <button data-toggle="tooltip" data-placement="top" title="Download {{ pipeline.name }}" class="download-button btn btn-primary" data-pipe_name="{{ pipeline.name }}" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-download download-button"></i></button>
                             <button class="delete-button btn btn-danger" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
                             <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
                         </div>
