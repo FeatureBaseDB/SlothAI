@@ -42,7 +42,7 @@ Query pipelines extend this concept, where data enters through POST requests and
 ### Sample Ingestion Graph
 The following graph outlines a typical RAG-based *ingestion pipeline* for data which extracts keyterms, embeds the text and keyterms together, then forms a question about the text and keyterms using GPT-3.5-turbo. The results are saved into FeatureBase for query interactions:
 
-<img src="" width="360"/>
+<img src="https://raw.githubusercontent.com/FeatureBaseDB/SlothAI/SlothAI/SlothAI/static/sloth.png" width="360"/>
 
 ## Development Notes
 * Processor support for reading text or PDFs, audio files, image files, or use of custom data models.
