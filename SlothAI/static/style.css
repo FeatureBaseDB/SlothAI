@@ -102,11 +102,16 @@ div.login_form h2 {
 }
 
 .badge {
-  margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px; /* Adjust the maximum width as needed */
   font-size: 0.9em;
+  height:  20px;
+}
+
+.badge-dark {
+  padding-top: 5px;
+  height: 26px;
 }
 
 .dropdown-menu {         
@@ -183,11 +188,6 @@ div.login_form h2 {
 @media (min-width: 1342px) {
   .content {
     margin-left: 200px; /* Set the maximum margin-left for wider screens */
-  }
-}
-@media (min-width: 1005px) {
-  #templatesTable_wrapper {
-    width: 1005px !important;
   }
 }
 

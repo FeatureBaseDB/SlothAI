@@ -231,7 +231,7 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
 	if "gpt" in task.document.get('model'):
 		openai.api_key = task.document.get('openai_token')
 
-		template_text = template_service.remove_fields_and_extras(template.get('text'))
+		template_text = Template.remove_fields_and_extras(template.get('text'))
 
 		if template_text:
 			jinja_template = env.from_string(template_text)
@@ -327,7 +327,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 			# item is not used...but we set iterate_index for the template
 			task.document['iterate_index'] = iterate_index
 
-			template_text = template_service.remove_fields_and_extras(template.get('text'))
+			template_text = Template.remove_fields_and_extras(template.get('text'))
 
 			if template_text:
 				jinja_template = env.from_string(template_text)

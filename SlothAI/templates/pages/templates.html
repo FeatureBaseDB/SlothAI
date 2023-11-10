@@ -197,6 +197,7 @@ $(document).ready(function() {
         setTimeout(function () {
             if (!$('.popover:hover').length) {
                 $(that).popover('hide'); // Hide the popover if the mouse is not over it
+                $(that).blur();
             }
         }, 100);
     });

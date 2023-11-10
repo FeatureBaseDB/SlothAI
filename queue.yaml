@@ -1,5 +1,5 @@
 queue:
-- name: sloth-strong
+- name: sloth-spittle
   rate: 500/s
   retry_parameters:
     min_backoff_seconds: 4

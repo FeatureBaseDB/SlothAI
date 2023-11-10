@@ -14,7 +14,7 @@ Machine learning box deployment is managed using [Laminoid](https://github.com/F
 ## But, Why?
 SlothAI distinguishes itself from other frameworks like LangChain, AutoChain, Auto-GPT, and Ray by focusing on scalable asynchronous inferences coupled with an intuitive UI that simplifies the editing of templates and the management of pipeline flows. SlothAI makes template editing and debugging fun and easy.
 
-SlothAI use a SQL engine (FeatureBase) capable of point lookups, binary set operations, and vector similarity for its storage and compute layers. Tasks are executed within containers via task queues, and for more demanding inference tasks, it orchestrates calls to GPU boxes, streamlining the process of running large model inferences.
+SlothAI use a SQL engine (FeatureBase) capable of point lookups, binary set operations, and vector similarity for its storage layers. Tasks are executed within containers on Google Cloud via task queues, and for more demanding inferencing tasks, it orchestrates calls to GPU boxes, streamlining the process of running large model inferences.
 
 Individual movements of a sloth are measured and intentional, mirroring the pace of synchronous ETL processes when seen alone. SlothAI's true capability, akin to the combined might of sloths, becomes apparent when it functions asynchronously, parallelizing inference steps to increase the speed of data transformations.
 

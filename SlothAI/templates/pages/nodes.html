@@ -64,7 +64,7 @@
 
                     <td>
                         <div class="btn-group">
-                            <a data-toggle="tooltip" data-placement="top" title="{{ node.get('template').get('name') }}" class="btn btn-secondary" href="/templates/{{ node.get('template_id') }}"><i class="fas fa-pen"></i></a>
+                            <a data-toggle="popover" data-placement="top" data-content="{{ node.get('template').get('name') }}" title="{{ node.get('template').get('name') }}" class="btn btn-secondary" href="/templates/{{ node.get('template_id') }}"><i class="fas fa-pen"></i></a>
                             <button class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></button>
                             <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
                         </div>
@@ -291,6 +291,7 @@ $(document).ready(function() {
         setTimeout(function () {
             if (!$('.popover:hover').length) {
                 $(that).popover('hide'); // Hide the popover if the mouse is not over it
+                $(that).blur();
             }
         }, 100);
     });
@@ -606,7 +607,7 @@ $(document).ready(function() {
         });
     }
     $(function () {
-      $('[data-toggle="tooltip"]').tooltip()
+      $('[data-toggle="popover"]').tooltip()
     })
 
 });

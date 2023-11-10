@@ -1,5 +1,5 @@
 entrypoint: gunicorn -b :8080 "SlothAI:create_app(conf='prod')" -w 2 -t 200
-
+service_account: sloth-ai@appspot.gserviceaccount.com
 runtime: python38
 
 automatic_scaling:

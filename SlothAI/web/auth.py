@@ -14,6 +14,19 @@ from SlothAI.lib.database import featurebase_query
 # client connection
 client = ndb.Client()
 
+def get_brand(app):
+    # brand setup
+    brand = {}
+    brand['name'] = app.config['BRAND']
+    brand['favicon'] = app.config['BRAND_FAVICON']
+    brand['color'] = app.config['BRAND_COLOR']
+    brand['service'] = app.config['BRAND_SERVICE']
+    brand['service_url'] = app.config['BRAND_SERVICE_URL']
+    brand['github_url'] = app.config['BRAND_GITHUB_URL']
+    brand['discord_url'] = app.config['BRAND_DISCORD_URL']
+    brand['youtube_url'] = app.config['BRAND_YOUTUBE_URL']
+    return brand
+
 # logins
 login_manager = flask_login.LoginManager()
 login_manager.session_protection = "strong"
@@ -76,22 +89,20 @@ def login():
         next_url = request.form.get('next')
 
     # if we have no connection to the DB, this will handle it
-    try:
-        # secure transaction to POST
-        transaction_id = random_string(13)
-        _ = Transaction.create(uid="anonymous", tid=transaction_id)
+    # secure transaction to POST
+    transaction_id = random_string(13)
+    _ = Transaction.create(uid="anonymous", tid=transaction_id)
 
-        return render_template(
-            'pages/login.html',
-            config=app.config,
-            session=session,
-            app_id = random_string(9),
-            transaction_id = transaction_id,
-            next=next_url
-        )
-    except Exception:
-        return redirect(url_for('site.home'))
-
+    return render_template(
+        'pages/login.html',
+        config=app.config,
+        session=session,
+        app_id = random_string(9),
+        transaction_id = transaction_id,
+        next=next_url,
+        brand=get_brand(app)
+    )
+    
 
 # LOGIN POST
 @auth.route('/login', methods=['POST'])

@@ -213,6 +213,7 @@ $(document).ready(function () {
         setTimeout(function () {
             if (!$('.popover:hover').length) {
                 $(that).popover('hide'); // Hide the popover if the mouse is not over it
+                $(that).blur(); // Remove focus from the button
             }
         }, 100);
     });
@@ -408,6 +409,7 @@ $(document).ready(function () {
         buttonGroup.append(createButton(getNodeInfo(selectedNode).processor, "Processor Output", getNodeInfo(selectedNode).output_fields));
         buttonGroup.on('mouseleave', function() {
             buttonGroup.find('[data-toggle="popover"]').popover('hide');
+            buttonGroup.find('[data-toggle="popover"]').blur(); // Remove focus from the button
         });
         buttonGroup.append(deleteButton);
 

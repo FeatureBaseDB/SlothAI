@@ -121,6 +121,9 @@ class Task:
 			self.nodes = []
 			return node
 
+	def delete_task(self):
+		self.delete()
+		return True
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!

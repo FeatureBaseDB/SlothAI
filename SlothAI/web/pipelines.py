@@ -238,25 +238,30 @@ def ingest_post(pipeline_id):
             return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
 
     # now we create the task
+    task_id = random_string()
     task = Task(
-        id=random_string(),
+        id=task_id,
         user_id=current_user.uid,
         pipe_id=pipeline.get('pipe_id'),
         nodes=pipeline.get('node_ids'),
         document=dict(),
         created_at=datetime.utcnow(),
         retries=0,
-		error=None,
-		state=TaskState.RUNNING,
+        error=None,
+        state=TaskState.RUNNING,
         split_status=-1
     )
 
     # store and queue
     task.document = json_data_dict
-    app.config['task_service'].create_task(task)
 
-    return jsonify(task.to_dict()), 200
-
+    try:
+        app.config['task_service'].create_task(task)
+        return jsonify(task.to_dict()), 200
+    except Exception as ex:
+        print(ex)
+        print(task.to_dict())
+        return jsonify({"error": "task queue is erroring. site admin needs to setup task queue"})
 
 
 @pipeline.route('/pipeline/upload', methods=['POST'])

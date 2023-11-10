@@ -20,7 +20,7 @@ class AppEngineTaskQueue(ABC):
 	def queue(self, task: Task):
 		project_id = app.config['PROJECT_ID']
 		client = tasks_v2.CloudTasksClient()
-		queue = client.queue_path(project_id, "us-east1", app.config['SLOTH_QUEUE'])
+		queue = client.queue_path(project_id, app.config['SLOTH_QUEUE_REGION'], app.config['SLOTH_QUEUE'])
 		encoding = task.to_json().encode()
 
 		if app.config['DEV'] == "True":

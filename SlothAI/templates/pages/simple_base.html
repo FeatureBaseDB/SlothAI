@@ -14,7 +14,7 @@
 
   {% block title %}
   <title>{{ app_name }}</title>
-  <meta property='og:title' content='FeatureBaseAI' />
+  <meta property='og:title' content="{{brand.get('name')}}" />
   {% endblock %}
 
   <meta property="og:image" content="https://ai.featurebase.com/static/sloth.png" />
@@ -24,11 +24,11 @@
   
   <meta name="twitter:card" content="summary_large_image" /> <!-- This specifies a large image card -->
   <meta name="twitter:site" content="@FeatureBase" /> <!-- Replace with your Twitter handle -->
-  <meta name="twitter:title" content="FeatureBaseAI" />
-  <meta name="twitter:description" content="A FeatureBase for your Models." />
+  <meta name="twitter:title" content="{{brand.get('name')}}" />
+  <meta name="twitter:description" content="Pipelines for AI." />
   <meta name="twitter:image" content="https://ai.featurebase.com/static/sloth.png" />
 
-  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="shortcut icon" href="{{ url_for('static', filename=brand.get('favicon')) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
