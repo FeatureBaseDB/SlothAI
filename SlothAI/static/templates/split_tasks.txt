@@ -1,6 +1,6 @@
 {# Use this template with the split_task processor. #}
 
-{# The split_task processor spawns parallel task for a given set of keys with equal lengths. #}
+{# The split_task processor spawns parallel tasks for a given set of keys with equal lengths. #}
 {# When used properly with an AI processor, it allows rapid inferencing of large amounts of data. #}
 
 {# The split_task processor requires input_fields and output_fields to be the same. #}

@@ -38,8 +38,8 @@ processors = [
 
 # template examples
 template_examples = [
-    {"name": "Start with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
-    {"name": "Generate random words", "template_name": "get_started_random_word", "processor_type": "jinja2"},
+    {"name": "alpha: Start with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
+    {"name": "alpha: Generate random words", "template_name": "get_started_random_word", "processor_type": "jinja2"},
     {"name": "Convert text to embedding", "template_name": "text_to_embedding", "processor_type": "embedding"},
     {"name": "Convert text to an OpenAI embedding", "template_name": "text_to_ada_embedding", "processor_type": "embedding"},
     {"name": "Write to table", "template_name": "write_table", "processor_type": "write_fb"},
@@ -47,10 +47,12 @@ template_examples = [
     {"name": "Read from table", "template_name": "read_table", "processor_type": "read_fb"},
     {"name": "Read embedding distance from a table", "template_name": "read_embedding_from_table", "processor_type": "read_fb"},
     {"name": "Read PDF or text file and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
+    {"name": "Deserialize a PDF to pages and convert to text", "template_name": "deserialized_pdf_to_text", "processor_type": "read_file"},
     {"name": "Download file from URI with GET", "template_name": "uri_to_file", "processor_type": "read_uri"},
     {"name": "POST data to URI", "template_name": "json_to_uri", "processor_type": "read_uri"},
-    {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
     {"name": "Split a document into page numbers for split tasks", "template_name": "filename_to_splits", "processor_type": "jinja2"},
+    {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
+    {"name": "Convert page text into chunks w/loop", "template_name": "text_filename_to_chunks_loop", "processor_type": "jinja2"},
     {"name": "Split tasks", "template_name": "split_tasks", "processor_type": "split_task"},
     {"name": "Generate keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
     {"name": "Generate a question from text and keyterms", "template_name": "text_keyterms_to_question", "processor_type": "aidict"},

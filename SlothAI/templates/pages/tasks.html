@@ -12,7 +12,7 @@
 
     <div class="rounded-lg border p-3 table-responsive">
         <h4 class="mb-3">Your Tasks</h4>
-        <p>Task are started by sending data to a pipeline's ingestion endpoint. Tasks are cleared after an hour.</p><p>If there is an error in a node, the last node that completed successfully is listed.</p>
+        <p>Task are started by sending data to a pipeline's ingestion endpoint. Tasks are cleared after an hour.</p><p>If there is an error in a node, the last node that ran is listed.</p>
         <div class="text-left">
             <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
                 <i class="fas fa-sync-alt"></i> Reload
@@ -64,17 +64,12 @@
 <script type="text/javascript">
 $(document).ready(function() {
 
-    // Function to store sorting order in a cookie
-    function storeSortingOrderInCookie(order) {
+    function storeSortingOrder(order) {
         document.cookie = "sortingOrder=" + JSON.stringify(order) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
     }
 
-    // Function to load sorting order from the cookie and set the table order
-    function loadSortingOrderFromCookie() {
-        var cookieValue = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('sortingOrder='));
-        
+    function loadSortingOrder() {
+        var cookieValue = document.cookie.split('; ').find(row => row.startsWith('sortingOrder='));
         if (cookieValue) {
             var order = JSON.parse(cookieValue.split('=')[1]);
             if (order) {
@@ -83,82 +78,49 @@ $(document).ready(function() {
         }
     }
 
-    // Sort table
     var table = $('#tasksTable').DataTable({});
-
     var headers = table.columns().header().toArray();
 
     $(headers).on('click', function () {
         var order = table.order();
-        console.log(order); // This will print the current sort order.
-        
-        // Store the sorting order in a cookie
-        storeSortingOrderInCookie(order);
+        storeSortingOrder(order);
     });
 
-    // Load sorting order from cookie on page load
-    loadSortingOrderFromCookie();
+    loadSortingOrder();
 
-    // is it a travesty that I didn't write any of this?
-    let inactivityTimer; // Initialize a timer variable
-
-    // Function to reload the page
-    function reloadPage() {
-      window.location.reload();
-    }
-
-    $('#clearCompleted').click(function() {
-        // Send the DELETE request to the server.
-        $.ajax({
-            url: '/tasks?state=completed',
-            type: 'DELETE',
-            success: function(response) {
-                toastr.success("Completed tasks cleared.");
-                window.location.reload();
-            },
-            error: function(xhr, status, error) {
-                toastr.error("Error clearing tasks.");
-            }
-        });
-    });
-
-    $('#clearErrors').click(function() {
-        // Send the DELETE request to the server.
-        $.ajax({
-            url: '/tasks?state=failed',
-            type: 'DELETE',
-            success: function(response) {
-                toastr.success("Failed tasks cleared.");
-                window.location.reload();
-            },
-            error: function(xhr, status, error) {
-                toastr.error("Error clearing tasks.");
-            }
-        });
-    });
-
-    // Function to start the inactivity timer
-    function startInactivityTimer() {
-      inactivityTimer = setTimeout(reloadPage, 30000); // Reload the page after 1 minute (60000 milliseconds)
-    }
-
-    // Function to reset the inactivity timer
-    function resetInactivityTimer() {
-      clearTimeout(inactivityTimer); // Clear the previous timer
-      startInactivityTimer(); // Start a new timer
-    }
-
-    // Event listeners for mouse and keyboard activity
-    document.addEventListener('mousemove', resetInactivityTimer); // Mouse activity
-    document.addEventListener('keydown', resetInactivityTimer); // Keyboard activity
-
-    // Start the initial timer
-    startInactivityTimer();
-    // Probably not.
-    
     $(function () {
         $("button").tooltip();
     });
+
+    function clearTasks(state, successMessage) {
+      $.ajax({
+        url: '/tasks?state=' + state,
+        type: 'DELETE',
+        success: function (response) {
+          toastr.success(successMessage);
+          window.location.reload();
+        },
+        error: function (xhr, status, error) {
+          toastr.error("Error clearing tasks.");
+        }
+      });
+    }
+
+    $('#clearCompleted').click(function () {
+      clearTasks('completed', "Completed tasks cleared.");
+    });
+
+    $('#clearErrors').click(function () {
+      clearTasks('failed', "Failed tasks cleared.");
+    });
+
+    let t;
+    const r = () => location.reload();
+    const s = () => { clearTimeout(t); t = setTimeout(r, 3e4); };
+    
+    $(document).on('mousemove keydown scroll', s);
+    s();
+
 });
 </script>
 {% endblock %}

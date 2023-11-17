@@ -36,7 +36,7 @@ def random_sentence():
 
 
 @custom_commands.app_template_global()
-def chunk_with_page_filename(texts, filename, length=512, overlap=0):
+def chunk_with_page_filename(texts, filename, length=512, start_page=1, overlap=0):
     # main object
     texts_chunks = []
 
@@ -109,7 +109,7 @@ def chunk_with_page_filename(texts, filename, length=512, overlap=0):
     chunk_numbers = []
     filenames = []
 
-    current_page_number = 1
+    current_page_number = start_page
     current_chunk_number = 1
 
     for text in texts_chunks:

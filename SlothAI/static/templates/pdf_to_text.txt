@@ -1,4 +1,5 @@
 {# Use this template to read a PDF or .txt file and convert it to text #}
+{# This example will serialze PDF processing. Use the deserialized PDF template for faster extraction. #}
 
 {# Input Fields #}
 {# These should not be changed, as they are provided by the task ingestion endpoint for file uploads. #}
