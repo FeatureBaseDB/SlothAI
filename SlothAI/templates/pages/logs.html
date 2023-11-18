@@ -58,14 +58,11 @@ $(document).ready(function() {
         var tdLog = $(this).find("td[data-log");
         var rawData = tdLog.data('log');
 
-        var cleanedData = rawData.slice(2, -1);
-        cleanedData = cleanedData.replace(/\\\n/g, " ");
-        cleanedData = cleanedData.replace(/\\n/g, " ");
-        cleanedData = cleanedData.replace(/\\\'/g, "'");
-        cleanedData = cleanedData.replace(/\\'/g, "'");
-        cleanedData = cleanedData.replace(/\\\"/g, "'");
-        cleanedData = cleanedData.replace(/\\"/g, "'");
-        cleanedData = cleanedData.replace(/\\/g, "");
+        // brute force
+        var cleanedData = rawData.slice(2, -1)
+          .replace(/\\n/g, " ")
+          .replace(/\\\'|\\\"|\\'/g, "'")
+          .replace(/\\/g, "");
 
         var jsonDataObj;
 
@@ -89,7 +86,6 @@ $(document).ready(function() {
             tdLog.find('pre').text(cleanedData);
         }
 
-
         // Loop through all <pre> elements
         $('pre.logEntry').each(function() {
             var pre = $(this);
@@ -100,15 +96,7 @@ $(document).ready(function() {
             }
         });
 
-        let inactivityTimer;
-        function reloadPage() { window.location.reload(); }
-        function startInactivityTimer() { inactivityTimer = setTimeout(reloadPage, 60000); }
-        function resetInactivityTimer() { clearTimeout(inactivityTimer); startInactivityTimer(); }
 
-        document.addEventListener('mousemove', resetInactivityTimer);
-        document.addEventListener('keydown', resetInactivityTimer);
-
-        startInactivityTimer();
     });
 
     // Handle click on the expand icon
@@ -136,36 +124,8 @@ $(document).ready(function() {
         });
     });
 
-    // is it a travesty that I didn't write any of this?
-    let inactivityTimer; // Initialize a timer variable
-
-    // Function to reload the page
-    function reloadPage() {
-      window.location.reload();
-    }
-
-    // Function to start the inactivity timer
-    function startInactivityTimer() {
-      inactivityTimer = setTimeout(reloadPage, 30000); // Reload the page after 1 minute (60000 milliseconds)
-    }
-
-    // Function to reset the inactivity timer
-    function resetInactivityTimer() {
-      clearTimeout(inactivityTimer); // Clear the previous timer
-      startInactivityTimer(); // Start a new timer
-    }
-
-    // Event listeners for mouse and keyboard activity
-    document.addEventListener('mousemove', resetInactivityTimer); // Mouse activity
-    document.addEventListener('keydown', resetInactivityTimer); // Keyboard activity
-
-    // Start the initial timer
-    startInactivityTimer();
-    // Probably not.
-    
-    $(function () {
-        $("button").tooltip();
-    });
+    // reload when not in use
+    let t;const r = () => location.reload();const s = () => { clearTimeout(t); t = setTimeout(r, 3e4); };$(document).on('mousemove keydown scroll', s);s();
 
 });
 </script>
