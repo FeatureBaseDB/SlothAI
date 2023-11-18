@@ -7,16 +7,16 @@ SlothAI is designed for speed.
 
 In SlothAI, pipelines are built with templates and nodes that transform data fields sent to the pipeline. These nodes supports deserialization of calls to AI models, which greatly increase the speed of indexing and querying large amounts of data.
 
-You can try out SlothAI at [FeatureBaseAI](https://ai.featurebase.com/). SlothAI uses [FeatureBase Cloud](https://cloud.featurebase.com/) for storage.
+You can try out SlothAI at [MittaAI](https://mitta.ai/). SlothAI uses [FeatureBase Cloud](https://cloud.featurebase.com/) for storage.
 
 Machine learning box deployment is managed using [Laminoid](https://github.com/FeatureBaseDB/Laminoid).
 
 ## But, Why?
+Individual movements of a sloth are measured and intentional, mirroring the pace of synchronous ETL processes when seen alone. SlothAI's true capability, akin to the combined might of a sloth hoard, becomes apparent when it functions asynchronously, parallelizing inference steps to increase the speed of data transformations.
+
 SlothAI distinguishes itself from other frameworks like LangChain, AutoChain, Auto-GPT, and Ray by focusing on scalable asynchronous inferences coupled with an intuitive UI that simplifies the editing of templates and the management of pipeline flows. SlothAI makes template editing and debugging fun and easy.
 
 SlothAI use a SQL engine (FeatureBase) capable of point lookups, binary set operations, and vector similarity for its storage layers. Tasks are executed within containers on Google Cloud via task queues, and for more demanding inferencing tasks, it orchestrates calls to GPU boxes, streamlining the process of running large model inferences.
-
-Individual movements of a sloth are measured and intentional, mirroring the pace of synchronous ETL processes when seen alone. SlothAI's true capability, akin to the combined might of sloths, becomes apparent when it functions asynchronously, parallelizing inference steps to increase the speed of data transformations.
 
 In the world of data, async ETL's strength is not in the speed of a single process, but in the collective and orchestrated efforts that move mountains of data with remarkable agility.
 
@@ -30,7 +30,7 @@ Templates are the essence of SlothAI's strategy for effective communication with
 ## Storage Opinions
 SlothAI is opinionated, inasmuch that it uses FeatureBase for its SQL processing to handle tabular data retrieval, set operations with a binary tree storage, and vector comparisons with a tuple storage layer. These features, together in one storage layer, are necessary to deliver datasets to machine learning models for prompt augmentation and training data management.
 
-We are working on adding a storage layer for PostgreSQL with pgvector support, and work is underway on a PostgreSQL FeatureBase module for set operations, which will be available in the near future.
+Other storage backends will be added to the system in the future.
 
 ## Pipelines
 SlothAI allows for building powerful ingest pipelines comprising nodes that serve as ETL (Extract, Transform, Load) functions, altering and enriching data fields as they pass through. Each node is capable of executing a transformation, extending one field into multiple fields. 
@@ -64,6 +64,19 @@ Create a `config.py` configuration file in the root directory. Use `config.py.ex
 
 Keys, tokens and IPs are created as needed.
 
+### Dependencies - MacOS
+You will need Xcode installed first before the requirements can be installed with `pip`. To do this on most versions of MacOS do the following:
+
+```
+xcode-select --install
+```
+
+Once the install has finished, you'll need to accept the license:
+
+```
+sudo xcodebuild -license
+```
+
 ### Dependencies - Conda
 Install conda and activate a new environment:
 
@@ -79,7 +92,7 @@ pip3 install -r requirements
 ```
 
 ### Dependencies - FeatureBase
-You will need a FeatureBase cloud account. It's free and requires your email address: https://cloud.featurebase.com/. We're poor, but we do have one friendly guy who may contact you. He's quite smart.
+You will need a FeatureBase cloud account to use the read_fb and write_fb processors. It's free to signup and requires your email address: https://cloud.featurebase.com/.
 
 ### Dependencies - Google Cloud
 You'll need a whole bunch of Google Cloud things done. Enabling AppEngine, Compute, Cloud Tasks, domain names, firewalls and setting up credentials will eventually be documented here.

@@ -2,6 +2,7 @@ import ast
 import re
 import math
 import time
+import base64
 
 from io import BytesIO
 
@@ -143,8 +144,145 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
+
 @processer
-def embedding(node: Dict[str, any], task: Task) -> Task:
+def callback(node: Dict[str, any], task: Task) -> Task:
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+    if not template:
+        raise TemplateNotFoundError(template_id=node.get('template_id'))
+    
+    user = User.get_by_uid(uid=task.user_id)
+    if not user:
+        raise UserNotFoundError(user_id=task.user_id)
+
+    # need to rewrite to allow mapping tokens to the url template
+    # alternately we could require a jinja template processor to be used in front of this to build the url
+    auth_uri = task.document.get('callback_uri')
+
+    # strip secure stuff out of the document
+    document = strip_secure_fields(task.document) # returns document
+
+    keys_to_keep = []
+    if template.get('output_fields'):
+        for field in template.get('output_fields'):
+            for key, value in field.items():
+                if key == 'name':
+                    keys_to_keep.append(value)
+
+        if len(keys_to_keep) == 0:
+            data = document
+        else:
+            data = filter_document(document, keys_to_keep)
+    else:
+        data = document
+
+    # must add node_id and pipe_id
+    data['node_id'] = node.get('node_id')
+    data['pipe_id'] = task.pipe_id
+
+    try:
+        resp = requests.post(auth_uri, data=json.dumps(data))
+        if resp.status_code != 200:
+            message = f'got status code {resp.status_code} from callback'
+            if resp.status_code in retriable_status_codes:
+                raise RetriableError(message)
+            else:
+                raise NonRetriableError(message)
+        
+    except (
+        requests.ConnectionError,
+        requests.HTTPError,
+        requests.Timeout,
+        requests.TooManyRedirects,
+        requests.ConnectTimeout,
+    ) as exception:
+        raise RetriableError(exception)
+    except Exception as exception:
+        raise NonRetriableError(exception)
+
+    return task
+
+
+@processer
+def info_file(node: Dict[str, any], task: Task) -> Task:
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+
+    # user
+    user = User.get_by_uid(uid=task.user_id)
+    uid = user.get('uid')
+
+    # can't do anything without this input
+    if 'filename' not in task.document:
+        raise NonRetriableError("A 'filename' key must be present in the document. Use a string or an array of strings.")
+    else:
+        filename = task.document.get('filename')
+
+    # make lists, like santa
+    if isinstance(filename, str):
+        # If both variables are strings, convert them into lists
+        filename = [filename]
+
+    # verify output fields
+    output_fields = template.get('output_fields')
+    _break = [0,0,0,1] # size, ttl, content_type, pdf_num_pages
+    for index, output_field in enumerate(output_fields):
+        if "content_type" in output_field.get('name'):
+            _break[2] = 1
+        if "file_size_mb" in output_field.get('name'):
+            _break[0] = 1
+        if "ttl" in output_field.get('name'):
+            _break[1] = 1
+        if 0 not in _break:
+            break
+    if 0 in _break:
+        raise NonRetriableError("You must have 'content_type', 'file_size_mg', and 'ttl' defined in output_fields. Optionally, you can use 'pdf_num_pages' for the number of pages in a PDFs.")
+
+    # outputs
+    task.document['file_size_bytes'] = []
+    task.document['ttl'] = []
+    task.document['pdf_num_pages'] = []
+    storage_content_types = []
+
+    # let's get to the chopper
+    for index, file_name in enumerate(filename):
+        # Get the file
+        gcs = storage.Client()
+        bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+        blob = bucket.get_blob(f"{uid}/{file_name}")
+        file_content = blob.download_as_bytes()
+
+        # Get the content type of the file from metadata
+        try:
+            content_type = blob.content_type
+            file_size_bytes = blob.size
+        except:
+            raise NonRetriableError("Can't get the size or content_type from the file in storage.")
+
+        if content_type == "application/pdf":
+            # Create a BytesIO object for the PDF content
+            pdf_content_stream = BytesIO(file_content)
+            pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
+            pdf_num_pages = len(pdf_reader.pages)
+            task.document['pdf_num_pages'].append(pdf_num_pages)
+        else:
+            # we must add something even if it's not a PDF
+            task.document['pdf_num_pages'].append(-1)
+
+        storage_content_types.append(content_type)
+        task.document['file_size_bytes'].append(file_size_bytes)
+        task.document['ttl'].append(-1) # fix this
+
+    # handle existing content_type in the document
+    if not task.document['content_type'] or not isinstance(task.document.get('content_type'), list):
+        task.document['content_type'] = storage_content_types
+
+    return task
+
+
+@processer
+def split_task(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
     input_fields = template.get('input_fields')
@@ -154,6 +292,112 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
     if not output_fields:
         raise NonRetriableError("split_task processor: output fields required")
 
+    inputs  = [n['name'] for n in input_fields]
+    outputs = [n['name'] for n in output_fields] 
+
+    batch_size = node.get('extras', {}).get('batch_size', None)
+
+    task_service = app.config['task_service']
+
+    # batch_size must be in extras
+    if not batch_size:
+        raise NonRetriableError("split_task processor: batch_size must be specified in extras!")
+    
+    try:
+        batch_size = int(batch_size)
+    except Exception as e:
+        raise NonRetriableError("split_task processor: batch size must be an integer")
+
+    # this call is currently required to update split status
+    
+    try:
+        task_stored = task_service.fetch_tasks(task_id=task.id)
+        task_stored = task_stored[0]
+        task.split_status = task_stored['split_status']
+    except Exception as e:
+        raise NonRetriableError(f"getting task by ID but got none: {e}")
+    # task.refresh_split_status()
+    
+    # all input / output fields should be lists of the same length to use split_task
+    total_sizes = []
+    for output in outputs:
+        if output in inputs:
+            field = task.document[output]
+            if not isinstance(field, list):
+                raise NonRetriableError(f"split_task processor: output fields must be list type: got {type(field)}")
+
+            # if this task was partially process, we need to truncate the data
+            # to only contain the data that hasn't been split.
+            if task.split_status != -1:
+                total_sizes.append(len(task.document[output][task.split_status:]))
+                del task.document[output][:task.split_status]
+            else:
+                total_sizes.append(len(field))
+
+        else:
+            raise NonRetriableError(f"split_task processor: all output fields must be taken from input fields: output field {output} was not found in input fields.")
+
+    if not all_equal(total_sizes):
+        raise NonRetriableError("split_task processor: len of fields must be equal to re-batch a task")
+
+    app.logger.info(f"Split Task: Task ID: {task.id}. Task Size: {total_sizes[0]}. Batch Size: {batch_size}. Number of Batches: {math.ceil(total_sizes[0] / batch_size)}. Task split status was set to {task.split_status}.")
+
+    new_task_count = math.ceil(total_sizes[0] / batch_size)
+
+    # split the data and re-task
+    try:
+        for i in range(new_task_count):
+
+            task_stored = task_service.fetch_tasks(task_id=task.id)[0] # not safe
+
+            if not task_service.is_valid_state_for_process(task_stored['state']):
+                raise services.InvalidStateForProcess(task_stored['state'])
+
+            batch_data = {}
+            for field in outputs:
+                batch_data[field] = task.document[field][:batch_size]
+                del task.document[field][:batch_size]
+
+            new_task = Task(
+                id = random_string(),
+                user_id=task.user_id,
+                pipe_id=task.pipe_id,
+                nodes=task.nodes[1:],
+                document=batch_data,
+                created_at=datetime.datetime.utcnow(),
+                retries=0,
+                error=None,
+                state=TaskState.RUNNING,
+                split_status=-1
+            )
+
+            # create new task and queue it      
+            task_service.create_task(new_task)
+
+            # commit status of split on original task
+            task.split_status = (i + 1) * batch_size
+            task_service.update_task(task_id=task.id, split_status=task.split_status)
+
+            app.logger.info(f"Split Task: spawning task {i + 1} of projected {new_task_count}. It's ID is {new_task.id}")
+
+    except services.InvalidStateForProcess as e:
+        app.logger.warn(f"Task with ID {task.id} was being split. State was changed during that process.")
+        raise e
+
+    except Exception as e:
+        app.logger.warn(f"Task with ID {task.id} was being split. An exception was raised during that process.")
+        raise NonRetriableError(e)
+
+    # the initial task doesn't make it past split_task. so remove the rest of the nodes
+    task.nodes = [task.next_node()]
+    return task
+
+
+@processer
+def embedding(node: Dict[str, any], task: Task) -> Task:
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+    
     extras = node.get('extras', None)
     if not extras:
         raise NonRetriableError("embedding processor: extras not found but is required")
@@ -162,9 +406,11 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
     if not model:
         raise NonRetriableError("embedding processor: model not found in extras but is required")
 
+    input_fields = template.get('input_fields')
     if not input_fields:
         raise NonRetriableError("embedding processor: input_fields required.")
     
+    output_fields = template.get('output_fields')
     if not output_fields:
         raise NonRetriableError("embedding processor: output_fields required.")
 
@@ -434,7 +680,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
         raise NonRetriableError("The aidict processor expects a supported model.")
 
 
-# look at a picture and get objects
+# look at a picture and get stuff
 @processer
 def aivision(node: Dict[str, any], task: Task) -> Task:
     # Output and input fields
@@ -445,6 +691,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
+    model = task.document.get('model', "gv-objects")
 
     # use the first output field
     try:
@@ -493,22 +740,73 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 
     # loop through the detection filenames
     for index, file_name in enumerate(filename):
-        # Now run the code for image processing
-        image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
+        if model == "gv-objects":
+            # Now run the code for image processing
+            image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
 
-        client = vision.ImageAnnotatorClient()
-        response = client.annotate_image({
-            'image': {'source': {'image_uri': image_uri}},
-            'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
-        })
+            client = vision.ImageAnnotatorClient()
+            response = client.annotate_image({
+                'image': {'source': {'image_uri': image_uri}},
+                'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
+            })
 
-        # Get a list of detected labels (objects)
-        labels = [label.description.lower() for label in response.label_annotations]
+            # Get a list of detected labels (objects)
+            labels = [label.description.lower() for label in response.label_annotations]
 
-        # Append the labels list to task.document[output_field]
-        if not task.document.get(output_field):
-            task.document[output_field] = []
-        task.document[output_field].append(labels)
+            # Append the labels list to task.document[output_field]
+            if not task.document.get(output_field):
+                task.document[output_field] = []
+            task.document[output_field].append(labels)
+
+        elif model == "gpt-scene":
+            # Get the document
+            gcs = storage.Client()
+            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+            blob = bucket.blob(f"{uid}/{file_name}")
+
+            # download to file
+            content = blob.download_as_bytes()
+            base64_data = base64.b64encode(content).decode('utf-8')
+
+            headers = {
+              "Content-Type": "application/json",
+              "Authorization": f"Bearer {task.document.get('openai_token')}"
+            }
+
+            payload = {
+              "model": "gpt-4-vision-preview",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What’s in this image?"
+                    },
+                    {
+                      "type": "image_url",
+                      "image_url": {
+                        "url": f"data:image/jpeg;base64,{base64_data}"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "max_tokens": 300
+            }
+            response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+            # Append the labels list to task.document[output_field]
+            try:
+                scene = response.json().get('choices')[0].get('message').get('content')
+            except:
+                raise NonRetriableError("Couldn't decode a response from the AI.")
+
+            if not task.document.get(output_field):
+                task.document[output_field] = []
+            task.document[output_field].append(scene)
+    
+        else:
+            raise NonRetriableError("Vision model not found. Check extras.")
 
     return task
 
@@ -765,177 +1063,6 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
         # update the document
         task.document[output_field].append(texts)
     
-    return task
-
-
-@processer
-def callback(node: Dict[str, any], task: Task) -> Task:
-    template_service = app.config['template_service']
-    template = template_service.get_template(template_id=node.get('template_id'))
-    if not template:
-        raise TemplateNotFoundError(template_id=node.get('template_id'))
-    
-    user = User.get_by_uid(uid=task.user_id)
-    if not user:
-        raise UserNotFoundError(user_id=task.user_id)
-
-    # need to rewrite to allow mapping tokens to the url template
-    # alternately we could require a jinja template processor to be used in front of this to build the url
-    auth_uri = task.document.get('callback_uri')
-
-    # strip secure stuff out of the document
-    document = strip_secure_fields(task.document) # returns document
-
-    keys_to_keep = []
-    if template.get('output_fields'):
-        for field in template.get('output_fields'):
-            for key, value in field.items():
-                if key == 'name':
-                    keys_to_keep.append(value)
-
-        if len(keys_to_keep) == 0:
-            data = document
-        else:
-            data = filter_document(document, keys_to_keep)
-    else:
-        data = document
-
-    # must add node_id and pipe_id
-    data['node_id'] = node.get('node_id')
-    data['pipe_id'] = task.pipe_id
-
-    try:
-        resp = requests.post(auth_uri, data=json.dumps(data))
-        if resp.status_code != 200:
-            message = f'got status code {resp.status_code} from callback'
-            if resp.status_code in retriable_status_codes:
-                raise RetriableError(message)
-            else:
-                raise NonRetriableError(message)
-        
-    except (
-        requests.ConnectionError,
-        requests.HTTPError,
-        requests.Timeout,
-        requests.TooManyRedirects,
-        requests.ConnectTimeout,
-    ) as exception:
-        raise RetriableError(exception)
-    except Exception as exception:
-        raise NonRetriableError(exception)
-
-    return task
-
-
-@processer
-def split_task(node: Dict[str, any], task: Task) -> Task:
-    template_service = app.config['template_service']
-    template = template_service.get_template(template_id=node.get('template_id'))
-    input_fields = template.get('input_fields')
-    output_fields = template.get('output_fields')
-    if not input_fields:
-        raise NonRetriableError("split_task processor: input fields required")
-    if not output_fields:
-        raise NonRetriableError("split_task processor: output fields required")
-
-    inputs  = [n['name'] for n in input_fields]
-    outputs = [n['name'] for n in output_fields] 
-
-    batch_size = node.get('extras', {}).get('batch_size', None)
-
-    task_service = app.config['task_service']
-
-    # batch_size must be in extras
-    if not batch_size:
-        raise NonRetriableError("split_task processor: batch_size must be specified in extras!")
-    
-    try:
-        batch_size = int(batch_size)
-    except Exception as e:
-        raise NonRetriableError("split_task processor: batch size must be an integer")
-
-    # this call is currently required to update split status
-    
-    try:
-        task_stored = task_service.fetch_tasks(task_id=task.id)
-        task_stored = task_stored[0]
-        task.split_status = task_stored['split_status']
-    except Exception as e:
-        raise NonRetriableError(f"getting task by ID but got none: {e}")
-    # task.refresh_split_status()
-    
-    # all input / output fields should be lists of the same length to use split_task
-    total_sizes = []
-    for output in outputs:
-        if output in inputs:
-            field = task.document[output]
-            if not isinstance(field, list):
-                raise NonRetriableError(f"split_task processor: output fields must be list type: got {type(field)}")
-
-            # if this task was partially process, we need to truncate the data
-            # to only contain the data that hasn't been split.
-            if task.split_status != -1:
-                total_sizes.append(len(task.document[output][task.split_status:]))
-                del task.document[output][:task.split_status]
-            else:
-                total_sizes.append(len(field))
-
-        else:
-            raise NonRetriableError(f"split_task processor: all output fields must be taken from input fields: output field {output} was not found in input fields.")
-
-    if not all_equal(total_sizes):
-        raise NonRetriableError("split_task processor: len of fields must be equal to re-batch a task")
-
-    app.logger.info(f"Split Task: Task ID: {task.id}. Task Size: {total_sizes[0]}. Batch Size: {batch_size}. Number of Batches: {math.ceil(total_sizes[0] / batch_size)}. Task split status was set to {task.split_status}.")
-
-    new_task_count = math.ceil(total_sizes[0] / batch_size)
-
-    # split the data and re-task
-    try:
-        for i in range(new_task_count):
-
-            task_stored = task_service.fetch_tasks(task_id=task.id)[0] # not safe
-
-            if not task_service.is_valid_state_for_process(task_stored['state']):
-                raise services.InvalidStateForProcess(task_stored['state'])
-
-            batch_data = {}
-            for field in outputs:
-                batch_data[field] = task.document[field][:batch_size]
-                del task.document[field][:batch_size]
-
-            new_task = Task(
-                id = random_string(),
-                user_id=task.user_id,
-                pipe_id=task.pipe_id,
-                nodes=task.nodes[1:],
-                document=batch_data,
-                created_at=datetime.datetime.utcnow(),
-                retries=0,
-                error=None,
-                state=TaskState.RUNNING,
-                split_status=-1
-            )
-
-            # create new task and queue it      
-            task_service.create_task(new_task)
-
-            # commit status of split on original task
-            task.split_status = (i + 1) * batch_size
-            task_service.update_task(task_id=task.id, split_status=task.split_status)
-
-            app.logger.info(f"Split Task: spawning task {i + 1} of projected {new_task_count}. It's ID is {new_task.id}")
-
-    except services.InvalidStateForProcess as e:
-        app.logger.warn(f"Task with ID {task.id} was being split. State was changed during that process.")
-        raise e
-
-    except Exception as e:
-        app.logger.warn(f"Task with ID {task.id} was being split. An exception was raised during that process.")
-        raise NonRetriableError(e)
-
-    # the initial task doesn't make it past split_task. so remove the rest of the nodes
-    task.nodes = [task.next_node()]
     return task
 
 
@@ -1254,6 +1381,11 @@ def process_input_fields(task_document, input_fields):
                 updated_document[field_name] = [value]
     
     return updated_document
+
+
+# Function to encode the image
+def encode_image(image_file):
+    return base64.b64encode(image_file.read()).decode('utf-8')
 
 
 def validate_document(node, task: Task, validate: DocumentValidator):

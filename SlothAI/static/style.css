@@ -117,6 +117,10 @@ div.login_form h2 {
   height:  20px;
 }
 
+.homelead a{
+  color: white;
+}
+
 .badge-dark {
   padding-top: 5px;
   height: 24px;
@@ -128,25 +132,34 @@ div.login_form h2 {
 }
 
 .highlighted-link {
-  background-color: #393758;
+  background-color: #628395;
 }
 
 .text-muted {
   margin-bottom: 14px;
-}
-/* Navbar and sidebar */
-.navbar,
-.sidebar {
-  background-color: #131138;
 }
 
 .navbar {
   height: 56px !important;
 }
 
+.background {
+  background-color: #444; 
+  color: white; 
+  text-align: center; 
+  padding-top: 83px; 
+  padding-bottom: 83px;
+}
+
+/* Navbar and sidebar */
+.navbar,
+.sidebar {
+  background-color: #444;
+}
+
 /* Sidebar styles */
 .sidebar {
-  background-color: #131138;
+  background-color: #444;
   height: 100%;
   width: 15%;
   max-width: 192px;
@@ -201,7 +214,7 @@ div.login_form h2 {
 
 .page_heading {
   padding-bottom: 14px;
-  color: #0000B7;
+  color: #4e6b82;
 }
 
 /* Code and pre styles */

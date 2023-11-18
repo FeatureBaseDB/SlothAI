@@ -14,11 +14,9 @@
     <div class="col-sm-6">
       <div class="login_form">
         <div style="display: flex; align-items: center;">
-          
-          <h3 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">{{brand.get('name')}}</h2>
+          <h3 style="font-family: Roboto,sans-serif;">{{brand.get('name')}}</h3>
         </div>
 
-        <p class="lead">Build powerful AI pipelines with <a href="{{brand.get('service_url')}}">{{brand.get(('service'))}}</a>.</p>
         <form autocomplete="off" id="{{app_id}}" action="/login" method="post">
           <div class="form-group">
             <label for="dbid">Get your <a href="https://cloud.featurebase.com/databases" target="_blank">database ID</a>...</label>
