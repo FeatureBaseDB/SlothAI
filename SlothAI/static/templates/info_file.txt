@@ -4,7 +4,7 @@
 input_fields = [{'name': "filename", 'type': "string"}]
 
 {# The output_fields expected from the node processor using this template %}
-output_fields = [{'name': "content_type", 'type': "strings"},{'name': "file_size_mb", 'type': "ints"},{'name': "ttl", 'type': "ints"},{'name': "pdf_num_pages", 'type': "ints"}]]
+output_fields = [{'name': "content_type", 'type': "strings"},{'name': "file_size_bytes", 'type': "ints"},{'name': "ttl", 'type': "ints"},{'name': "pdf_num_pages", 'type': "ints"}]]
 
 {# Define the info_file processor #}
 extras = {"processor": "info_file"}

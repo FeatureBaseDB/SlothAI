@@ -221,8 +221,9 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
 
     # make lists, like santa
     if isinstance(filename, str):
-        # If both variables are strings, convert them into lists
+        # If filename is a string, convert it into a list
         filename = [filename]
+        task.document['filename'] = filename
 
     # verify output fields
     output_fields = template.get('output_fields')
@@ -230,15 +231,15 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
     for index, output_field in enumerate(output_fields):
         if "content_type" in output_field.get('name'):
             _break[2] = 1
-        if "file_size_mb" in output_field.get('name'):
+        if "file_size_bytes" in output_field.get('name'):
             _break[0] = 1
         if "ttl" in output_field.get('name'):
             _break[1] = 1
         if 0 not in _break:
             break
     if 0 in _break:
-        raise NonRetriableError("You must have 'content_type', 'file_size_mg', and 'ttl' defined in output_fields. Optionally, you can use 'pdf_num_pages' for the number of pages in a PDFs.")
-
+        raise NonRetriableError("You must have 'content_type', 'file_size_bytes', and 'ttl' defined in output_fields. Optionally, you can use 'pdf_num_pages' for the number of pages in a PDFs.")
+    
     # outputs
     task.document['file_size_bytes'] = []
     task.document['ttl'] = []
@@ -615,7 +616,6 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
         # Loop over iterator field list, or if False, just loop once
         for outer_index, item in enumerate(iterator):
-            print(f"================= outer index is: {outer_index} ==================")
             # if the item is not a list, we make it one
             if not isinstance(item, list):
                 item = [item]
@@ -623,7 +623,6 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
             ai_dicts = []
             # loop over inner list
             for inner_index in range(len(item)):
-                print(f"================= inner index is: {inner_index} ==================")
                 # set the fields for the template's loop inclusions, if it has any
                 task.document['outer_index'] = outer_index
                 task.document['inner_index'] = inner_index
@@ -653,8 +652,6 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
                     if key not in result_dict:
                         result_dict[key] = []
                     result_dict[key].append(value)
-
-            print(result_dict)
             
             for field in output_fields:
                 field_name = field['name']
@@ -672,7 +669,6 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
         task.document.pop('outer_index')
         task.document.pop('inner_index')
-        print(task.document)
 
         return task
 
