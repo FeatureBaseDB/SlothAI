@@ -9,6 +9,8 @@ import io
 import zlib
 import base64
 
+import slack
+
 import openai
 
 from coolname import generate_slug
@@ -19,6 +21,13 @@ from flask_login import current_user
 
 from google.cloud import storage
 
+# don't call yer methods Client, dorks
+from twilio.rest import Client as Twilio
+
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+
+# random crap
 def random_number(size=6, chars=string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
@@ -34,6 +43,67 @@ def random_name(size=3):
 def generate_token(size=30):
     # generate a secrets token, less the dashes for better copy pasta
     return secrets.token_urlsafe(size).replace('-','')
+
+
+# sms user
+def sms_user(phone_e164, message="Just saying Hi!"):
+    if app.config['DEV'] == "True":
+        print(phone_e164)
+        print(message)
+        response = {'status': "success", 'message': "sending code via dev console"}
+    else:
+        response = {'status': "success", 'message': "sending code via twilio"}
+        try:
+            client = Twilio(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
+            message = client.messages.create(
+                body = message,
+                from_ = app.config['TWILIO_NUMBER'],
+                to = phone_e164
+            )
+            return True
+        except Exception as ex:
+            if app.config['DEV'] == "True":
+                print(ex)
+            else:
+                response = {'status': "failed", 'message': "sending code via twilio"}
+
+    return response
+
+
+# email user
+def email_user(email, subject="subject", html_content="content"):
+    if app.config['DEV'] == "True":
+        response = {'status': "success", 'message': "sending code via dev console"}
+    else:
+        response = {'status': "success", 'message': "sending code via sendmail"}
+        message = Mail(
+            from_email='noreply@%s' % app.config['APP_DOMAIN'],
+            to_emails=email,
+            subject='%s' % subject,
+            html_content=html_content
+        )
+        try:
+            sg = SendGridAPIClient(app.config['SENDGRID_API_KEY'])
+            response = sg.send(message)
+
+        except Exception as ex:
+            if app.config['DEV'] == "True":
+                print(ex)
+            
+            response = {'status': "fail", 'message': "exception was %s" % ex}
+
+    return response
+
+
+# slack connection (for Mitta's slack, not the bot)
+def slacker(channel="growth", text="text"):
+    try:
+        client = slack.WebClient(token=app.config['SLACK_TOKEN'])
+        text = f"Incoming message from MittaAI: {text} \n"
+        client.chat_postMessage(channel="growth", text=text)
+    except Exception as ex:
+        print(ex)
+        pass
 
 
 def handle_quotes(object):

@@ -72,6 +72,10 @@ def node_create():
         if 'node' in json_data and isinstance(json_data['node'], dict) and json_data['node'].get('template_id', '').lower() != 'none':
             node_data = json_data['node']
 
+            if node_data.get('processor') == "read_fb" or node_data.get('processor') == "write_fb":
+                if not current_user.dbid:
+                    return jsonify({"error": "No connection.", "message": "You don't have a database connected. Navigate to settings and connect a database."}), 400
+
             template_service = app.config['template_service']
             template = template_service.get_template(template_id=node_data.get('template_id'))
 

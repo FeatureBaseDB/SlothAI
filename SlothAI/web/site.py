@@ -83,6 +83,7 @@ def get_brand(app):
     brand['youtube_url'] = app.config['BRAND_YOUTUBE_URL']
     return brand
 
+
 @site.route('/sitemap.txt')
 def sitemap():
     brand = get_brand(app)
@@ -109,6 +110,16 @@ def home():
         username = "anonymous"
 
     return render_template('pages/index.html', username=username, brand=get_brand(app))
+
+
+@site.route('/legal', methods=['GET'])
+def legal():
+    try:
+        username = current_user.name
+    except:
+        username = "anonymous"
+
+    return render_template('pages/privacy.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
 
 
 @site.route('/pipelines', methods=['GET'])

@@ -18,15 +18,61 @@
 
         <button id="resetToken" class="btn btn-warning"><i class="fas fa-recycle"></i> Reset</button>
         <p></p>
-        <p>If you reset your token, you will need to update any default callbacks in your pipelines.</p>        
+        <p>If you reset your token, you will need to update any default callbacks in your pipelines. This will be fixed in the near future.</p>        
         <hr/>
+        {% if dbid %}
+        <p>Your FeatureBase account is connected to MittaAI. Click the ID to disconnect.</p>
+        <button type="button" id="removeDatabaseButton" class="btn btn-danger">
+            <i class="fas fa-eraser"></i> {{dbid}}
+        </button>
+        <p></p>
+        <p class="card-text"><strong>Note:</strong> Disconnecting from your FeatureBase account or deleting your account will not affect your data on FeatureBase Cloud. You may elect to remove it manually <a href="https://cloud.featurebase.com/">there</a>.</p>
+        {% else %}
+        <h5>Connect Database and Vector Store</h5>
+        <p>To store and read data from pipelines, you will need to connect a <a href="https://featurebase.com/cloud">FeatureBase Cloud</a> account.</p><p>If you don't have a FeatureBase Cloud account, you may create one during the process.</p>
+        <button type="button" id="addDatabaseButton" class="btn btn-success" data-toggle="modal" data-target="#fbFormModal">
+            <i class="fas fa-plus"></i> Connect FeatureBase
+        </button>
+        {% endif %}
+        <hr/>
+        <h5>Delete Your Account</h5>
         <p>The process of deleting your login is irreversible. We'd hate to see you go.</p>
         
-        <button class="btn btn-danger delete-button" data-table-id="{{ dbid }}">Delete Login</button>
+        <button class="btn btn-danger delete-button" data-table-id="{{ dbid }}"><i class="fas fa-trash"></i> Delete Account</button>
         <p></p>
-    	<p class="card-text"><strong>Note:</strong> Your data on FeatureBase Cloud will be left intact, and you may elect to remove it manually there.</p>
     </div>
 </div>
+
+<div class="modal fade" id="fbFormModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Connect a Database</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Add your node form fields here -->
+                <div class="form-group">
+                    <label for="dbid">Get your <a href="https://cloud.featurebase.com/databases" target="_blank">database ID</a>...</label>
+                    <input type="text" class="form-control" placeholder="Enter your database ID" id="dbid">
+                </div>
+                <div class="form-group">
+                    <label for="db_token">Get your <a href="https://cloud.featurebase.com/configuration/api-keys" target="_blank">API token (secret)</a>...</label>
+                    <input type="password" class="form-control" placeholder="Enter your API token (secret)" id="db_token">
+                </div>
+                <p><strong>Note:</strong> Ensure you copy the <strong>secret</strong> at the bottom of the API key modal on FeatureBase. If you try to use the token ID for the database ID or the token fileds here, it won't work! </p> 
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="addDatabase"><i class="fas fa-plus"></i> Connect</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 {% endblock %}
 
 {% block javascript %}
@@ -56,7 +102,6 @@ $(document).ready(function() {
     });
 
     $("#resetToken").click(function() {
-    	console.log("here")
         $.ajax({
             url: '/token_reset',
             type: 'POST',
@@ -69,6 +114,57 @@ $(document).ready(function() {
                 toastr.error("Error resetting token. Very strange.");
             }
         });
+    });
+
+    $("#addDatabase").click(function() {
+        var dbid = $("#dbid").val();
+        var db_token = $("#db_token").val();
+
+        if (!dbid || !db_token) {
+            toastr.error("You must enter values for the fields.");
+            return False
+        }
+
+        var postData = {
+            dbid: dbid,
+            db_token: db_token
+        };
+        $.ajax({
+            url: '/connect',
+            type: 'POST',
+            data: JSON.stringify(postData),
+            contentType: 'application/json',
+            success: function(data) {
+                $('#fbFormModal').modal('hide');
+                toastr.success("FeatureBase account connected.")
+                window.location.reload() 
+            },
+            error: function(error) {
+                console.log(error)
+                toastr.error('Error connecting FeatureBase. ' + error.responseJSON.error);
+            }
+        });
+    });
+
+    $("#removeDatabaseButton").click(function() {
+        if (confirm("Are you sure you want to disconnect the database? This may affect running pipelines.")) {
+            // Get the dbid from the data attribute of the button
+            var dbid = $(this).data('table-id');
+            
+            // Send a DELETE request to the /disconnect/<dbid> endpoint
+            $.ajax({
+                url: '/disconnect/' + dbid,
+                type: 'DELETE',
+                success: function(data) {
+                    toastr.info("Database connection removed.")
+                    window.location.reload()
+                },
+                error: function(error) {
+                    toastr.error('This is likely frustrating. ' + error.responseJSON.error);
+                    window.location.reload()
+                }
+            });
+        }
     });
 });
 </script>

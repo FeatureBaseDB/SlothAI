@@ -3,6 +3,6 @@ service_account: sloth-ai@appspot.gserviceaccount.com
 runtime: python38
 
 automatic_scaling:
-  min_instances: 1
+  min_instances: 3
   max_instances: 1000
-  max_concurrent_requests: 1 
+  max_concurrent_requests: 2

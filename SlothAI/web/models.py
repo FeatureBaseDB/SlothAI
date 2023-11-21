@@ -61,6 +61,16 @@ class Template(ndb.Model):
     processor = ndb.StringProperty()
     created = ndb.DateTimeProperty()
 
+    @classmethod
+    @ndb_context_manager
+    def delete_by_uid(cls, uid):
+        templates = cls.query(cls.uid == uid).fetch()
+        if templates:
+            for template in templates:
+                template.key.delete()
+            return True
+        return False
+
     @staticmethod
     def compress_text(text):
         compressed_bytes = zlib.compress(text.encode('utf-8'))
@@ -201,7 +211,17 @@ class Node(ndb.Model):
     processor = ndb.StringProperty()
     template_id = ndb.StringProperty()
     extras = ndb.JsonProperty() # holds model flavor, tokens, etc.
-    
+
+    @classmethod
+    @ndb_context_manager
+    def delete_by_uid(cls, uid):
+        nodes = cls.query(cls.uid == uid).fetch()
+        if nodes:
+            for node in nodes:
+                node.key.delete()
+            return True
+        return False
+
     @classmethod
     @ndb_context_manager
     def create(cls, name, uid, extras, processor, template_id):
@@ -326,12 +346,31 @@ class Node(ndb.Model):
             return False
 
 
+    @classmethod
+    @ndb_context_manager
+    def delete_by_pipe_id(cls, pipe_id):
+        pipe = cls.query(cls.pipe_id == pipe_id).get()
+        if pipe:
+            pipe.key.delete()
+            return True
+        return False
+
 class Pipeline(ndb.Model):
     pipe_id = ndb.StringProperty()
     uid = ndb.StringProperty()
     name = ndb.StringProperty()
     node_ids = ndb.JsonProperty()
     created = ndb.DateTimeProperty()
+
+    @classmethod
+    @ndb_context_manager
+    def delete_by_uid(cls, uid):
+        pipes = cls.query(cls.uid == uid).fetch()
+        if pipes:
+            for pipe in pipes:
+                pipe.key.delete()
+            return True
+        return False
 
     @classmethod
     @ndb_context_manager
@@ -411,6 +450,7 @@ class Pipeline(ndb.Model):
             return True
         return False
 
+
 # this needs to go to Laminoid
 class Box(ndb.Model):
     box_id = ndb.StringProperty()
@@ -479,15 +519,27 @@ class User(flask_login.UserMixin, ndb.Model):
     updated = ndb.DateTimeProperty()
     expires = ndb.DateTimeProperty()
 
-    # auth settings and log
+    # phone settings
+    phone = ndb.StringProperty()
+    phone_code = ndb.StringProperty(default=False)
+    failed_2fa_attempts = ndb.IntegerProperty(default=0)
+
+    # email actions
+    email = ndb.StringProperty()
+    mail_token = ndb.StringProperty()
+    mail_confirm = ndb.BooleanProperty(default=False)
+    mail_tries = ndb.IntegerProperty(default=0)
+
+    # database settings
     dbid = ndb.StringProperty()
     db_token = ndb.StringProperty()
-    admin = ndb.BooleanProperty()
 
     # status
     authenticated = ndb.BooleanProperty(default=False)
     active = ndb.BooleanProperty(default=True)
     anonymous = ndb.BooleanProperty(default=False)
+    admin = ndb.BooleanProperty()
+    account_type = ndb.StringProperty(default="free")
 
     # API use
     api_token = ndb.StringProperty()
@@ -505,6 +557,11 @@ class User(flask_login.UserMixin, ndb.Model):
     def is_anonymous(self):
         return self.anonymous
 
+    def has_phone(self):
+        if self.phone != "+1":
+            return True
+        return False
+
     @classmethod
     @ndb_context_manager
     def token_reset(cls, uid):
@@ -515,22 +572,42 @@ class User(flask_login.UserMixin, ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def create(cls, dbid="", db_token=""):
+    def create(cls, email="noreply@mitta.ai", phone="+1"):
         name = random_name(3)
         uid = random_string(size=17)
         user = cls(
-            uid=uid,
-            name=name,
-            created=datetime.datetime.utcnow(),
-            updated=datetime.datetime.utcnow(),
-            expires=datetime.datetime.utcnow() + datetime.timedelta(days=15),
-            admin=False,
-            dbid=dbid,
-            db_token=db_token,
-            api_token=generate_token()
+            uid = uid,
+            name = name,
+            email = email,
+            account_type = "free",
+            phone = phone,
+            phone_code = generate_token(),
+            created = datetime.datetime.utcnow(),
+            updated = datetime.datetime.utcnow(),
+            expires = datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            admin = False,
+            mail_token = generate_token(),
+            api_token = generate_token()
         )
         user.put()
-        return cls.query(cls.dbid == dbid).get().to_dict()
+        return cls.query(cls.email == email).get()
+
+    @classmethod
+    @ndb_context_manager
+    def bump_mail(cls, uid, tries):
+        user = cls.query(cls.uid == uid).get()
+        user.mail_tries = tries
+        user.put()
+        return user.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def update_db(cls, uid=None, dbid="", db_token=""):
+        user = cls.query(cls.uid == uid).get()
+        user.dbid = dbid
+        user.db_token = db_token
+        user.put()
+        return user.to_dict()
 
     @classmethod
     @ndb_context_manager
@@ -554,6 +631,11 @@ class User(flask_login.UserMixin, ndb.Model):
     def get_by_name(cls, name):
         result = cls.query(cls.name == name).get()
         return result.to_dict() if result else None
+
+    @classmethod
+    def get_by_email(cls, email):
+        with client.context():
+            return cls.query(cls.email == email).get()
 
     @classmethod
     @ndb_context_manager
@@ -581,6 +663,11 @@ class User(flask_login.UserMixin, ndb.Model):
         user.put()
         
         return user.to_dict() if user else None
+
+    @classmethod
+    def get_by_mail_token(cls, mail_token):
+        with client.context():
+            return cls.query(cls.mail_token == mail_token).get()
 
 
 class Log(flask_login.UserMixin, ndb.Model):
