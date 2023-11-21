@@ -15,7 +15,7 @@ from itertools import groupby
 
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
-from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage_requests
+from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage_requests, split_image_by_height, download_as_bytes
 from SlothAI.lib.template import Template
 
 from typing import Dict
@@ -225,7 +225,7 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
         filename = [filename]
         task.document['filename'] = filename
 
-    # verify output fields
+    # verify output fields steampunk style
     output_fields = template.get('output_fields')
     _break = [0,0,0,1] # size, ttl, content_type, pdf_num_pages
     for index, output_field in enumerate(output_fields):
@@ -736,6 +736,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 
     # loop through the detection filenames
     for index, file_name in enumerate(filename):
+        # models are gv-objects, gpt-scene, and gv-ocr
         if model == "gv-objects":
             # Now run the code for image processing
             image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
@@ -764,6 +765,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
             content = blob.download_as_bytes()
             base64_data = base64.b64encode(content).decode('utf-8')
 
+            # move this to util and clean up
             headers = {
               "Content-Type": "application/json",
               "Authorization": f"Bearer {task.document.get('openai_token')}"
@@ -791,6 +793,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
               "max_tokens": 300
             }
             response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+            
             # Append the labels list to task.document[output_field]
             try:
                 scene = response.json().get('choices')[0].get('message').get('content')
@@ -801,6 +804,45 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
                 task.document[output_field] = []
             task.document[output_field].append(scene)
     
+        elif model == "gv-ocr":
+            # Now run the code for image processing
+            image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
+
+            # Download the file contents as bytes
+            content = download_as_bytes(uid,file_name)
+
+            # Split the image into segments by height
+            image_segments = split_image_by_height(BytesIO(content))
+
+            # Initialize the Vision API client
+            vision_client = vision.ImageAnnotatorClient()
+
+            _texts = [] # array by image segment (page)
+
+            try:
+                for i, segment_bytesio in enumerate(image_segments):
+                    # Create a vision.Image object for each segment
+                    segment_image = vision.Image(content=segment_bytesio.read())
+
+                    # Detect text in the segment
+                    response = vision_client.document_text_detection(image=segment_image)
+
+                    # Get text annotations for the segment
+                    texts = response.text_annotations
+
+                    # Extract only the descriptions (the actual text)
+                    for text in texts:
+                        # append it to our new array
+                        _texts.append(text.description)
+                        break
+
+            except Exception as ex:
+                raise NonRetriableError(f"Something went wrong with character detection. Contact support: {ex}")
+
+            if not task.document.get(output_field):
+                task.document[output_field] = []
+            task.document[output_field].append(_texts)
+
         else:
             raise NonRetriableError("Vision model not found. Check extras.")
 

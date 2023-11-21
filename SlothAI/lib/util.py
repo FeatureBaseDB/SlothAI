@@ -171,6 +171,64 @@ def load_from_storage(uid, filename):
 
     return buffer
 
+def download_as_bytes(uid, filename):
+    gcs = storage.Client()
+    bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+    blob = bucket.blob("%s/%s" % (uid, filename))
+
+    # Download the file contents as bytes
+    content = blob.download_as_bytes()
+    return content
+
+from PIL import Image
+from io import BytesIO
+
+def split_image_by_height(image_bytesio, output_format='PNG', segment_height=8192):
+    """
+    Splits an image stored in a BytesIO object by height into segments.
+
+    Args:
+        image_bytesio (BytesIO): BytesIO object containing the image.
+        output_format (str): Output format for segmented images (e.g., 'PNG', 'JPEG').
+        segment_height (int): Desired height of each segment.
+
+    Returns:
+        List of BytesIO objects containing segmented images.
+    """
+    # Open the image from BytesIO
+    image = Image.open(image_bytesio)
+
+    # Get the image dimensions
+    width, total_height = image.size
+
+    # Calculate the number of segments
+    num_segments = (total_height + segment_height - 1) // segment_height
+
+    # Initialize a list to store segmented images
+    segmented_images = []
+
+    for segment_index in range(num_segments):
+        # Calculate the cropping box for the current segment
+        top = segment_index * segment_height
+        bottom = min((segment_index + 1) * segment_height, total_height)
+
+        # Crop the segment
+        segment = image.crop((0, top, width, bottom))
+
+        # Create a BytesIO object to store the segmented image
+        output_bytesio = BytesIO()
+        segment.save(output_bytesio, format=output_format)
+        output_bytesio.seek(0)
+
+        # Append the segmented image to the list
+        segmented_images.append(output_bytesio)
+
+    return segmented_images
+
+# Example usage:
+# image_bytesio = BytesIO(...)  # Replace with your image data in BytesIO
+# segmented_images = split_image_by_height(image_bytesio, output_format='PNG', segment_height=8192)
+
 
 # load template
 def load_template(name="default"):

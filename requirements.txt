@@ -29,3 +29,4 @@ email_validator==2.1.0
 twilio==8.10.2
 sendgrid==6.10.0
 slackclient==2.9.4
+Pillow==10.1.0
