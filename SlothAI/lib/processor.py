@@ -15,7 +15,7 @@ from itertools import groupby
 
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
-from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage_requests, split_image_by_height, download_as_bytes, create_audio_chunks
+from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes, create_audio_chunks
 from SlothAI.lib.template import Template
 
 from typing import Dict
@@ -1214,7 +1214,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
         else:
             raise NonRetriableError("Processor read_file supports text/plain and application/pdf content types only.")
-            
+
         # update the document
         task.document[output_field].append(texts)
     
@@ -1318,6 +1318,96 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
 
     task.document['filename'] = filename
     task.document['content_type'] = content_type
+
+    return task
+
+
+@processer
+def aispeech(node: Dict[str, any], task: Task) -> Task:
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+
+    # OpenAI only for now
+    openai.api_key = task.document.get('openai_token')
+
+    if not template:
+        raise TemplateNotFoundError(template_id=node.get('template_id'))
+
+    output_fields = template.get('output_fields')
+    input_fields = template.get('input_fields')
+
+    # needs to be moved
+    # scan for required fields in the input
+    for field in input_fields:
+        field_name = field['name']
+        if field_name not in task.document:
+            raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+
+    # stuff this into util.py TODO
+    f = False
+    for index, output_field in enumerate(output_fields):
+        if "uri" in output_field.get('name'):
+            f = True
+            break
+    else:
+        raise NonRetriableError("You must have 'uri' defined in output_fields. This will return URL(s) for retrieving the audio file(s).")
+
+    # voice and model
+    voice = task.document.get('voice')
+    model = task.document.get('model')
+    if not voice:
+        voice = "alloy"
+    if not model:
+        model = "tts-1"
+    
+    # user stuff, arguable we need it
+    user = User.get_by_uid(uid=task.user_id)
+    uid = user.get('uid')
+
+    # grab the first input field name that isn't the filename
+    for _input_field in input_fields:
+        if 'filename' in _input_field.get('name'):
+            continue
+        else:
+            input_field = _input_field.get('name')
+
+    # lets support only a list of strings
+    if isinstance(task.document.get(input_field), list):
+        items = task.document.get(input_field)
+        if isinstance(items[0], list):
+            raise NonRetriableError(f"Input field {input_field} needs to be a list of strings. Found a list of lists instead.")
+    else:
+        raise NonRetriableError(f"Input field {input_field} needs to be a list of strings. Didn't find a list.")
+
+    task.document['uri'] = []
+
+    # Call your upload_to_storage_requests function
+    filename = task.document.get('filename')
+    if isinstance(filename, list):
+        filename = filename[0]
+
+    if not filename:
+            rand_name = random_name(2)
+            filename = f"{rand_name}-mitta-aispeech.mp3"
+    
+    for index, item in enumerate(items):
+        response = openai.audio.speech.create(
+            model = model,
+            voice = voice,
+            input = item
+        )
+
+        # Example usage
+        new_filename = add_index_to_filename(filename, index)
+        
+        # Assuming 'response.content' contains the binary content of the audio file
+        audio_data = response.content
+
+        content_type = 'audio/mpeg'  # Set the appropriate content type for the audio file
+        bucket_uri = upload_to_storage_requests(uid, new_filename, audio_data, content_type)
+
+        access_uri = f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{new_filename}?token="
+        task.document['uri'].append(access_uri)
 
     return task
 
@@ -1582,6 +1672,11 @@ def evaluate_extras(node, task) -> Dict[str, any]:
     extras_eval = {key: value for key, value in extras_eval.items() if key not in task.document}
 
     return extras_eval
+
+
+def add_index_to_filename(filename, index):
+    name, ext = filename.rsplit('.', 1)
+    return f"{name}_{index}.{ext}"
 
 
 def clean_extras(extras: Dict[str, any], task: Task):
