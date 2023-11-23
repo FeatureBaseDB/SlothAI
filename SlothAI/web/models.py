@@ -224,6 +224,37 @@ class Node(ndb.Model):
 
     @classmethod
     @ndb_context_manager
+    def rename(cls, uid, node_id, new_name):
+        node = cls.query(cls.uid == uid, cls.node_id == node_id).get()
+        node.name = new_name
+        node.put()
+        return node.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def update_extras(cls, uid, node_id, new_extras):
+        node = cls.query(cls.uid == uid, cls.node_id == node_id).get()
+        
+        # Clear the existing extras dictionary
+        node.extras = {}
+        
+        # Check if the "processor" key is present in new_extras
+        if "processor" in new_extras:
+            node.processor = new_extras["processor"]
+        
+        # Update the extras with the new data, excluding "processor" if it's present
+        for key, value in new_extras.items():
+            if key != "processor":
+                node.extras[key] = value
+        
+        # Save the updated node
+        node.put()
+        
+        return node.to_dict()
+
+
+    @classmethod
+    @ndb_context_manager
     def create(cls, name, uid, extras, processor, template_id):
         current_utc_time = datetime.datetime.utcnow()
         node = cls.query(cls.name == name, cls.uid == uid).get()

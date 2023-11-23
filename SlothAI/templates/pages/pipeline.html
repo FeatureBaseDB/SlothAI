@@ -64,6 +64,9 @@
             <li class="nav-item">
                 <a class="nav-link" id="record-tab" data-toggle="tab" href="#record" role="tab" aria-controls="record" aria-selected="false">Record Audio</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="record" aria-selected="false">Upload</a>
+            </li>
             {% endif %}
         </ul>
 
@@ -107,6 +110,12 @@
                 <button id="startRecord" class="btn btn-primary"><i class="fas fa-microphone"></i> Record</button>
                 <button id="stopRecord" class="btn btn-secondary" disabled><i class="fas fa-stop"></i> Stop</button>
                 <button id="uploadRecord" class="btn btn-success"><i class="fas fa-upload"></i> Upload</button>
+            </div>
+            <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="record-tab">
+                <p></p>
+                <p>You may upload single audio files (<strong>.mp3, .mp3, .mp3, .mp3, .mp3, .wav, .webm, .mp4, .m4a, .m4a, .wav</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+                <input type="file" id="fileInput" style="display: none;" accept=".mp3, .mp3, .mp3, .mp3, .mp3, .wav, .webm, .mp4, .m4a, .m4a, .wav">
+                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
             </div>
             {% endif %}
         </div>
@@ -262,7 +271,8 @@ $(document).ready(function() {
                 }
             }
             var pipe_id = "{{pipeline.get('pipe_id')}}";
-            container.append($('<a href="/templates/'+nodeTemplateID+'">Edit Template</a><br/>'));
+            container.append($('<a target=_blank href="/templates/'+nodeTemplateID+'">Edit Template</a><br/>'));
+            container.append($('<a target=_blank href="/nodes/'+nodeID+'">Edit Node</a><br/>'));
             container.append($('<a href="/pipelines/'+pipe_id+'/'+nodeID+'/delete">Delete Node</a>'));
             nodeButton.popover({
                 content: container.html(),
@@ -453,7 +463,7 @@ $(document).ready(function() {
                         location.reload();
                     },
                     error: function(xhr, status, error) {
-                        toastr.error('Upload failed: ' + error);
+                        toastr.error('Upload failed. ' + error.responseJSON.error);
                     }
                 });
             };

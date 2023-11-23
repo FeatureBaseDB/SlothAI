@@ -30,3 +30,5 @@ twilio==8.10.2
 sendgrid==6.10.0
 slackclient==2.9.4
 Pillow==10.1.0
+pydub==0.25.1
+ffmpeg-python==0.2.0

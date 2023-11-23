@@ -18,10 +18,9 @@
         </div>
 
         <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
-
     </form>
     <p></p>
-    <div class="container">
+    <div class="p-3">
         <div class="row">
             <div class="text-left">
                 <button id="goBack" class="btn btn-danger"><i class="fas fa-arrow-left"></i> Back</button>
@@ -66,14 +65,10 @@ $(document).ready(function() {
     editor.resize()
     editor.setOptions({
         autoScrollEditorIntoView: true,
-        copyWithEmptySelection: true,
+        copyWithEmptySelection: true
     });
     editor.setShowPrintMargin(false);
     editor.getSession().setUseWrapMode(true)
-
-    editor.setOptions({
-        enableBasicAutocompletion: true
-    });
 
     {% if template %}$('#renameButton').hide();{% endif %}
 
@@ -235,7 +230,7 @@ $(document).ready(function() {
 
     // Event listener for changes in the templateName field
     $("#templateName").on("input", function() {
-        var currentTemplateName = $(this).val();
+        var currentTemplateName = $("#templateName").val();
         templateNameChanged = currentTemplateName !== originalTemplateName;
 
         if (templateNameChanged) {

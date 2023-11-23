@@ -27,13 +27,13 @@
                     <th>Inputs</th>
                     <th>Outputs</th>
                     <th>Extras</th>
-                    <th>Edit</th>
+                    <th>Remove</th>
                 </tr>
             </thead>
             <tbody id="nodeTable">
                 {% for node in nodes %}
                 <tr>
-                    <td><button type="button" class="btn btn-secondary min-button" disabled><i class="fas fa-cube"></i><br/>{{ node.name }}</button></td>
+                    <td><a href="/nodes/{{ node.node_id }}" type="button" class="btn btn-secondary min-button" disabled><i class="fas fa-cube"></i><br/>{{ node.name }}</a></td>
                     <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors min-button" title="{{ node.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i><br/>{{ node.processor }}</a></td>
 
                     <td>
@@ -63,11 +63,8 @@
                     </td>
 
                     <td>
-                        <div class="btn-group">
-                            <a data-toggle="popover" data-placement="top" data-content="{{ node.get('template').get('name') }}" title="{{ node.get('template').get('name') }}" class="btn btn-secondary" href="/templates/{{ node.get('template_id') }}"><i class="fas fa-pen"></i></a>
-                            <a class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></a>
-                            <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
-                        </div>
+                        <a class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></a>
+                        <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -118,11 +115,11 @@
                 <div class="modal-body">
                     <!-- Add your node form fields here -->
                     <div class="form-group">
-                        <label for="nodeName">Node Name:</label>
+                        <label for="nodeName">Node Name</label>
                         <input type="text" class="form-control" id="nodeName">
                     </div>
                     <div class="form-group">
-                        <label for="nodeProcessor">Node Processor:</label>
+                        <label for="nodeProcessor">Node Processor</label>
                         <select class="form-control" id="nodeProcessor">
                         <option value="all">All</option>
                         {% for processor in processors %}
@@ -131,7 +128,7 @@
                         </select>
                     </div>
                     <div class="form-group" style="display: none;" id="nodeTemplateContainer">
-                        <label for="nodeTemplate">Node Template:</label>
+                        <label for="nodeTemplate">Node Template</label>
                         <select class="form-control" id="nodeTemplate">
                         </select>
                     </div>

@@ -11,10 +11,11 @@ output_fields = [{'name': "summary" ,'type': "strings"}]
 extras = {'openai_token': None, 'processor': "aidict", 'model': "gpt-3.5-turbo-1106", 'iterate_key': "chunks"}
 
 {# Process the input string: #}
+{# outer_index is provided by the templating system to iterate over arrays of strings #}
 # complete dict task
 1. Look at this text:
 """
-{{ chunks[iterate_index] }}
+{{ chunks[outer_index] }}
 """
 2. The required key for the dictionary is: 'summary'.
 3. The required value for 'summary' is a string.

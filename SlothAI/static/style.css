@@ -352,3 +352,7 @@ span.log-expand {
   max-width: 960px;
   margin-top: 80px;
 }
+
+.container-interior {
+  margin-top: 20px;
+}

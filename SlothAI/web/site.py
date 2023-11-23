@@ -122,6 +122,16 @@ def legal():
     return render_template('pages/privacy.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
 
 
+@site.route('/about', methods=['GET'])
+def about():
+    try:
+        username = current_user.name
+    except:
+        username = "anonymous"
+
+    return render_template('pages/about.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
+
+
 @site.route('/pipelines', methods=['GET'])
 @flask_login.login_required
 def pipelines():
@@ -291,6 +301,28 @@ def nodes():
 
     return render_template(
         'pages/nodes.html', username=username, brand=get_brand(app), dev=app.config['DEV'], nodes=_nodes, name_random=name_random, templates=templates, processors=processors
+    )
+
+
+@site.route('/nodes/new/<template_id>')
+@site.route('/nodes/<node_id>', methods=['GET'])
+@flask_login.login_required
+def node_detail(node_id=None, template_id=None):
+    # get the user
+    username = current_user.name
+    template_service = app.config['template_service']
+
+    node = Node.get(node_id=node_id)
+    if not node:
+        node = {"name": "new"}
+    else:
+        template_id = node.get('template_id')
+   
+    if template_id:
+        template = template_service.get_template(template_id=template_id, user_id=current_user.uid)
+    
+    return render_template(
+        'pages/node.html', username=username, brand=get_brand(app), dev=app.config['DEV'], node=node, template=template, processors=processors
     )
 
 

@@ -229,6 +229,35 @@ def split_image_by_height(image_bytesio, output_format='PNG', segment_height=819
 # image_bytesio = BytesIO(...)  # Replace with your image data in BytesIO
 # segmented_images = split_image_by_height(image_bytesio, output_format='PNG', segment_height=8192)
 
+from pydub import AudioSegment
+def create_audio_chunks(input_file_stream, chunk_duration_ms=30000):
+    # Load the audio file from the file stream
+    audio = AudioSegment.from_file(input_file_stream)
+
+    # Initialize variables
+    chunks = []
+    current_position = 0
+    chunk_count = 0
+
+    # Iterate through the audio file in specified chunk duration
+    while current_position < len(audio):
+        # Extract a chunk of the specified duration
+        chunk = audio[current_position:current_position + chunk_duration_ms]
+        current_position += chunk_duration_ms
+
+        # Export chunk to file stream (BytesIO)
+        chunk_stream = BytesIO()
+        chunk.export(chunk_stream, format='mp3')
+        chunk_stream.seek(0)  # Rewind to the beginning of the stream
+
+        # set the filename for things        
+        chunk_stream.name = f"chunk_{chunk_count}.mp3"
+        chunk_count += 1
+
+        chunks.append(chunk_stream)
+    
+    return chunks
+
 
 # load template
 def load_template(name="default"):

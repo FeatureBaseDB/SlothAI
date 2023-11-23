@@ -13,7 +13,7 @@ extras = {'openai_token': None, 'model': 'gpt-3.5-turbo-1106', 'processor': 'aid
 # complete dict task by following step by step
 1. The user has provided the following query:
 """
-{{query[iterate_index]}}
+{{query[outer_index]}}
 """
 2. A search was run against this query and the following document chunks were returned:
 """

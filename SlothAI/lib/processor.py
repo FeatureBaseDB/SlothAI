@@ -15,7 +15,7 @@ from itertools import groupby
 
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
-from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage_requests, split_image_by_height, download_as_bytes
+from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage_requests, split_image_by_height, download_as_bytes, create_audio_chunks
 from SlothAI.lib.template import Template
 
 from typing import Dict
@@ -133,7 +133,7 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
             jinja = jinja_template.render(task.document)
     except Exception as e:
         raise NonRetriableError(f"jinja2 processor: unable to render jinja: {e}")
-    print(jinja)
+
     try:
         jinja_json = json.loads(jinja)
         for k,v in jinja_json.items():
@@ -563,13 +563,12 @@ def ai_prompt_to_dict(model="gpt-3.5-turbo-1106", prompt="", retries=3):
                 ai_dict = ai_dict('ai_dict')
             err = None
             break
-        except (ValueError, SyntaxError, NameError) as ex:
+        except (ValueError, SyntaxError, NameError, AttributeError) as ex:
             ai_dict = {}
             err = f"AI returned a un-evaluatable, non-dictionary object on try {_try} of {retries}: {ex}"
             time.sleep(2) # give it a few seconds
 
     return err, ai_dict
-
 
 @processer
 def aidict(node: Dict[str, any], task: Task) -> Task:
@@ -596,7 +595,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
         if not iterate_field_name:
             raise NonRetriableError("More than one input field requires an 'iterate_field' value in extras.")
         if iterate_field_name != "False" and iterate_field_name not in [field['name'] for field in input_fields]:
-            raise NonRetriableError(f"'{iterate_field_name}' must be present in 'input_fields' when there are more than one input fields, or you may use 'False' for no iteration.")
+            raise NonRetriableError(f"'{iterate_field_name}' must be present in 'input_fields' when there are more than one input fields, or you may use a 'False' string for no iteration.")
     else:
         # use the first field
         iterate_field_name = input_fields[0]['name']
@@ -604,8 +603,11 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
     if iterate_field_name != "False":
         iterator = task.document.get(iterate_field_name)
     else:
-        iterator = ['False']
-    
+        iterator = ["False"]
+
+    # Identify if the iterator is a list of lists
+    is_list_of_lists = isinstance(iterator[0], list)
+
     # output fields
     output_fields = template.get('output_fields')
 
@@ -614,13 +616,14 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
     if "gpt" in model:
         openai.api_key = task.document.get('openai_token')
 
-        # Loop over iterator field list, or if False, just loop once
+        # Loop over iterator field list, or if "False", just loop once
         for outer_index, item in enumerate(iterator):
             # if the item is not a list, we make it one
             if not isinstance(item, list):
                 item = [item]
 
             ai_dicts = []
+            
             # loop over inner list
             for inner_index in range(len(item)):
                 # set the fields for the template's loop inclusions, if it has any
@@ -634,7 +637,119 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
                     prompt = jinja_template.render(task.document)
                 else:
                     raise NonRetriableError("Couldn't find template text.")
-                
+
+                # call the ai
+                err, ai_dict = ai_prompt_to_dict(
+                    model=model,
+                    prompt=prompt,
+                    retries=3
+                )
+                ai_dicts.append(ai_dict)
+
+                if err:
+                    raise NonRetriableError(err)
+
+            if is_list_of_lists:
+                # Process as list of lists
+                sublist_result_dict = {field['name']: [] for field in output_fields}
+                for dictionary in ai_dicts:
+                    for key, value in dictionary.items():
+                        sublist_result_dict[key].append(value)
+
+                for field in output_fields:
+                    field_name = field['name']
+                    if field_name not in task.document:
+                        task.document[field_name] = []
+                    task.document[field_name].append(sublist_result_dict[field_name])
+            else:
+                # Process as a simple list
+                result_dict = {field['name']: [] for field in output_fields}
+                for dictionary in ai_dicts:
+                    for key, value in dictionary.items():
+                        result_dict[key].append(value)
+
+                for field in output_fields:
+                    field_name = field['name']
+                    if field_name not in task.document:
+                        task.document[field_name] = []
+                    task.document[field_name].extend(result_dict[field_name])
+
+        task.document.pop('outer_index', None)
+        task.document.pop('inner_index', None)
+
+        return task
+
+    else:
+        raise NonRetriableError("The aidict processor expects a supported model.")
+
+"""
+@processer
+def aidict(node: Dict[str, any], task: Task) -> Task:
+    # templates
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+    if not template:
+        raise TemplateNotFoundError(template_id=node.get('template_id'))
+    
+    input_fields = template.get('input_fields')
+    
+    # Check if each input field is present in 'task.document'
+    for field in input_fields:
+        field_name = field['name']
+        if field_name not in task.document:
+            raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+
+    # replace single strings with lists
+    task.document = process_input_fields(task.document, input_fields)
+
+    # Check if there are more than one input fields and grab the iterate_field
+    if len(input_fields) > 1:
+        iterate_field_name = task.document.get('iterate_field')
+        if not iterate_field_name:
+            raise NonRetriableError("More than one input field requires an 'iterate_field' value in extras.")
+        if iterate_field_name != "False" and iterate_field_name not in [field['name'] for field in input_fields]:
+            raise NonRetriableError(f"'{iterate_field_name}' must be present in 'input_fields' when there are more than one input fields, or you may use a 'False' string for no iteration.")
+    else:
+        # use the first field
+        iterate_field_name = input_fields[0]['name']
+
+    if iterate_field_name != "False":
+        iterator = task.document.get(iterate_field_name)
+    else:
+        iterator = ["False"]
+
+    # output fields
+    output_fields = template.get('output_fields')
+
+    # get the model and begin
+    model = task.document.get('model')
+    if "gpt" in model:
+        openai.api_key = task.document.get('openai_token')
+
+        # Loop over iterator field list, or if "False", just loop once
+        for outer_index, item in enumerate(iterator):
+            # if the item is not a list, we make it one
+            if not isinstance(item, list):
+                item = [item]
+
+            ai_dicts = []
+
+
+            # loop over inner list
+            for inner_index in range(len(item)):
+                # set the fields for the template's loop inclusions, if it has any
+                task.document['outer_index'] = outer_index
+                task.document['inner_index'] = inner_index
+
+                template_text = Template.remove_fields_and_extras(template.get('text'))
+
+                if template_text:
+                    print(task.document)
+                    jinja_template = env.from_string(template_text)
+                    prompt = jinja_template.render(task.document)
+                else:
+                    raise NonRetriableError("Couldn't find template text.")
+
                 # call the ai
                 err, ai_dict = ai_prompt_to_dict(
                     model=model,
@@ -674,7 +789,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
     else:
         raise NonRetriableError("The aidict processor expects a supported model.")
-
+"""
 
 # look at a picture and get stuff
 @processer
@@ -1209,7 +1324,7 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
 def aiaudio(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
-    
+
     # OpenAI only for now
     openai.api_key = task.document.get('openai_token')
 
@@ -1255,34 +1370,44 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
     # Get the file size using the BytesIO object's getbuffer method
     file_size = len(audio_file.getbuffer())
 
-    # Check if the file size is within the limit (25 MB)
-    max_file_size = 25 * 1024 * 1024  # 25 MB in bytes
-    if file_size > max_file_size:
-        raise NonRetriableError("File size exceeds the 25 MB limit")
+    # Check file size limit (25 MB)
+    max_original_file_size = 25 * 1024 * 1024  # 25 MB in bytes
+    if file_size > max_original_file_size:
+        raise NonRetriableError("Original file size exceeds the 25 MB limit.")
 
-    # process the audio
-    model = task.document.get('model', "whisper-1")
-    transcript = openai.Audio.transcribe(model, audio_file, content_type="wav")
+    # removed this for now due to 32MB file size limit on appengine
+    # Process the audio: split the audio into chunks
+    # audio_chunks = create_audio_chunks(audio_file) # this might work if you use it
 
-    # split on words
-    words = transcript.get('text', "").split(" ")
-    chunks = []
-    current_chunk = []
+    # for now, just do one up to 25MB
+    audio_chunks = [audio_file]
 
-    # set the page chunk size (number of characters per page)
-    page_chunk_size = task.document.get('page_chunk_size', 1536)
+    # Iterate through each chunk and send it to Whisper
+    for chunk_stream in audio_chunks:
+        # process the audio
+        model = task.document.get('model', "whisper-1")
+        transcript = openai.Audio.transcribe(model, chunk_stream, content_type="mp3")
 
-    # build the chunks
-    for word in words:
-        current_chunk.append(word)
-        if len(current_chunk) >= page_chunk_size:
+        # split on words
+        words = transcript.get('text', "").split(" ")
+        chunks = []
+        current_chunk = []
+
+        # set the page chunk size (number of characters per page)
+        page_chunk_size = task.document.get('page_chunk_size', 1536)
+
+        # build the chunks
+        for word in words:
+            current_chunk.append(word)
+            if len(current_chunk) >= page_chunk_size:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = []
+
+        # append any leftovers
+        if current_chunk:
             chunks.append(' '.join(current_chunk))
-            current_chunk = []
 
-    # append any leftovers
-    if current_chunk:
-        chunks.append(' '.join(current_chunk))
-
+    # list of strings
     task.document[output_field] = chunks
         
     # Return the modified task

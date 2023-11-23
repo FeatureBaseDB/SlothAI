@@ -70,7 +70,7 @@ def template_update(template_id):
 
     nodes = Node.fetch(template_id=template_id)
     if nodes and not sorted(template.get('extras')) == sorted(_template.extras):
-        return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node."}), 500
+        return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node. Edit the node's extras instead."}), 500
 
     updated_template = template_service.update_template(
         template_id=template_id,

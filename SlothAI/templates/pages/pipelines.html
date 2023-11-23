@@ -32,7 +32,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Nodes</th>
-                    <th>Edit</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -342,7 +342,8 @@ $(document).ready(function () {
                 container.append('<br>');
             }
         }
-        container.append($('<a href="/templates/'+nodeTemplateID+'">edit template</a>'));
+        container.append($('<a href="/templates/'+nodeTemplateID+'">edit template</a><br/>'));
+        container.append($('<a href="/nodes/'+nodeID+'">edit node</a>'));
         nodeButton.popover({
             content: container.html(),
             trigger: 'focus',

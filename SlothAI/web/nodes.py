@@ -39,6 +39,54 @@ def get_node(node_id):
         return jsonify({"error": "Not found", "message": "The requested node was not found."}), 404
 
 
+@node_handler.route('/nodes/<node_id>/rename', methods=['POST'])
+@flask_login.login_required
+def update_name(node_id):
+    # Parse the JSON data from the request
+    try:
+        json_data = request.get_json()
+        new_name = json_data["node"]["name"]
+    except Exception as e:
+        return jsonify({"error": "Invalid JSON data"}), 400
+
+    # Check if the user has permission to update the node
+    node = Node.get(uid=current_user.uid, node_id=node_id)
+    if not node:
+        return jsonify({"error": "Node not found"}), 404
+
+    # Update the node's name with the new name
+    updated_node = Node.rename(current_user.uid, node_id, new_name)
+
+    if updated_node:
+        return jsonify({"message": "Node renamed successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to rename node"}), 500
+
+
+@node_handler.route('/nodes/<node_id>/update_extras', methods=['POST'])
+@flask_login.login_required
+def update_extras(node_id):
+    # Parse the JSON data from the request
+    try:
+        json_data = request.get_json()
+        extras = json_data.get("node", {}).get("extras", {})
+    except Exception as e:
+        return jsonify({"error": "Invalid JSON data"}), 400
+
+    # Check if the user has permission to update the node
+    node = Node.get(uid=current_user.uid, node_id=node_id)
+    if not node:
+        return jsonify({"error": "Node not found"}), 404
+
+    # Update the node's extras with the new values
+    updated_node = Node.update_extras(current_user.uid, node_id, extras)
+
+    if updated_node:
+        return jsonify({"message": "Extras updated successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to update extras"}), 500
+
+
 @node_handler.route('/nodes/validate/openai', methods=['POST'])
 @flask_login.login_required
 def validate_openai():

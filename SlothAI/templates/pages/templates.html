@@ -21,17 +21,26 @@
             <thead>
                 <tr>
                     <th>Template</th>
-                    <th>Processor</th>
+                    <th>Extras</th>
                     <th>Inputs</th>
                     <th>Outputs</th>
-                    <th>Extras</th>
-                    <th>Edit</th>
+                    <th>Processor</th>
+                    <th>Remove</th>
                 </tr>
             </thead>
             <tbody id="templateTable">
                 {% for template in templates %}
-                    <td><button class="btn btn-secondary min-button" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-pen"></i><br/>{{ template.name }}</button></td>
-                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary min-button processors" title="{{ template.name }}" data-content="{{ processors | selectattr('value', 'equalto', template.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i><br/>{{ template.processor }}</a></td>
+                    <td><button class="btn btn-secondary min-button" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-file"></i><br/>{{ template.name }}</button></td>
+                    <td>
+                        {% if template.extras %}
+                            {% for key, value in template.extras.items() %}
+                                <span>
+                                    {{ generate_extra_badge(key, value) }}
+                                </span>
+                                <br>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
                     <td>
                         {% if template is not none and template.get('input_fields') is not none %}
                             {% for input_field in template['input_fields'] %}
@@ -46,17 +55,7 @@
                             {% endfor %}
                         {% endif %}
                     </td>
-                    
-                    <td>
-                        {% if template.extras %}
-                            {% for key, value in template.extras.items() %}
-                                <span>
-                                    {{ generate_extra_badge(key, value) }}
-                                </span>
-                                <br>
-                            {% endfor %}
-                        {% endif %}
-                    </td>
+                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary min-button processors" title="{{ template.name }}" data-content="{{ processors | selectattr('value', 'equalto', template.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i><br/>{{ template.processor }}</a></td>
                     <td>
                         <button class="delete-button btn btn-danger" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
                         <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">
