@@ -1,18 +1,21 @@
 import json
 import datetime
+import io
 
 from google.cloud import ndb
 
 from flask import Blueprint, render_template, jsonify
-from flask import redirect, url_for
-from flask import request
+from flask import redirect, url_for, abort
+from flask import request, send_file, Response
 from flask import current_app as app
 
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template
-from SlothAI.web.models import Pipeline, Node, Log
+from google.cloud import storage
+
+from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage
+from SlothAI.web.models import Pipeline, Node, Log, User
 
 site = Blueprint('site', __name__)
 
@@ -34,7 +37,8 @@ processors = [
     {"value": "aiimage", "label": "Generative Image Processor"},
     {"value": "embedding", "label": "Embedding Vectors Processor"},
     {"value": "aivision", "label": "Vision Processor"},
-    {"value": "aiaudio", "label": "Audio Processor"}
+    {"value": "aiaudio", "label": "Audio Processor"},
+    {"value": "aispeech", "label": "Speech Processor"}   
 ]
 
 # template examples
@@ -426,3 +430,31 @@ def settings():
     )
 
 
+# image serving
+@site.route('/d/<name>/<filename>')
+@flask_login.login_required
+def serve(name, filename):
+    if name != current_user.name:
+        abort(404) 
+
+    user = User.get_by_uid(current_user.uid)
+    if not user:
+        abort(404)
+
+    # set up bucket on google cloud
+    gcs = storage.Client()
+    bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+    blob = bucket.blob("%s/%s" % (current_user.uid, filename))
+    
+    buffer = io.BytesIO()
+    blob.download_to_file(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer, 
+        download_name=filename,
+        as_attachment=False,
+        mimetype=blob.content_type # and there it is
+    )
+
+    return Response(blob)
