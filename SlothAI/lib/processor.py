@@ -1121,8 +1121,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
     # loop over the filenames
     for index, file_name in enumerate(filename):
-
-        if content_type[index] == "application/pdf":
+        if "application/pdf" in content_type[index]:
             # Get the document
             gcs = storage.Client()
             bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
@@ -1185,7 +1184,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
                 # Close the page stream
                 page_stream.close()
 
-        elif content_type[index] == "text/plain":
+        elif "text/plain" in content_type[index]:
             # grab document
             gcs = storage.Client()
             bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
@@ -1213,6 +1212,9 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
             texts = chunks
 
+        else:
+            raise NonRetriableError("Processor read_file supports text/plain and application/pdf content types only.")
+            
         # update the document
         task.document[output_field].append(texts)
     
