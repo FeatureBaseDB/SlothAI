@@ -24,6 +24,16 @@ label {
   outline: 0;
 }
 
+footer {
+   position:fixed;
+   left:0px;
+   bottom:0px;
+   height:300px;
+   width:100%;
+   padding-top: 80px;
+   background:#EEE;
+}
+
 #editor { 
   height: 50vw;
   width: 80vw;
@@ -196,12 +206,6 @@ nav h2 a:hover {
 }
 
 /* Content styles */
-.content {
-  padding-left: 20px;
-  width: 85%;
-  transition: margin-left 0.3s;
-  margin-left: 15%;
-}
 
 /* Media query to hide text and adjust icon size under 800px */
 @media (max-width: 800px) {
@@ -354,6 +358,8 @@ span.log-expand {
 .container {
   max-width: 960px;
   margin-top: 80px;
+  flex-direction:  column;
+  display:  flex;
 }
 
 .container-interior {
