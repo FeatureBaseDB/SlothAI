@@ -1,21 +1,33 @@
-<!DOCTYPE html>
-/* Base styles */
+/* Reset and base styles */
 body {
   background: #fefefe;
-  font-size: 15px;
-  font-family: Roboto, sans-serif;
+  font-size: 15px, sans-serif;
   padding-left: 3px;
 }
 
 html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Fonts */
+@font-face {
+  font-family: 'Roboto';
+  src: url('/static/fonts/Roboto-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('/static/fonts/Roboto-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
 }
 
 /* Form and label styles */
-form,
-label {
+form, label {
   margin: 0;
   padding: 0;
 }
@@ -24,17 +36,8 @@ label {
   outline: 0;
 }
 
-footer {
-   position:fixed;
-   left:0px;
-   bottom:0px;
-   height:300px;
-   width:100%;
-   padding-top: 80px;
-   background:#EEE;
-}
-
-#editor { 
+/* Editor styles */
+#editor {
   height: 50vw;
   width: 80vw;
   font-size: 13px;
@@ -50,42 +53,49 @@ button {
   border-radius: 0;
 }
 
+footer {
+  position: fixed;
+  left: 0px;
+  bottom: 0px;
+  height: 300px;
+  width: 100%;
+  padding-top: 80px;
+  background: #EEE;
+}
+
 .min-button {
   min-width: 80px;
 }
 
-.container_legal {
-  margin-bottom: 80px;
-}
-#buttonSortable {
+#buttonSortable, #buttonSortable li {
   list-style-type: none;
   margin: 0;
   padding: 0;
   background-color: transparent;
-  border: none; /* Remove the border */
+  border: none;
 }
 
 #buttonSortable li {
   margin: 0;
   padding-bottom: 18px;
   background-color: transparent;
-  border: none; /* Remove the border */
+  border: none;
 }
 
 #buttonSortable li i.fa {
   color: rgba(0, 0, 0, 0);
-  transition: color 0.2s; /* Add a smooth color transition */
+  transition: color 0.2s;
 }
 
 #buttonSortable li:hover i.fa {
-  color: rgba(0, 0, 0, 0.25); /* Change transparency on hover */
+  color: rgba(0, 0, 0, 0.25);
 }
 
 #fileUpload:hover {
-  background-color: #007bff; /* Change background color on hover */
-  color: #fff; /* Change text color on hover */
-  cursor: pointer; /* Use a regular pointer cursor on hover */
-  transition: background-color 0.3s, color 0.3s; /* Add a transition effect */
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .btn-group .delete-button {
@@ -118,15 +128,15 @@ div.login_form h2 {
   font-weight: 700;
 }
 
-nav h2 a{
+nav h2 a {
   color: white;
-  text-decoration: none; /* Remove the default underline */
-  transition: text-decoration 0.2s; /* Add a smooth transition effect for text-decoration */
+  text-decoration: none;
+  transition: text-decoration 0.2s;
 }
 
 /* Style the link to be overlined on hover */
 nav h2 a:hover {
-    text-decoration: overline;
+  text-decoration: overline;
 }
 
 .selected-node {
@@ -136,12 +146,12 @@ nav h2 a:hover {
 .badge {
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px; /* Adjust the maximum width as needed */
+  max-width: 200px;
   font-size: 0.8em;
-  height:  20px;
+  height: 20px;
 }
 
-.homelead a{
+.homelead a {
   color: white;
 }
 
@@ -150,7 +160,7 @@ nav h2 a:hover {
   height: 24px;
 }
 
-.dropdown-menu {         
+.dropdown-menu {
   max-height: 480px;
   overflow-y: auto;
 }
@@ -168,56 +178,35 @@ nav h2 a:hover {
 }
 
 .background {
-  background-color: #444; 
-  color: white; 
-  text-align: center; 
-  padding-top: 83px; 
+  background-color: #444;
+  color: white;
+  text-align: center;
+  padding-top: 83px;
   padding-bottom: 83px;
 }
 
 /* Navbar and sidebar */
-.navbar,
-.sidebar {
+.navbar, .sidebar {
   background-color: #444;
-}
-
-/* Sidebar styles */
-.sidebar {
-  background-color: #444;
-  height: 100%;
-  width: 15%;
-  max-width: 192px;
-  position: fixed;
-  top: 56px;
-  left: 0;
-  padding-top: 16px;
-  transition: width 0.3s; /* Add a transition for smooth width changes */
-}
-
-.sidebar a {
-  padding: 10px 15px;
-  text-decoration: none;
-  font-size: 15px;
-  color: #fff;
-  display: block;
-  white-space: nowrap; /* Prevent text from wrapping */
-  overflow: hidden; /* Hide overflowing text */
-  text-overflow: ellipsis; /* Add ellipsis (...) for truncated text */
 }
 
 /* Content styles */
+.content {
+  padding-left: 20px;
+  width: 85%;
+  transition: margin-left 0.3s;
+  margin-left: 15%;
+}
 
 /* Media query to hide text and adjust icon size under 800px */
 @media (max-width: 800px) {
   .sidebar {
-    width: 60px; /* Adjust the width to show only icons */
+    width: 60px;
   }
-  
   .sidebar a {
     padding: 10px;
-    text-align: center; /* Center align the icon */
+    text-align: center;
   }
-  
   /* Optionally hide the icon labels completely */
   .sidebar a span {
     display: none;
@@ -226,7 +215,7 @@ nav h2 a:hover {
 
 @media (min-width: 1342px) {
   .content {
-    margin-left: 200px; /* Set the maximum margin-left for wider screens */
+    margin-left: 200px;
   }
 }
 
@@ -264,7 +253,7 @@ code, pre {
 span.command-copy {
   position: absolute;
   top: 15px;
-  right: 15px; /* Adjust as needed for desired spacing */
+  right: 15px;
   opacity: .6;
   font-size: 20px;
   color: #555755;
@@ -296,8 +285,8 @@ span.log-expand {
 
 #site {
   color: white;
-  text-decoration: none; /* Remove the default underline */
-  transition: text-decoration 0.2s; /* Add a smooth transition effect for text-decoration */
+  text-decoration: none;
+  transition: text-decoration 0.2s;
 }
 
 #site:hover {
@@ -305,8 +294,8 @@ span.log-expand {
 }
 
 #templateText {
-    height: 60vh; /* Use vh units for the height */
-    resize: none;
+  height: 60vh;
+  resize: none;
 }
 
 #templateName {
@@ -315,10 +304,6 @@ span.log-expand {
 
 #userDropdown {
   color: white !important;
-}
-
-.dataTables_wrapper .dataTables_filter {
-  padding-bottom: 8px;
 }
 
 .container_api h1 {
@@ -358,10 +343,52 @@ span.log-expand {
 .container {
   max-width: 960px;
   margin-top: 80px;
-  flex-direction:  column;
-  display:  flex;
 }
 
 .container-interior {
   margin-top: 20px;
+}
+
+/* Sidebar styles */
+.sidebar {
+  background-color: #444;
+  height: 100%;
+  width: 15%;
+  max-width: 192px;
+  position: fixed;
+  top: 56px;
+  left: 0;
+  padding-top: 16px;
+  transition: width 0.3s;
+}
+
+.sidebar a {
+  padding: 10px 15px;
+  text-decoration: none;
+  font-size: 15px;
+  color: #fff;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hover effect for links */
+.sidebar a:hover {
+  background-color: #f0f0f0;
+  color: #333;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* Styles for highlighted links */
+.sidebar a.highlighted-link {
+  background-color: #ddd;
+  color: #000;
+}
+
+/* Hover effect for highlighted links */
+.sidebar a.highlighted-link:hover {
+  background-color: #ccc;
+  color: #333;
 }
