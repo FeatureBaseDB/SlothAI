@@ -165,10 +165,6 @@ nav h2 a:hover {
   overflow-y: auto;
 }
 
-.highlighted-link {
-  background-color: #628395;
-}
-
 .text-muted {
   margin-bottom: 14px;
 }
@@ -375,20 +371,9 @@ span.log-expand {
 
 /* Hover effect for links */
 .sidebar a:hover {
-  background-color: #f0f0f0;
-  color: #333;
-  text-decoration: none;
   font-weight: bold;
 }
 
-/* Styles for highlighted links */
-.sidebar a.highlighted-link {
-  background-color: #ddd;
-  color: #000;
-}
-
-/* Hover effect for highlighted links */
-.sidebar a.highlighted-link:hover {
-  background-color: #ccc;
-  color: #333;
+.highlighted-link {
+  background-color: #628395;
 }

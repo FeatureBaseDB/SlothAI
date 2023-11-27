@@ -26,16 +26,15 @@
 
     <link rel="shortcut icon" href="{{ url_for('static', filename=brand.get('favicon')) }}">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/brands.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/solid.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='toastr.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='jquery-ui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='jquery.dataTables.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
-    
     {% block style %}
     {% endblock %}
 </head>
@@ -62,8 +61,8 @@
             {% if username != "anonymous" %}
             <button class="btn btn-outline-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{username}}</button>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+                <a class="dropdown-item" href="/settings">Settings</a>
                 <a class="dropdown-item" href="/logout">Logout</a>
-                <a class="dropdown-item" href="/settings">Tokens</a>
             </div>
             {% else %}
             <a href="/pipelines" class="btn btn-outline-light" type="button" >Login</a>
@@ -100,8 +99,8 @@
   </div>
 </footer>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
+<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='jquery-3.6.0.min.js') }}"></script>
+<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
 
 {% block javascript %}
   <script type="text/javascript">

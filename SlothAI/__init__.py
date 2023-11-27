@@ -1,6 +1,7 @@
 import flask_login
 
 from flask import Flask, render_template, make_response, request
+from flask_talisman import Talisman
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -26,6 +27,20 @@ from SlothAI.lib.services import TaskService, TemplateService
 from SlothAI.lib.storage import NDBTaskStore, NDBTemplateStore
 from SlothAI.lib.queue import AppEngineTaskQueue
 
+csp = {
+    'default-src': [
+        '\'self\''
+    ],
+    'script-src': [
+        '\'self\'',
+        '\'unsafe-inline\''
+    ],
+    'style-src': [
+        '\'self\'',
+        '\'unsafe-inline\''
+    ]
+}
+
 def create_app(conf='dev'):
 
     app = Flask(__name__)
@@ -36,6 +51,7 @@ def create_app(conf='dev'):
         app.config.from_object(config.DevConfig)
     elif conf == 'prod':
         app.config.from_object(config.ProdConfig)
+        Talisman(app, content_security_policy=csp)
     else:
         raise Exception("invalid conf argument: must be 'testing', 'dev', or 'prod'.") 
 
