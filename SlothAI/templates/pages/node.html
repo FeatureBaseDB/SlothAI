@@ -40,8 +40,10 @@
             {% for pipeline in pipelines %}{% set ns.counter = ns.counter + 1 %}{% if ns.counter == 1 %}<a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a>{% elif ns.counter == pipelines|length %} and <a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a>{% else %}, <a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a>{% endif %}{% endfor %}
             processor(s) are using this node.
         </p>
+        <hr/>
         {% else %}
         <p>This node is not in use in any pipelines.</p>
+        <hr/>
         {% endif %}
 
         {% if filtered_pipelines %}

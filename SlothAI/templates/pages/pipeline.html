@@ -240,7 +240,7 @@ $(document).ready(function() {
 
                 // Process inputs (green)
                 inputFields.forEach(function(field) {
-                    var badgeText = "input:" + field.name;
+                    var badgeText = "input: " + field.name;
                     var badge = $('<span>', {
                         class: 'badge badge-success',
                         text: badgeText,
@@ -252,7 +252,7 @@ $(document).ready(function() {
 
                 // Process outputs (blue)
                 outputFields.forEach(function(field) {
-                    var badgeText = 'output:' + field.name;
+                    var badgeText = 'output: ' + field.name;
                     var badge = $('<span>', {
                         class: 'badge badge-primary',
                         text: badgeText,
@@ -392,7 +392,7 @@ $(document).ready(function() {
     // download the pipeline
     $('#DownloadPipeline').on('click', function() {
         $(this).prop('disabled', true);
-        toastr.info("Download request sent. Standby...");
+        toastr.info("Download request sent.");
 
         // Get the pipe_id from the data attribute
         var pipe_id = $(this).data('pipe_id');
