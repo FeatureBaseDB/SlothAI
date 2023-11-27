@@ -20,16 +20,47 @@
                 </form>
             </div>
             <div class="col text-right">
-                <button class="btn btn-danger delete-button" data-pipe-id="{{node.pipe_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
+                <button class="btn btn-danger delete-button" data-node-id="{{node.node_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
             </div>
         </div>
         <p></p>
         <h5>Node Template</h5>
-        <p>The <strong>{{ node.name }}</strong> node uses the <strong>{{ template.name }}</strong> template with a <strong>{{ node.processor }}</strong> processor.</p>
+        <p>The <strong>{{ node.name }}</strong> node uses the <strong>{{ template.name }}</strong> template with the <strong>{{ node.processor }}</strong> processor.</p>
         <a class="btn btn-secondary min-button" target=_blank href="/templates/{{ template.template_id }}"><i class="fas fa-file"></i><br/>{{ template.name }}</a></td>
         <p></p>
         <p>Edit the <strong>{{ template.name }}</strong> template to alter this node's input and output fields.</p>
         <hr/>
+        <div class="d-flex justify-content-between align-items-center">
+            <h5>Pipelines</h5>
+        </div>
+        
+        {% if pipelines %}
+        <p>The 
+            {% set ns = namespace(counter=0) %}
+            {% for pipeline in pipelines %}{% set ns.counter = ns.counter + 1 %}{% if ns.counter == 1 %}<a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a>{% elif ns.counter == pipelines|length %} and <a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a>{% else %}, <a href="/pipelines/{{ pipeline.pipe_id }}">{{ pipeline.name }}</a>{% endif %}{% endfor %}
+            processor(s) are using this node.
+        </p>
+        {% else %}
+        <p>This node is not in use in any pipelines.</p>
+        {% endif %}
+
+        {% if filtered_pipelines %}
+        <form id="pipelineForm" class="form-inline">
+            <div class="form-group mb-2">
+                <label for="pipelineSelect" class="sr-only">Select Pipeline</label>
+                <select id="pipelineSelect" class="form-control">
+                    {% for filtered_pipeline in filtered_pipelines %}
+                        <option value="{{ filtered_pipeline.pipe_id }}">{{ filtered_pipeline.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="button" id="addToPipelineButton" class="btn btn-success mb-2 ml-2">
+                <i class="fas fa-plus"></i> Add to Pipeline
+            </button>
+        </form>
+        <hr/>
+        {% endif %}
+
         <div class="d-flex justify-content-between align-items-center">
             <h5>Extras</h5>
         </div>
@@ -53,7 +84,7 @@
                         <input class="form-control" type="text" id="{{ key }}" name="{{ key }}" value="{{ value }}">
                         {% endif %}
                         <div class="input-group-append">
-                            <button type="button" class="btn btn-danger remove-entry" aria-label="Remove">
+                            <button type="button" class="btn btn-danger remove-entry" data-extra_id="{{key}}" aria-label="Remove">
                                 <i class="fas fa-trash" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -149,6 +180,22 @@ $(document).ready(function() {
     // Run changeButtonColors function when the document is ready
     changeButtonColors();
 
+    $(".delete-button").on("click", function(event) {
+        $.ajax({
+            url: '/nodes/{{node.node_id}}',
+            type: 'DELETE',
+            success: function (response) {
+                toastr.success('Node deleted.');
+            },
+            error: function (error) {
+                toastr.error(error.responseJSON.message);
+            },
+            complete: function () {
+                window.location.href = '/nodes';
+            }
+        });
+    });
+
     $("#renameButton").on("click", function(event) {
         event.preventDefault(); // Prevent the default form submission behavior
         var newName = $("#thenodeName").val();
@@ -201,7 +248,7 @@ $(document).ready(function() {
                     </div>
                     <input class="form-control" type="text" id="${newKeyName}" name="${newKeyName}" value="">
                     <div class="input-group-append">
-                        <button type="button" class="btn btn-danger remove-entry">
+                        <button data-extra_key="${newKeyName}" type="button" class="btn btn-danger remove-entry">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -241,7 +288,7 @@ $(document).ready(function() {
 
         // Send a POST request to update the extras
         $.ajax({
-            url: '/nodes/{{ node.node_id }}/update_extras', // Replace with your actual endpoint
+            url: '/nodes/{{ node.node_id }}/update_extras',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ "node": { "extras": extrasData } }), // Wrap the extras data in a "node" object
@@ -257,6 +304,29 @@ $(document).ready(function() {
         });
     });
 
+    $('#addToPipelineButton').click(function() {
+        var selectedPipeId = $('#pipelineSelect').val();
+
+        $.ajax({
+            type: "POST",
+            url: '/pipeline/' + selectedPipeId + '/add_node',
+            data: JSON.stringify({ "node_id": "{{ node.node_id }}" }),
+            contentType: 'application/json',
+            success: function(response) {
+                // Handle the success response
+                toastr.info(response.message);
+                window.location.href = "/pipelines/" + selectedPipeId;
+            },
+            error: function(error) {
+                // Handle the error response
+                try {
+                    toastr.error(error.responseJSON.error);
+                } catch (error) {
+                    toastr.error("An error occured.")
+                }
+            }
+        });
+    });
 
 });
 </script>

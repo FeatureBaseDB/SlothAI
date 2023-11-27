@@ -437,7 +437,7 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                 batch_size = 10
                 for i in range(0, len(input_data), batch_size):
                     batch = input_data[i:i + batch_size]
-                    embedding_results = openai.Embedding.create(input=batch, model=task.document.get('model'))
+                    embedding_results = openai.embedding.create(input=batch, model=task.document.get('model'))
                     embeddings.extend([_object.get('embedding') for _object in embedding_results.get('data')])
 
                 # Add the embeddings to the output field
@@ -513,12 +513,12 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
         retries = 3
         # try a few times
         for _try in range(retries):
-            completion = openai.ChatCompletion.create(
+            completion = openai.chat.completions.create(
                 model = task.document.get('model'),
                 messages = chat_messages
             )
 
-            answer = completion.choices[0].message.get('content')
+            answer = completion.choices[0].message.content
 
             if answer:
                 task.document[output_field] = answer
@@ -543,7 +543,7 @@ def ai_prompt_to_dict(model="gpt-3.5-turbo-1106", prompt="", retries=3):
 
     # try a few times
     for _try in range(retries):
-        completion = openai.ChatCompletion.create(
+        completion = openai.chat.completions.create(
             model = model,
             response_format = response_format,
             messages = [
@@ -551,9 +551,7 @@ def ai_prompt_to_dict(model="gpt-3.5-turbo-1106", prompt="", retries=3):
                 {"role": "user", "content": prompt}
             ]
         )
-        answer = completion.choices[0].message
-
-        ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "")
+        ai_dict_str = completion.choices[0].message.content.replace("\n", "").replace("\t", "")
         ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
         ai_dict_str = re.sub(r'^ai_dict\s*=\s*', '', ai_dict_str)
 
@@ -682,114 +680,6 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
     else:
         raise NonRetriableError("The aidict processor expects a supported model.")
 
-"""
-@processer
-def aidict(node: Dict[str, any], task: Task) -> Task:
-    # templates
-    template_service = app.config['template_service']
-    template = template_service.get_template(template_id=node.get('template_id'))
-    if not template:
-        raise TemplateNotFoundError(template_id=node.get('template_id'))
-    
-    input_fields = template.get('input_fields')
-    
-    # Check if each input field is present in 'task.document'
-    for field in input_fields:
-        field_name = field['name']
-        if field_name not in task.document:
-            raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
-
-    # replace single strings with lists
-    task.document = process_input_fields(task.document, input_fields)
-
-    # Check if there are more than one input fields and grab the iterate_field
-    if len(input_fields) > 1:
-        iterate_field_name = task.document.get('iterate_field')
-        if not iterate_field_name:
-            raise NonRetriableError("More than one input field requires an 'iterate_field' value in extras.")
-        if iterate_field_name != "False" and iterate_field_name not in [field['name'] for field in input_fields]:
-            raise NonRetriableError(f"'{iterate_field_name}' must be present in 'input_fields' when there are more than one input fields, or you may use a 'False' string for no iteration.")
-    else:
-        # use the first field
-        iterate_field_name = input_fields[0]['name']
-
-    if iterate_field_name != "False":
-        iterator = task.document.get(iterate_field_name)
-    else:
-        iterator = ["False"]
-
-    # output fields
-    output_fields = template.get('output_fields')
-
-    # get the model and begin
-    model = task.document.get('model')
-    if "gpt" in model:
-        openai.api_key = task.document.get('openai_token')
-
-        # Loop over iterator field list, or if "False", just loop once
-        for outer_index, item in enumerate(iterator):
-            # if the item is not a list, we make it one
-            if not isinstance(item, list):
-                item = [item]
-
-            ai_dicts = []
-
-
-            # loop over inner list
-            for inner_index in range(len(item)):
-                # set the fields for the template's loop inclusions, if it has any
-                task.document['outer_index'] = outer_index
-                task.document['inner_index'] = inner_index
-
-                template_text = Template.remove_fields_and_extras(template.get('text'))
-
-                if template_text:
-                    print(task.document)
-                    jinja_template = env.from_string(template_text)
-                    prompt = jinja_template.render(task.document)
-                else:
-                    raise NonRetriableError("Couldn't find template text.")
-
-                # call the ai
-                err, ai_dict = ai_prompt_to_dict(
-                    model=model,
-                    prompt=prompt,
-                    retries=3
-                )
-                ai_dicts.append(ai_dict)
-
-                if err:
-                    raise NonRetriableError(err)
-
-            result_dict = {}
-            for dictionary in ai_dicts:
-                for key, value in dictionary.items():
-                    if key not in result_dict:
-                        result_dict[key] = []
-                    result_dict[key].append(value)
-            
-            for field in output_fields:
-                field_name = field['name']
-
-                # Check if the field_name is present in ai_dict
-                if field_name in result_dict:
-                    # Ensure that the field exists in task.document as a list
-                    if field_name not in task.document:
-                        task.document[field_name] = []
-
-                    # Append the value(s) from ai_dict to the corresponding list in task.document
-                    task.document[field_name].append(result_dict[field_name])
-                else:
-                    NonRetriableError(f"The AI returned a field that wasn't expected: {field_name}. The field {field_name} should be listed in output_fields to address this.")
-
-        task.document.pop('outer_index')
-        task.document.pop('inner_index')
-
-        return task
-
-    else:
-        raise NonRetriableError("The aidict processor expects a supported model.")
-"""
 
 # look at a picture and get stuff
 @processer
@@ -870,7 +760,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
                 task.document[output_field] = []
             task.document[output_field].append(labels)
 
-        elif model == "gpt-scene":
+        elif "gpt" in model:
             # Get the document
             gcs = storage.Client()
             bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
@@ -885,16 +775,20 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
               "Content-Type": "application/json",
               "Authorization": f"Bearer {task.document.get('openai_token')}"
             }
+            if 'system_prompt' in task.document:
+                system_prompt = task.document.get('system_prompt')
+            else:
+                system_prompt = "What is in the image?"
 
             payload = {
-              "model": "gpt-4-vision-preview",
+              "model": model,
               "messages": [
                 {
                   "role": "user",
                   "content": [
                     {
                       "type": "text",
-                      "text": "What’s in this image?"
+                      "text": system_prompt
                     },
                     {
                       "type": "image_url",
@@ -907,8 +801,11 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
               ],
               "max_tokens": 300
             }
+
             response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-            
+            if 'error' in response.json():
+                raise NonRetriableError(response.json().get('error').get('message'))
+
             # Append the labels list to task.document[output_field]
             try:
                 scene = response.json().get('choices')[0].get('message').get('content')
@@ -1034,17 +931,20 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
             openai.api_key = task.document.get('openai_token')
 
             try:
-                response = openai.Image.create(
+                response = openai.images.generate(
                     prompt=prompt,
+                    model=task.document.get('model'),
                     n=int(num_images),
                     size="1024x1024"
                 )
-                urls = [[]]
+
+                urls = []
+                revised_prompts = []
 
                 # Loop over the 'data' list and extract the 'url' from each item
-                for item in response['data']:
-                    if 'url' in item:
-                        urls[0].append(item['url'])
+                for item in response.data:
+                    if item.url:
+                        urls.append(item.url)
 
                 task.document[output_field].append(urls)
 
@@ -1052,7 +952,7 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
                 # non-retriable error for now but add retriable as needed
                 raise NonRetriableError(f"aiimage processor: exception talking to OpenAI image create: {ex}")
         else:
-            task.document[output_field] = [[]]
+            raise NonRetriableError(f"Need a valid model. Try 'dall-e-2' or 'dall-e-3'.")
 
     return task
 
@@ -1478,7 +1378,7 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
     for chunk_stream in audio_chunks:
         # process the audio
         model = task.document.get('model', "whisper-1")
-        transcript = openai.Audio.transcribe(model, chunk_stream, content_type="mp3")
+        transcript = openai.audio.transcriptions.create(model, chunk_stream, content_type="mp3")
 
         # split on words
         words = transcript.get('text', "").split(" ")

@@ -37,7 +37,7 @@
             </thead>
             <tbody>
                 {% for pipeline in pipelines %}
-                <tr>
+                <tr id="tr_{{pipeline.pipe_id}}">
                     <td>
                         <button class="btn btn-secondary" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'"><i class="fas fa-code-branch"></i><br/>{{ pipeline.name }}</button>
                     </td>
@@ -116,9 +116,8 @@
                     <div class="input-group">
                         <select class="form-control" id="selectedNode">
                             <optgroup id="nodePulldown" label="Available Nodes">
-                                <option value="None">None</option>
                                 {% for node in nodes %}
-                                    <option value="{{ node.node_id }}">{{ node.name }} ➔ {{ node.template_name }} ➔ {{ node.processor }}</option>
+                                    <option value="{{ node.node_id }}">{{ node.name }} ← {{ node.processor }} ← {{ node.template_name }} </option>
                                 {% endfor %}
                             </optgroup>
                         </select>
@@ -166,22 +165,6 @@ $(document).ready(function () {
     
     var pipelines = JSON.parse('{{pipelines | tojson}}');
     
-    function getRowCount() {
-        const tbody = document.querySelector('table tbody');
-        if (tbody) {
-            const rowCount = tbody.getElementsByTagName('tr').length;
-            return rowCount;
-        } else {
-            return 0;
-        }
-    }
-    
-    // sort table
-    $('#pipelineTable').DataTable({
-        "columnDefs": [{ "orderable": false, "targets": [2] }],
-        "order": [[0, "asc"]]
-    });
-
     function getColorFromName(name) {
         name = name.trim(); // Remove leading and trailing spaces
         let hash = 0;
@@ -406,8 +389,9 @@ $(document).ready(function () {
         deleteButton.append($('<i class="fas fa-trash-alt"></i>'));
 
         buttonGroup.append(createButton(getNodeInfo(selectedNode).name, "Node Input", getNodeInfo(selectedNode).input_fields));
-        buttonGroup.append(createButton(getNodeInfo(selectedNode).template_name, "Template", getNodeInfo(selectedNode).extras, true));
         buttonGroup.append(createButton(getNodeInfo(selectedNode).processor, "Processor Output", getNodeInfo(selectedNode).output_fields));
+        buttonGroup.append(createButton(getNodeInfo(selectedNode).template_name, "Template", getNodeInfo(selectedNode).extras, true));
+
         buttonGroup.on('mouseleave', function() {
             buttonGroup.find('[data-toggle="popover"]').popover('hide');
             buttonGroup.find('[data-toggle="popover"]').blur(); // Remove focus from the button
@@ -421,7 +405,7 @@ $(document).ready(function () {
     });
 
     $("#createPipeline").on("click", function() {
-        if ($("#nodePulldown").find('option').length > 1) {
+        if ($("#nodePulldown").find('option').length > 0) {
             $("#nodeFormModal").modal("show");
             $("#selectedNodesContainer").hide();
             $("#selectedNodesContainer").empty();
@@ -433,7 +417,7 @@ $(document).ready(function () {
 
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
-        var pipelineId = $(this).data("pipe_id");
+        var pipe_id = $(this).data("pipe_id");
         var $this = $(this);
         var spinner = $this.siblings(".spinner-border");
         
@@ -442,19 +426,19 @@ $(document).ready(function () {
 
         // Send an AJAX request to delete the pipeline with the DELETE method
         $.ajax({
-            url: '/pipeline/' + pipelineId,
+            url: '/pipeline/' + pipe_id,
             type: 'DELETE',
             success: function (response) {
                 toastr.success('Pipeline deleted.');
-                $this.closest("tr").remove();
+                table.row($('#tr_'+pipe_id)).remove().draw();
             },
             error: function (error) {
-                toastr.error(error.responseJSON.message);
+                toastr.error(error.responseJSON.error);
             },
             complete: function() {
                 $this.show();
                 spinner.hide();
-                if (getRowCount() === 0) {
+                if (table.row().count() === 0) {
                     window.location.href = '/pipelines';
                 }
             }.bind(this)
@@ -529,6 +513,30 @@ $(document).ready(function () {
         }
     });
 
+    var getUrlParameter = function getUrlParameter(sParam) {
+        var sPageURL = window.location.search.substring(1),
+            sURLVariables = sPageURL.split('&'),
+            sParameterName,
+            i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            sParameterName = sURLVariables[i].split('=');
+
+            if (sParameterName[0] === sParam) {
+                return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+            }
+        }
+        return false;
+    };
+
+    // sort table
+    var table = $('#pipelineTable').DataTable({
+        "columnDefs": [{ "orderable": false, "targets": [2] }],
+        "order": [[0, "asc"]]
+    });
+    if (getUrlParameter('q')) {
+        table.search(getUrlParameter('q')).draw();
+    }
 });
 </script>
 {% endblock %}

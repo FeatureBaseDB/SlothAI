@@ -44,6 +44,9 @@ button {
   min-width: 80px;
 }
 
+.container_legal {
+  margin-bottom: 80px;
+}
 #buttonSortable {
   list-style-type: none;
   margin: 0;

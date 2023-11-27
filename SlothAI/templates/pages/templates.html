@@ -30,6 +30,7 @@
             </thead>
             <tbody id="templateTable">
                 {% for template in templates %}
+                <tr id="tr_{{template.template_id}}">
                     <td><button class="btn btn-secondary min-button" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-file"></i><br/>{{ template.name }}</button></td>
                     <td>
                         {% if template.extras %}
@@ -73,18 +74,9 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-    function getRowCount() {
-        const tbody = document.querySelector('table tbody');
-        if (tbody) {
-            const rowCount = tbody.getElementsByTagName('tr').length;
-            return rowCount;
-        } else {
-            return 0;
-        }
-    }
-
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
+        console.log(table.rows().count())
         var template_id = $(this).data("template-id");
         var spinner = $(this).siblings(".spinner-border");
 
@@ -95,16 +87,16 @@ $(document).ready(function() {
             url: '/templates/' + template_id,
             type: 'DELETE',
             success: function (response) {
-                $(this).closest("tr").remove();
+                table.row($('#tr_'+template_id)).remove().draw();
                 toastr.success('Template deleted.');
             }.bind(this), // Maintain the reference to the button
             error: function (error) {
-                toastr.error(error.responseJSON.message);
+                toastr.error(error.responseJSON.error);
             },
             complete: function () {
                 $(this).show();
                 spinner.hide();
-                if (getRowCount() === 0) {
+                if (table.rows().count() === 0) {
                     window.location.href = '/templates/new';
                 }
             }.bind(this)
@@ -164,15 +156,6 @@ $(document).ready(function() {
         });
     }
 
-    // Function to run after both changeButtonColors and changeBadgeColors are done
-    function sortTable() {
-        // sort table
-        $('#templatesTable').DataTable({
-            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
-            "order": [[0, "asc"]],
-            "pageLength": 25
-        });
-    }
 
     // Run changeButtonColors and changeBadgeColors functions using Promises
     const buttonColorsPromise = new Promise((resolve) => {
@@ -205,6 +188,36 @@ $(document).ready(function() {
     $(function () {
       $('[data-toggle="tooltip"]').tooltip()
     })
+
+    var getUrlParameter = function getUrlParameter(sParam) {
+        var sPageURL = window.location.search.substring(1),
+            sURLVariables = sPageURL.split('&'),
+            sParameterName,
+            i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            sParameterName = sURLVariables[i].split('=');
+
+            if (sParameterName[0] === sParam) {
+                return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+            }
+        }
+        return false;
+    };
+    
+    // Function to run after both changeButtonColors and changeBadgeColors are done
+    var table = {};
+    function sortTable() {
+        // sort table
+        table = $('#templatesTable').DataTable({
+            "columnDefs": [{ "orderable": false, "targets": [2,3,5] }],
+            "order": [[0, "asc"]],
+            "pageLength": 25
+        });
+        if (getUrlParameter('q')) {
+            table.search(getUrlParameter('q')).draw();
+        }
+    }
 });
 </script>
 {% endblock %}

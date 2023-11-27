@@ -32,7 +32,7 @@
             </thead>
             <tbody id="nodeTable">
                 {% for node in nodes %}
-                <tr>
+                <tr id="tr_{{ node.node_id }}">
                     <td><a href="/nodes/{{ node.node_id }}" type="button" class="btn btn-secondary min-button" disabled><i class="fas fa-cube"></i><br/>{{ node.name }}</a></td>
                     <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors min-button" title="{{ node.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i><br/>{{ node.processor }}</a></td>
 
@@ -63,7 +63,7 @@
                     </td>
 
                     <td>
-                        <a class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></a>
+                        <a class="delete-button btn btn-danger" data-node_id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></a>
                         <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
                     </td>
                 </tr>
@@ -79,7 +79,7 @@
         <div class="rounded-lg border p-3">
             <h4 class="mb-3">Create a Node</h4>
             <p>You have no nodes defined. Click the "Add Node" button below to create your first node from one of your templates. </p>
-            <p>Templates use variables and those variables may be set in the template itself. If a variable's value is set to <strong>"generate"</strong> or <strong>None</strong>, you will be prompted for the variable's value when you create the node. </p>
+            <p>Templates use variables and those variables may be set in the template itself. If a variable's value is set to <strong>None</strong>, you will be prompted for the variable's value when you create the node. </p>
             <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal">
                 <i class="fas fa-plus"></i> Create Node
             </button>
@@ -104,49 +104,49 @@
 
 
 <div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Create Node</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Create Node</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Add your node form fields here -->
+                <div class="form-group">
+                    <label for="nodeName">Node Name</label>
+                    <input type="text" class="form-control" id="nodeName">
                 </div>
-                <div class="modal-body">
-                    <!-- Add your node form fields here -->
-                    <div class="form-group">
-                        <label for="nodeName">Node Name</label>
-                        <input type="text" class="form-control" id="nodeName">
-                    </div>
-                    <div class="form-group">
-                        <label for="nodeProcessor">Node Processor</label>
-                        <select class="form-control" id="nodeProcessor">
-                        <option value="all">All</option>
-                        {% for processor in processors %}
-                        <option value="{{ processor['value'] }}">{{ processor['label'] }}</option>
-                        {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group" style="display: none;" id="nodeTemplateContainer">
-                        <label for="nodeTemplate">Node Template</label>
-                        <select class="form-control" id="nodeTemplate">
-                        </select>
-                    </div>
-                    <div class="spinner-grow" role="status" id="nodeTemplateSpinner">
-                        <span class="sr-only"></span>
-                    </div>
-                <div class="form-group" style="display: none;" id="dynamicFieldsContainer">
-                    <!-- JavaScript will populate this container with new fields -->
+                <div class="form-group">
+                    <label for="nodeProcessor">Node Processor</label>
+                    <select class="form-control" id="nodeProcessor">
+                    <option value="all">All</option>
+                    {% for processor in processors %}
+                    <option value="{{ processor['value'] }}">{{ processor['label'] }}</option>
+                    {% endfor %}
+                    </select>
                 </div>
+                <div class="form-group" style="display: none;" id="nodeTemplateContainer">
+                    <label for="nodeTemplate">Node Template</label>
+                    <select class="form-control" id="nodeTemplate">
+                    </select>
+                </div>
+                <div class="spinner-grow" role="status" id="nodeTemplateSpinner">
+                    <span class="sr-only"></span>
+                </div>
+            <div class="form-group" style="display: none;" id="dynamicFieldsContainer">
+                <!-- JavaScript will populate this container with new fields -->
+            </div>
 
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" id="addNodeModalButton"><i class="fas fa-plus"></i> Create Node</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="addNodeModalButton"><i class="fas fa-plus"></i> Create Node</button>
             </div>
         </div>
     </div>
+</div>
 
 
 {% endblock %}
@@ -154,16 +154,6 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-    function getRowCount() {
-        const tbody = document.querySelector('table tbody');
-        if (tbody) {
-            const rowCount = tbody.getElementsByTagName('tr').length;
-            return rowCount;
-        } else {
-            return 0;
-        }
-    }
-
     // badge popovers
     $('.extras').popover({
       trigger: 'focus'
@@ -173,7 +163,7 @@ $(document).ready(function() {
     });
 
     $(".delete-button").on("click", function () {
-        var node_id = $(this).data("node-id");
+        var node_id = $(this).data("node_id");
         var $this = $(this);
         var spinner = $this.siblings(".spinner-border");
         
@@ -185,7 +175,7 @@ $(document).ready(function() {
             type: 'DELETE',
             success: function (response) {
                 toastr.success('Node deleted.');
-                $this.closest("tr").remove();
+                table.row($('#tr_'+node_id)).remove().draw();  
             },
             error: function (error) {
                 toastr.error(error.responseJSON.message);
@@ -193,7 +183,7 @@ $(document).ready(function() {
             complete: function () {
                 $this.show();
                 spinner.hide();
-                if (getRowCount() === 0) {
+                if (table.row().count() === 0) {
                     window.location.href = '/nodes';
                 }
             }.bind(this)
@@ -232,17 +222,6 @@ $(document).ready(function() {
             const color = getColorFromName(name);
             badge.style.backgroundColor = color;
             badge.style.borderColor = color;
-        });
-    }
-
-    // Function to run after both changeButtonColors and changeBadgeColors are done
-    function sortTable() {
-        // sort table
-        $('#nodesTable').DataTable({
-            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
-            "order": [[0, "asc"]],
-            "pageLength": 25,
-            "responsive": true
         });
     }
 
@@ -325,7 +304,7 @@ $(document).ready(function() {
 
                     // Check if the processor is available, and append
                     if (template.processor) {
-                        optionText += " ➔ " + template.processor;
+                        optionText += " → " + template.processor;
                     }
 
                     if (Array.isArray(template.input_fields) && template.input_fields.length > 0) {
@@ -336,11 +315,11 @@ $(document).ready(function() {
                     }
 
                     if (Array.isArray(template.output_fields) && template.output_fields.length > 0) {
-                        optionText += " ➔ " + template.output_fields.map(function (outputField) {
+                        optionText += " →  return (" + template.output_fields.map(function (outputField) {
                             return outputField.name;
-                        }).join(', ');
+                        }).join(', ') + ")";
                     } else if (!Array.isArray(template.input_fields) || template.input_fields.length === 0) {
-                        optionText += " ➔ passthrough";
+                        optionText += " → passthrough";
                     }
 
                     templateSelect.append($('<option>', {
@@ -595,7 +574,7 @@ $(document).ready(function() {
             success: function(response) {
                 $("#nodeFormModal").modal('hide');
                 toastr.success('Node added successfully.');
-                window.location.reload();
+                window.location.href = '/nodes/'+response.node_id;
             },
             error: function(error) {
                 $("#addNodeButton").prop("disabled", false);
@@ -603,10 +582,42 @@ $(document).ready(function() {
             }
         });
     }
+    
     $(function () {
       $('[data-toggle="popover"]').tooltip()
     })
 
+    var getUrlParameter = function getUrlParameter(sParam) {
+        var sPageURL = window.location.search.substring(1),
+            sURLVariables = sPageURL.split('&'),
+            sParameterName,
+            i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            sParameterName = sURLVariables[i].split('=');
+
+            if (sParameterName[0] === sParam) {
+                return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+            }
+        }
+        return false;
+    };
+
+    var table = {};
+
+    // Function to run after both changeButtonColors and changeBadgeColors are done
+    function sortTable() {
+        // sort table
+        table = $('#nodesTable').DataTable({
+            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
+            "order": [[0, "asc"]],
+            "pageLength": 25,
+            "responsive": true
+        });
+        if (getUrlParameter('q')) {
+            table.search(getUrlParameter('q')).draw();
+        }
+    }
 });
 </script>
 

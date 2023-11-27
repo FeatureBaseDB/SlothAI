@@ -14,7 +14,7 @@ from flask_login import current_user
 
 from google.cloud import storage
 
-from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage
+from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage, merge_extras
 from SlothAI.web.models import Pipeline, Node, Log, User
 
 site = Blueprint('site', __name__)
@@ -69,6 +69,7 @@ template_examples = [
     {"name": "Generate chat from texts", "template_name": "text_to_chat", "processor_type": "aichat"},
     {"name": "Generate an image from text", "template_name": "text_to_image", "processor_type": "aiimage"},
     {"name": "Find objects in image (Google Vision)", "template_name": "image_to_objects", "processor_type": "aivision"},
+    {"name": "Find text in image (Google Vision)", "template_name": "image_to_text", "processor_type": "aivision"},
     {"name": "Generate scene text from image (OpenAI GPT)", "template_name": "image_to_scene", "processor_type": "aivision"},
     {"name": "Transcribe audio to text pages", "template_name": "audio_to_text", "processor_type": "aiaudio"},
     {"name": "Convert text to speech audio", "template_name": "text_to_speech", "processor_type": "aispeech"},
@@ -309,25 +310,65 @@ def nodes():
     )
 
 
-@site.route('/nodes/new/<template_id>')
+@site.route('/nodes/new/<template_id>', methods=['GET'])
 @site.route('/nodes/<node_id>', methods=['GET'])
 @flask_login.login_required
 def node_detail(node_id=None, template_id=None):
     # get the user
     username = current_user.name
+    uid = current_user.uid
+
     template_service = app.config['template_service']
 
-    node = Node.get(node_id=node_id)
+    node = Node.get(node_id=node_id, uid=uid)
+
     if not node:
-        node = {"name": "new"}
-    else:
-        template_id = node.get('template_id')
-   
-    if template_id:
+        if not template_id:
+            abort(404)
+
+        # get the template
         template = template_service.get_template(template_id=template_id, user_id=current_user.uid)
-    
+        if not template:
+            abort(404)
+
+        processor = template.get('extras').get('processor')
+        if not processor:
+            processor = template.get('processor')
+            if not processor:
+                processor = "jinja2"
+
+        # patch extras
+        merged_extras = merge_extras(template.get('extras', {}), {})
+
+        # create a new node
+        node = Node.create(
+            name=random_name(2).split('-')[1],
+            uid=uid,
+            extras=merged_extras,
+            processor=processor,
+            template_id=template.get('template_id')
+        )
+        return redirect(url_for('site.node_detail', node_id=node.get('node_id')))
+
+    pipelines = Pipeline.get_by_uid_node_id(uid, node.get('node_id'))
+    if pipelines:
+        pipelines_ids = [pipeline['pipe_id'] for pipeline in pipelines]
+    else:
+        pipeline_ids = []
+
+    add_pipelines = Pipeline.fetch(uid=uid)
+
+    # Filter out pipelines already in `pipelines`, unless it's a callback
+    if "callback" in node.get('processor') or not pipelines:
+        filtered_pipelines = add_pipelines
+    else:
+        filtered_pipelines = [pipeline for pipeline in add_pipelines if pipeline['pipe_id'] not in pipelines_ids]
+
+    # we have a node, so get the template
+    template = template_service.get_template(template_id=node.get('template_id'), user_id=current_user.uid)
+
     return render_template(
-        'pages/node.html', username=username, brand=get_brand(app), dev=app.config['DEV'], node=node, template=template, processors=processors
+        'pages/node.html', username=username, brand=get_brand(app), dev=app.config['DEV'], node=node, template=template, processors=processors, pipelines=pipelines, filtered_pipelines=filtered_pipelines
     )
 
 
@@ -372,7 +413,7 @@ def template_detail(template_id="new"):
         if len(name_random) < 9:
             break
 
-    empty_template = '{# New Template #}\n\n{# Extras are required. #}\nextras = {"static_extra": "hello", "user_extra": None}'
+    empty_template = '{# This is a reference jinja2 processor template #}\n\n{# Input Fields #}\ninput_fields = [{"name": "input_key", "type": "strings"}]\n\n{# Output Fields #}\noutput_fields = [{"name": "output_key", "type": "strings"}]\n\n{# Extras are required. #}\nextras = {"processor": "jinja2", "static_value": "String for static value.", "dynamic_value": None, "referenced_value": "{{static_value}}"}\n\n{"dict_key": "{{dynamic_value}}"}'
 
     return render_template(
         'pages/template.html', username=username, brand=get_brand(app), dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random, template_examples=template_examples, empty_template=empty_template

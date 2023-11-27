@@ -288,7 +288,7 @@ def gpt_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo")
         print(ex)
         return None
 
-    completion = openai.ChatCompletion.create(
+    completion = openai.chat.completions.create(
         model=model,
         messages=[
             {"role": "system", "content": "You do what you are told, step by step."},
@@ -324,7 +324,7 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
         response_format = None
 
     try:
-        completion = openai.ChatCompletion.create(
+        completion = openai.chat.completions.create(
             model = model,
             response_format = response_format,
             messages = [
@@ -333,9 +333,9 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
             ]
         )
 
-        answer = completion.choices[0].message
+        answer = completion.choices[0].message.content
 
-        ai_dict_str = answer.get('content').replace("\n", "").replace("\t", "")
+        ai_dict_str = answer.replace("\n", "").replace("\t", "")
         ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
         ai_dict_str = ai_dict_str.strip('ai_dict = ')
     

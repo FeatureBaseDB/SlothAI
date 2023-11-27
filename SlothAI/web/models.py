@@ -242,16 +242,14 @@ class Node(ndb.Model):
         if "processor" in new_extras:
             node.processor = new_extras["processor"]
         
-        # Update the extras with the new data, excluding "processor" if it's present
+        # Update the extras with the new data
         for key, value in new_extras.items():
-            if key != "processor":
-                node.extras[key] = value
+            node.extras[key] = value
         
         # Save the updated node
         node.put()
         
         return node.to_dict()
-
 
     @classmethod
     @ndb_context_manager
@@ -376,7 +374,6 @@ class Node(ndb.Model):
         else:
             return False
 
-
     @classmethod
     @ndb_context_manager
     def delete_by_pipe_id(cls, pipe_id):
@@ -385,6 +382,7 @@ class Node(ndb.Model):
             pipe.key.delete()
             return True
         return False
+
 
 class Pipeline(ndb.Model):
     pipe_id = ndb.StringProperty()
@@ -425,6 +423,36 @@ class Pipeline(ndb.Model):
             pipeline.put()
 
         return pipeline.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def add_node(cls, uid, pipe_id, node_id):
+        # Fetch the pipeline by pipe_id
+        pipeline = cls.query(cls.pipe_id == pipe_id).get()
+
+        if pipeline:
+            # Update the node_ids
+            pipeline.node_ids.append(node_id)
+
+            # Save the changes
+            pipeline.put()
+
+            return pipeline.to_dict()  # Return the updated pipeline as a dictionary
+        else:
+            # Handle the case where the pipeline doesn't exist
+            return None 
+
+    @classmethod
+    @ndb_context_manager
+    def get_by_uid_node_id(cls, uid, node_id):
+        pipelines = cls.query(cls.uid == uid).fetch()
+        
+        node_pipelines = []
+        for pipeline in pipelines:
+            if node_id in pipeline.to_dict().get('node_ids'):
+                node_pipelines.append({"name": pipeline.name, "pipe_id": pipeline.pipe_id})
+
+        return node_pipelines if node_pipelines else None
 
     @classmethod
     @ndb_context_manager

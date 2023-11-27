@@ -85,6 +85,43 @@ def pipelines_download(pipe_id):
     return response
 
 
+@pipeline.route('/pipeline/<pipe_id>/add_node', methods=['POST'])
+@flask_login.login_required
+def node_to_pipeline(pipe_id):
+    user_id = current_user.uid
+    pipeline = Pipeline.get(uid=user_id, pipe_id=pipe_id)
+
+    if not pipeline:
+        return jsonify({"error": "Pipeline not found", "message": "The pipeline was not found."}), 404
+
+    if request.is_json:
+        try:
+            json_data = request.get_json()
+            node_id = json_data.get('node_id')
+            uid = current_user.uid  # Assuming the UID is obtained from the current logged-in user
+
+            # Call the method to add the node
+            pipeline = Pipeline.add_node(uid, pipe_id, node_id)
+
+            # Prepare and return a success response
+            return jsonify({
+                'message': 'Node successfully added to pipeline!',
+                'pipeline': pipeline
+            }), 200
+
+        except Exception as e:
+            print(e)
+            # Handle any exceptions that might occur
+            return jsonify({
+                'error': str(e)
+            }), 500
+    else:
+        # If the request is not in JSON format, return an error
+        return jsonify({
+            'error': 'Invalid request format, JSON expected.'
+        }), 400
+
+
 @pipeline.route('/pipeline/<pipe_id>', methods=['POST'])
 @flask_login.login_required
 def pipeline_update(pipe_id):
@@ -260,7 +297,6 @@ def ingest_post(pipeline_id):
         return jsonify(task.to_dict()), 200
     except Exception as ex:
         print(ex)
-        print(task.to_dict())
         return jsonify({"error": "task queue is erroring. site admin needs to setup task queue"})
 
 

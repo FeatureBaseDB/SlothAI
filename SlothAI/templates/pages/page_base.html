@@ -114,7 +114,7 @@ $(document).ready(function() {
       "positionClass": "toast-bottom-right",
     }
     {% for message in get_flashed_messages() %}
-    toastr.info(message);
+    toastr.info("{{message}}");
     {% endfor %}
 });
 </script>

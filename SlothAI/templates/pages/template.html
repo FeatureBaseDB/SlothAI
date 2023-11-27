@@ -12,22 +12,25 @@
     <div class="instructions">
         <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. Use upload and download to manage your template versions.</p>
     </div>
-    <form class="form-inline">
-        <div class="form-group">
-            <input type="text" class="form-control" id="templateName" value="{% if template %}{{ template.name }}{% else %}{{name_random}}{% endif %}">
-        </div>
+    <div class="row">
+        <div class="col text-left">
+            <form class="form-inline">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="templateName" value="{% if template %}{{ template.name }}{% else %}{{name_random}}{% endif %}">
+                </div>
 
-        <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
-    </form>
+                <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
+            </form>
+        </div>
+        <div class="col text-right">
+            <a id="saveButton" href class="btn btn-success"><i class="fas fa-save"></i> Save</a>
+        </div>
+    </div>
     <p></p>
     <div class="p-3">
         <div class="row">
             <div class="text-left">
                 <button id="goBack" class="btn btn-danger"><i class="fas fa-arrow-left"></i> Back</button>
-                <a id="saveButton" href class="btn btn-success"><i class="fas fa-save"></i> Save</a>
-                <a id="downloadButton" href class="btn btn-info" download="template.txt"><i class="fas fa-download"></i> Download</a>
-                <input type="file" id="fileInput" style="display: none;" accept=".txt">
-                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
                 <div class="dropdown d-inline">
                     <button class="btn btn-warning dropdown-toggle" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-cogs"></i> Choose Template
@@ -40,7 +43,11 @@
                             {% endif %}
                         {% endfor %}
                     </div>
-                </div>  
+                </div>
+                <a id="downloadButton" href class="btn btn-info" download="template.txt"><i class="fas fa-download"></i> Download</a>
+                <input type="file" id="fileInput" style="display: none;" accept=".txt">
+                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+                <button id="createNode" class="btn btn-outline-dark"><i class="fas fa-plus"></i> Create Node</button>
             </div>
         </div>
     </div>
@@ -68,14 +75,18 @@ $(document).ready(function() {
         copyWithEmptySelection: true
     });
     editor.setShowPrintMargin(false);
-    editor.getSession().setUseWrapMode(true)
+    editor.getSession().setUseWrapMode(true);
+
+    editor.getSession().on('change', function() { 
+        $('#createNode').prop('disabled', true);
+    });
 
     {% if template %}$('#renameButton').hide();{% endif %}
 
     {% if not has_templates %}
     $.get('/static/templates/get_started_callback.txt', function(response) {
         editor.setValue(response);
-        toastr.info('Loaded getting started template.');
+        toastr.success('Loaded getting started template.');
     });
     {% endif %}
 
@@ -90,6 +101,13 @@ $(document).ready(function() {
     var originalTemplateName = $("#templateName").val();
     var originalTemplateText = editor.getValue();
     var templateNameChanged = false;
+    
+    const currentURL = window.location.href;
+
+    // Check if the current URL ends with "/new"
+    if (currentURL.endsWith('/new')) {
+        $('#createNode').prop('disabled', true);
+    }
 
     {% if template %}
     var selectedProcessorType = "{{ template.processor }}";
@@ -138,7 +156,10 @@ $(document).ready(function() {
         var selectedTemplate = $("#generateTemplateDropdown .dropdown-item.active");
         var newTemplateText = editor.getValue();
 
-        if (newTemplateText !== originalTemplateText) {
+        const currentURL = window.location.href;
+        
+        if (newTemplateText !== originalTemplateText || currentURL.endsWith('/new')) {
+
             var data = {
                 "template": {
                     "name": $("#templateName").val(),
@@ -154,7 +175,9 @@ $(document).ready(function() {
                 success: function(response) {
                     toastr.info("Template saved.");
                     if (window.location.pathname === '/templates/new') {
-                        window.location.href = '/templates';
+                        window.location.href = '/templates?q=' + response.name;
+                    } else {
+                        $('#createNode').prop('disabled', false);
                     }
                 },
                 error: function(error) {
@@ -165,6 +188,7 @@ $(document).ready(function() {
 
         } else {
             toastrWarningCount++;
+
             if (toastrWarningCount < maxToastrWarnings) {
                 toastr.warning("Edit the template before saving it.");
             }
@@ -286,6 +310,12 @@ $(document).ready(function() {
             }
         });
     });
+
+    {% if template %}
+    $('#createNode').on('click', function() {
+        window.location.href = "/nodes/new/{{template.get('template_id')}}";
+    });
+    {% endif %}
 });
 </script>
 {% endblock %}
