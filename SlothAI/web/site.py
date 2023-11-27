@@ -95,6 +95,13 @@ def sitemap():
     brand = get_brand(app)
     return render_template('pages/sitemap.txt', brand=brand)
 
+@site.route('/static/js/<path:filename>')
+def serve_js_module(filename):
+    js_module_path = f'static/js/{filename}'
+    
+    # Set the correct MIME type for JavaScript modules
+    return send_file(js_module_path, mimetype='application/javascript')
+
 
 @site.route('/logs', methods=['GET'])
 @flask_login.login_required

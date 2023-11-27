@@ -1,7 +1,6 @@
 import flask_login
 
-from flask import Flask, render_template, make_response, request
-from flask_talisman import Talisman
+from flask import Flask, render_template, make_response, request, redirect
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -27,20 +26,6 @@ from SlothAI.lib.services import TaskService, TemplateService
 from SlothAI.lib.storage import NDBTaskStore, NDBTemplateStore
 from SlothAI.lib.queue import AppEngineTaskQueue
 
-csp = {
-    'default-src': [
-        '\'self\''
-    ],
-    'script-src': [
-        '\'self\'',
-        '\'unsafe-inline\''
-    ],
-    'style-src': [
-        '\'self\'',
-        '\'unsafe-inline\''
-    ]
-}
-
 def create_app(conf='dev'):
 
     app = Flask(__name__)
@@ -51,7 +36,6 @@ def create_app(conf='dev'):
         app.config.from_object(config.DevConfig)
     elif conf == 'prod':
         app.config.from_object(config.ProdConfig)
-        Talisman(app, content_security_policy=csp)
     else:
         raise Exception("invalid conf argument: must be 'testing', 'dev', or 'prod'.") 
 
@@ -139,7 +123,25 @@ def create_app(conf='dev'):
 
     @app.before_request
     def before_request():
-        pass
+        forwarded_proto = request.headers.get('X-Forwarded-Proto')
+
+        if app.config['DEV'] == "True":
+            return
+
+        # Check if the request is already secure (HTTPS)
+        if forwarded_proto == 'https':
+            return
+
+        # Disable redirects for URLs that contain "tasks" to avoid a loop
+        if "tasks" in request.url:
+            return
+
+        if forwarded_proto == 'http':
+            url = request.url.replace("http", "https", 1)
+            return redirect(url, code=302)
+
+        return
+
     @app.errorhandler(404)
     def f404_notfound(e):
         # Check if the request URL contains "/static/templates/"

@@ -433,18 +433,19 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
         embeddings = []
 
         if model == "text-embedding-ada-002":
+            openai.api_key = task.document.get('openai_token')
             try:
                 batch_size = 10
                 for i in range(0, len(input_data), batch_size):
                     batch = input_data[i:i + batch_size]
-                    embedding_results = openai.embedding.create(input=batch, model=task.document.get('model'))
-                    embeddings.extend([_object.get('embedding') for _object in embedding_results.get('data')])
+                    embedding_results = openai.embeddings.create(input=batch, model=task.document.get('model'))
+                    embeddings.extend([_object.embedding for _object in embedding_results.data])
 
                 # Add the embeddings to the output field
                 task.document[output_field] = embeddings
             except Exception as ex:
-                app.logger.info("embedding processor: " + input_data)
-                # Making non-retriable for now; you can handle different error cases as needed
+                app.logger.info(f"embedding processor: {ex}")
+
                 raise NonRetriableError(f"Exception talking to OpenAI ada embedding: {ex}")
 
 

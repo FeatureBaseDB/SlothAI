@@ -3,15 +3,13 @@ import traceback
 
 from flask import Blueprint, request
 from flask import current_app as app
+import flask_login
 from flask_login import current_user
 
 from SlothAI.lib.processor import process
 from SlothAI.lib.tasks import Task, RetriableError, NonRetriableError, TaskState, TaskNotFoundError
 import SlothAI.lib.services as services
 # from SlothAI.web.models import Task as TaskModel
-
-import flask_login
-from flask_login import current_user
 
 tasks = Blueprint('tasks', __name__)
 
