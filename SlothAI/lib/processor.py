@@ -1409,15 +1409,15 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
     for chunk_stream in audio_chunks:
         # process the audio
         model = task.document.get('model', "whisper-1")
-        transcript = openai.audio.transcriptions.create(model, chunk_stream, content_type="mp3")
-
+        transcript = openai.audio.transcriptions.create(model=model, file=chunk_stream)
+        print(transcript)
         # split on words
-        words = transcript.get('text', "").split(" ")
+        words = transcript.text.split(" ")
         chunks = []
         current_chunk = []
 
         # set the page chunk size (number of characters per page)
-        page_chunk_size = task.document.get('page_chunk_size', 1536)
+        page_chunk_size = int(task.document.get('page_chunk_size', 1536))
 
         # build the chunks
         for word in words:

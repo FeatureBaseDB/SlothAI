@@ -313,7 +313,6 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
     try:
         template = load_template(template)
         prompt = template.substitute(document)
-        print(prompt)
     except Exception as ex:
         return {}
 
