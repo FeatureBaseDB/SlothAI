@@ -1502,7 +1502,6 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
     if not tbl_exists:
         create_schema = Schemar(data=data).infer_create_table_schema() # check data.. must be lists
         err = create_table(table, create_schema, auth)
-        print(err)
         if err:
             if "already exists" in err:
                 # between checking if the table existed and trying to create the
