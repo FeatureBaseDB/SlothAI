@@ -592,7 +592,7 @@ def ai_prompt_to_dict(model="gpt-3.5-turbo-1106", prompt="", retries=3):
                 ai_dict = ai_dict('ai_dict')
             err = None
             break
-        except (ValueError, SyntaxError, NameError, AttributeError) as ex:
+        except (ValueError, SyntaxError, NameError, AttributeError, TypeError) as ex:
             ai_dict = {}
             err = f"AI returned a un-evaluatable, non-dictionary object on try {_try} of {retries}: {ex}"
             time.sleep(2) # give it a few seconds
@@ -1502,6 +1502,7 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
     if not tbl_exists:
         create_schema = Schemar(data=data).infer_create_table_schema() # check data.. must be lists
         err = create_table(table, create_schema, auth)
+        print(err)
         if err:
             if "already exists" in err:
                 # between checking if the table existed and trying to create the
@@ -1512,7 +1513,7 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
                 raise RetriableError(err)
             else:
                 # good response from the server but there was a query error.
-                raise NonRetriableError(err)
+                raise NonRetriableError(f"FeatureBase returned: {err}. Check your fields are valid with a callback.")
             
     # get columns from the table
     column_type_map, task.document['error'] = get_columns(table, auth)
