@@ -1410,7 +1410,7 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
         # process the audio
         model = task.document.get('model', "whisper-1")
         transcript = openai.audio.transcriptions.create(model=model, file=chunk_stream)
-        print(transcript)
+
         # split on words
         words = transcript.text.split(" ")
         chunks = []
