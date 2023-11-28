@@ -394,6 +394,36 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
+def sloth_embedding(input_field: str, output_field: str, model: str, task: Task) -> Task:
+
+    data = {
+        "text": task.document[input_field],
+        "model": model
+        # data = get_values_by_json_paths(keys, task.document)
+        # TODO: could be a nested key
+    }
+
+    defer, selected_box = box_required()
+    if defer:
+        raise RetriableError("sloth virtual machine is being started")
+    
+    url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
+
+    try:
+        # Send the POST request with the JSON data
+        response = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"}, timeout=60)
+    except Exception as ex:
+        raise NonRetriableError(f"Exception raised connecting to sloth virtual machine: {ex}")
+
+    # Check the response status code for success
+    if response.status_code == 200:
+        task.document[output_field] = response.json().get("embeddings")
+    else:
+        raise NonRetriableError(f"request to sloth_embedding virtual machine failed with status code {response.status_code}: {response.text}")
+
+    return task
+
+
 @processer
 def embedding(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']

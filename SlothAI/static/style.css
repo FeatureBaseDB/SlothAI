@@ -63,8 +63,28 @@ footer {
   background: #EEE;
 }
 
-.min-button {
-  min-width: 80px;
+.btn-action {
+  border-radius: 0 !important;
+}
+.btn-bottoms {
+  margin-bottom: 4px;
+}
+
+.btn-group {
+  flex-wrap: wrap;
+}
+
+table.dataTable.no-footer {
+  border-bottom: 0px;
+}
+
+table.dataTable thead th,table.dataTable thead td {
+  padding: 10px 18px;
+  border-bottom: 1px solid #111
+}
+
+table.dataTable.stripe tr.odd {
+  background-color: rgba(0,0,0,.05)!important;
 }
 
 #buttonSortable, #buttonSortable li {
@@ -73,6 +93,10 @@ footer {
   padding: 0;
   background-color: transparent;
   border: none;
+}
+
+button.btn-sortable {
+  border-radius: 0 !important;
 }
 
 #buttonSortable li {
@@ -96,10 +120,6 @@ footer {
   color: #fff;
   cursor: pointer;
   transition: background-color 0.3s, color 0.3s;
-}
-
-.btn-group .delete-button {
-  border-radius: 0 4px 4px 0 !important;
 }
 
 table {
@@ -343,6 +363,10 @@ span.log-expand {
 
 .container-interior {
   margin-top: 20px;
+}
+
+.container_legal {
+  margin-bottom: 60px;
 }
 
 /* Sidebar styles */

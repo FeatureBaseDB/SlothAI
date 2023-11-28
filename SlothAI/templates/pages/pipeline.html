@@ -14,28 +14,31 @@
             <div class="col text-left">
                 <h3 class="mb-3">{{pipeline.name}}</h3>
             </div>
-            <div class="col text-right">
-                <button id="SavePipeline" class="btn btn-success ignore-color"><i class="fas fa-save"></i> Save</button>
-                <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary ignore-color"><i class="fas fa-download"></i> Download</button>
-                <button class="btn btn-danger delete-button" data-pipe-id="{{pipeline.pipe_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
+            <div class="col text-right h-25">
+                <button id="SavePipeline" class="btn btn-success btn-bottoms"><i class="fas fa-save"></i> Save</button>
+                <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary btn-bottoms"><i class="fas fa-download"></i> Download</button>
+                <button class="btn btn-danger delete-button btn-bottoms" data-pipe-id="{{pipeline.pipe_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
             </div>
         </div>
         <p>The pipeline '{{pipeline.name}}' contains the following nodes. Nodes may be reordered, added or deleted.</p>
         <div class="row">
-        <div class="col text-left">
-        <ul id="buttonSortable" class="btn-group">
-            {% for node_id in pipeline.node_ids %}
-                {% for node in nodes %}
-                    {% if node.node_id == node_id %}
-                        <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable" style="border-radius: 0 !important;"><i class="fas fa-cube"></i><br/>{{ node.name }}</button></li>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-        </ul>
+            <div class="col text-left">
+                <ul id="buttonSortable" class="btn-group">
+                    {% for node_id in pipeline.node_ids %}
+                        {% for node in nodes %}
+                            {% if node.node_id == node_id %}
+                                <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable"><i class="fas fa-cube"></i><br/>{{ node.name }}</button></li>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
         </div>
-        <div class="col text-right">
-            <button id="addNode" class="btn btn-success"><i class="fas fa-plus"></i> Add Node</button>
-        </div>
+        <p></p>
+        <div class="row">
+            <div class="col text-left">
+                <button id="addNode" class="btn btn-outline-dark"><i class="fas fa-plus"></i> Add Node</button>
+            </div>
         </div>
         <hr/>
         <h4>Send Data</h4>

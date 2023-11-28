@@ -19,7 +19,7 @@
         </div>
         <p></p>
         <div>
-        <table width="100%" id="nodesTable" class="table table-striped">
+        <table width="100%" id="nodesTable" class="stripe hover">
             <thead>
                 <tr>
                     <th>Node</th>
@@ -63,7 +63,7 @@
                     </td>
 
                     <td>
-                        <a class="delete-button btn btn-danger" data-node_id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></a>
+                        <a class="delete-button btn btn-danger btn-sm" data-node_id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></a>
                         <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
                     </td>
                 </tr>
@@ -237,6 +237,7 @@ $(document).ready(function() {
 
     // Wait for both promises to resolve, and then execute anotherFunction
     Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
+        $("th").css("border-bottom-color","white");
         sortTable();
     });
 
