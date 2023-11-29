@@ -310,11 +310,11 @@ def pipeline_upload():
 
     json_data = request.get_json()
 
-    name = json_data.get('name')
+    pipe_name = json_data.get('name')
     nodes = json_data.get('nodes')
     user_id = current_user.uid
 
-    if not name or not nodes:
+    if not pipe_name or not nodes:
         return jsonify({"error": "Invalid JSON Object", "message": "The request body must be valid JSON data and contain a 'name' and 'nodes' key."}), 400
     
     if not isinstance(nodes, list):
@@ -328,10 +328,10 @@ def pipeline_upload():
         if not node or not template:
             return jsonify({"error": "Invalid JSON Object", "message": f"Each node in nodes must contain a 'node' and 'template' key"}), 400
 
-        name = node.get('name')
+        node_name = node.get('name')
         processor = node.get('processor', template.get('processor'))
 
-        if not name:
+        if not node_name:
             return jsonify({"error": "Invalid JSON Object", "message": f"Nested node object must contain a 'name' key value pair"}), 400
         if not processor:
             return jsonify({"error": "Invalid JSON Object", "message": f"Processor not found in template or node"}), 400
@@ -362,7 +362,7 @@ def pipeline_upload():
             return str(e), 400
         
         node = Node.create(
-            name=name,
+            name=node_name,
             uid=current_user.uid,
             extras=node_extras,
             processor=processor,
@@ -373,7 +373,7 @@ def pipeline_upload():
 
 
     # update with the create method
-    pipeline = Pipeline.create(user_id, name, node_ids)
+    pipeline = Pipeline.create(user_id, pipe_name, node_ids)
     
     if not pipeline:
         return jsonify({"error": "Update failed", "message": "Unable to update pipeline."}), 501
