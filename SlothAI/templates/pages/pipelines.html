@@ -18,7 +18,7 @@
             <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: inline;">
                 <input id="fileInput" type="file" name="file" style="display: none;" />
                 <button id="uploadPipeline" type="button" class="btn btn-info btn-upload" style="float: left;">
-                    <i class="fas fa-upload"></i> Upload
+                    <i class="fas fa-upload"></i> Import
                 </button>
                 <input type="submit" value="Submit" hidden/>
             </form>
@@ -494,7 +494,6 @@ $(document).ready(function () {
                     // Try to parse the file content as JSON
                     var json = JSON.parse(event.target.result);
 
-                    // Send the JSON to the Flask backend using jQuery's $.ajax
                     $.ajax({
                         url: '/pipeline/upload',
                         type: 'POST',
@@ -504,8 +503,8 @@ $(document).ready(function () {
                             toastr.success("Pipeline uploaded!");
                             window.location.reload();
                         },
-                        error: function(jqXHR, textStatus, errorThrown) {
-                            toastr.error(jqXHR.responseJSON.message);
+                        error: function(error) {
+                            toastr.error(error.responseJSON.error);
                         }
                     });
                 } catch (e) {
@@ -534,8 +533,9 @@ $(document).ready(function () {
     };
 
     // sort table
+    var table = {}
     function sortTable() {
-        var table = $('#pipelineTable').DataTable({
+        table = $('#pipelineTable').DataTable({
             "columnDefs": [{ "orderable": false, "targets": [2] }],
             "order": [[0, "asc"]]
         });

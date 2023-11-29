@@ -729,6 +729,63 @@ class User(flask_login.UserMixin, ndb.Model):
             return cls.query(cls.mail_token == mail_token).get()
 
 
+class Token(ndb.Model):
+    token_id = ndb.StringProperty()
+    user_id = ndb.StringProperty()
+    name = ndb.StringProperty()
+    value = ndb.JsonProperty()
+    created = ndb.DateTimeProperty()
+
+    @classmethod
+    @ndb_context_manager
+    def create(cls, user_id, name, value):
+        id = random_string(size=13)
+        token = cls(
+            token_id=id,
+            user_id=user_id,
+            name=name,
+            value=value,
+            created=datetime.datetime.utcnow(),
+        )
+        token.put()
+        return token.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def get_by_uid_name(cls, user_id, name):
+        token = cls.query(cls.user_id == user_id, cls.name == name).get()
+        if token:
+            return token.to_dict()
+        return None
+
+    @classmethod
+    @ndb_context_manager
+    def get_all_by_uid(cls, user_id):
+        tokens = cls.query(cls.user_id == user_id).fetch()
+        _tokens = []
+        for token in tokens:
+            _tokens.append(token.to_dict())
+        return _tokens
+
+    @classmethod
+    @ndb_context_manager
+    def delete_all(cls, user_id):
+        entities = cls.query(cls.user_id == user_id).fetch()
+        if entities:
+            for entity in entities:
+                entity.key.delete()
+        return True
+
+    @classmethod
+    @ndb_context_manager
+    def delete(cls, user_id, token_id):
+        entity = cls.query(cls.user_id == user_id, cls.token_id == token_id).get()
+        if entity:
+            entity.key.delete()
+            return True
+        else:
+            return False
+
 class Log(flask_login.UserMixin, ndb.Model):
     log_id = ndb.StringProperty()
     user_id = ndb.StringProperty()

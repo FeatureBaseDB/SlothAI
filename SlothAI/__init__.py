@@ -30,6 +30,9 @@ def create_app(conf='dev'):
 
     app = Flask(__name__)
 
+    # Enable pretty-printing for JSON responses
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
     if conf == 'testing':
         app.config.from_object(config.TestingConfig)
     elif conf == 'dev':

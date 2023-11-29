@@ -373,15 +373,13 @@ def filter_document(document, keys_to_keep):
     return {key: value for key, value in document.items() if key in keys_to_keep}
 
 
-# Define the deep_scrub function
+# scrub the data for tokens, passwords, secrets
 def deep_scrub(data):
     if isinstance(data, dict):
         for key in list(data.keys()):
             if any(word in key.lower() for word in ['secret', 'password', 'token']):
-                # only redact things that aren't templated
-                if data.get(key):
-                    if not data[key].startswith("[") and not data[key].endswith("]"):
-                        data[key] = "REDACTED"
+                # redact things that are secrets
+                data[key] = f"[{key}]"
             else:
                 deep_scrub(data[key])
     elif isinstance(data, list):

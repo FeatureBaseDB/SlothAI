@@ -9,7 +9,7 @@ from flask import current_app as app
 import flask_login
 from flask_login import current_user
 
-from SlothAI.web.models import User
+from SlothAI.web.models import User, Token
 from SlothAI.lib.util import random_string
 
 from SlothAI.lib.database import featurebase_query
@@ -69,3 +69,67 @@ def disconnect_db(dbid):
 
     user = User.update_db(uid, None, None)
     return jsonify({"success": "FeatureBase account removed."})
+
+
+@settings_handler.route('/tokens', methods=['GET'])
+@settings_handler.route('/tokens/<name>', methods=['GET'])
+@flask_login.login_required
+def get_tokens(name=None):
+    uid = current_user.uid
+    if not uid:
+        return jsonify({"error": "Error authenticating. Enter or check your credentials."}), 401
+
+    if not name:
+        tokens = Token.get_all_by_uid(uid)
+    else:
+        token = Token.get_by_uid_name(uid, name)
+        if token:
+            tokens = [token]
+        else:
+            # return an empty list so people can't scan for tokens
+            tokens = []
+
+    return jsonify(tokens)
+
+
+@settings_handler.route('/tokens', methods=['POST'])
+@flask_login.login_required
+def add_token():
+    uid = current_user.uid
+    if not uid:
+        return jsonify({"error": "Error authenticating. Enter or check your credentials."}), 401
+
+    try:
+        data = request.get_json()
+    except:
+        return jsonify({"error": "Data must be posted as a dictionary with values."}), 406
+
+    if data.get('name') and data.get('value'):
+        keywords = ["password", "token", "secret"]
+        for keyword in keywords:
+            if keyword in data.get('name'):
+                break
+        else:
+            return jsonify({"error": "Token name must contain 'secret', 'token', or 'password', such that it can be hidden properly."}), 422
+
+        token = Token.create(uid, data.get('name'), data.get('value'))
+
+    token['value'] = f"[{token.get('name')}]"
+
+    return jsonify(token)
+
+
+@settings_handler.route('/tokens/<token_id>', methods=['DELETE'])
+@flask_login.login_required
+def delete_token(token_id=None):
+    uid = current_user.uid
+    if not uid:
+        return jsonify({"error": "Error authenticating. Enter or check your credentials."}), 401
+
+    if not token_id:
+        return jsonify({"error": "Requires a token ID."}), 400
+
+    if Token.delete(uid, token_id):
+        return jsonify({"message": "Token deleted!"}), 200
+    else:
+        return jsonify({"error": "Error deleting token."}), 400

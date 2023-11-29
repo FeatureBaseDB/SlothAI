@@ -21,4 +21,4 @@ if (-not $existingRule) {
 }
 
 # Start the Flask application
-flask --app SlothAI run --port 8080 --debug
+flask --app SlothAI run --with-threads --port 8080 --debug

@@ -1,5 +1,6 @@
 import os
 import json
+import re
 
 from datetime import datetime
 
@@ -35,54 +36,6 @@ def pipelines_list():
     pipelines = Pipeline.fetch(uid=current_user.uid)
 
     return jsonify(pipelines)
-
-
-# API HANDLERS
-@pipeline.route('/pipelines/<pipe_id>/download', methods=['GET'])
-@flask_login.login_required
-def pipelines_download(pipe_id):
-    # Get the user and their tables
-    username = current_user.name
-
-    # Retrieve the pipeline by pipe_id (you need to implement your Pipeline class)
-    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
-
-    if pipeline is None:
-        return jsonify({"error": "Pipeline not found"})
-
-    # Retrieve nodes for the pipeline (you need to implement your Nodes class)
-    node_ids = pipeline.get('node_ids')  # Assuming 'nodes' is a list of node IDs
-
-    nodes = []
-    for node_id in node_ids:
-        node = Node.get(uid=current_user.uid, node_id=node_id)
-
-        # Retrieve the template for each node
-        template_service = app.config['template_service']
-        template = template_service.get_template(user_id=current_user.uid, template_id=node.get('template_id'))
-        # Append the node and its associated template to the nodes list
-        nodes.append({
-            "node": node,
-            "template": template,
-        })
-
-    # Create a dictionary containing pipeline information, including pipe_id
-    pipeline_data = {
-        "pipe_id": pipe_id,
-        "name": pipeline.get('name'),
-        "nodes": nodes,
-    }
-
-    deep_scrub(pipeline_data)
-
-    # Create a JSON response
-    response = jsonify(pipeline_data)
-
-    # Set the headers to force a file download
-    response.headers["Content-Disposition"] = f"attachment; filename=pipeline_{pipeline.get('name')}.json"
-    response.headers["Content-Type"] = "application/json"
-
-    return response
 
 
 @pipeline.route('/pipeline/<pipe_id>/add_node', methods=['POST'])
@@ -300,6 +253,55 @@ def ingest_post(pipeline_id):
         return jsonify({"error": "task queue is erroring. site admin needs to setup task queue"})
 
 
+@pipeline.route('/pipelines/<pipe_id>/download', methods=['GET'])
+@flask_login.login_required
+def pipelines_download(pipe_id):
+    # Get the user and their tables
+    username = current_user.name
+
+    # Retrieve the pipeline by pipe_id (you need to implement your Pipeline class)
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+
+    if pipeline is None:
+        return jsonify({"error": "Pipeline not found"})
+
+    # Retrieve nodes for the pipeline (you need to implement your Nodes class)
+    node_ids = pipeline.get('node_ids')  # Assuming 'nodes' is a list of node IDs
+
+    nodes = []
+    for node_id in node_ids:
+        node = Node.get(uid=current_user.uid, node_id=node_id)
+
+        # Retrieve the template for each node
+        template_service = app.config['template_service']
+        template = template_service.get_template(user_id=current_user.uid, template_id=node.get('template_id'))
+
+        # Append the node and its associated template to the nodes list
+        nodes.append({
+            "node": node,
+            "template": template,
+        })
+
+    # Create a dictionary containing pipeline information, including pipe_id
+    pipeline_data = {
+        "pipe_id": pipe_id,
+        "name": pipeline.get('name'),
+        "nodes": nodes,
+    }
+
+    # scrub the data for secrets
+    deep_scrub(pipeline_data)
+
+    # Create a JSON response
+    response = jsonify(pipeline_data)
+
+    # Set the headers to force a file download
+    response.headers["Content-Disposition"] = f"attachment; filename=pipeline_{pipeline.get('name')}.json"
+    response.headers["Content-Type"] = "application/json"
+
+    return response
+
+
 @pipeline.route('/pipeline/upload', methods=['POST'])
 @flask_login.login_required
 def pipeline_upload():
@@ -348,11 +350,20 @@ def pipeline_upload():
         if not isinstance(node_extras, dict):
             return jsonify({"error": "Invalid JSON Object", "message": f"extras must be a JSON object"}), 400
 
-        for k, v in template_extras.items():
+        # scan for values enclosed in brackets
+        pattern = r'\[(.*?)\]'
+        
+        for k, v in node.get('extras').items():
+            print(k,v)
+            # extras differ
+            """
             if k != "processor" and k not in node_extras:
                 return jsonify({"error": "Invalid JSON Object", "message": f"Extras keys must match for template and node: found {k} in template but not node"}), 400
-            if v == "REDACTED" or node_extras[k] == "REDACTED":
-                return jsonify({"error": "Invalid request", "message": "Extras for node or template contain the value REDACTED. Change this to a valid value."}), 400
+            """
+            match = re.search(pattern, str(v))
+            if match:
+                value = match.group(1)
+                print(value)
 
         template['user_id'] = current_user.uid
 

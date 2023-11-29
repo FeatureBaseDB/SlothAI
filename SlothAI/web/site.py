@@ -15,7 +15,7 @@ from flask_login import current_user
 from google.cloud import storage
 
 from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage, merge_extras
-from SlothAI.web.models import Pipeline, Node, Log, User
+from SlothAI.web.models import Pipeline, Node, Log, User, Token
 
 site = Blueprint('site', __name__)
 
@@ -475,8 +475,10 @@ def settings():
     api_token = current_user.api_token
     dbid = current_user.dbid
 
+    tokens = Token.get_all_by_uid(current_user.uid)
+
     return render_template(
-        'pages/settings.html', username=username, brand=get_brand(app), api_token=api_token, dbid=dbid
+        'pages/settings.html', username=username, brand=get_brand(app), api_token=api_token, dbid=dbid, tokens=tokens
     )
 
 
