@@ -111,7 +111,6 @@ class Template(ndb.Model):
     def update(cls, template_id, uid, name, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
         template = cls.query(cls.template_id == template_id, cls.uid == uid).get()
         if not template:
-            print("didn't find template")
             return None
 
         template.name = name
@@ -740,6 +739,11 @@ class Token(ndb.Model):
     @ndb_context_manager
     def create(cls, user_id, name, value):
         id = random_string(size=13)
+        token = cls.query(cls.user_id == user_id, cls.name == name).get()
+        if token:
+            return token.to_dict()
+
+        # otherwise, create
         token = cls(
             token_id=id,
             user_id=user_id,

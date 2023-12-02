@@ -79,7 +79,7 @@
                             {% endfor %}
                         </select>
                         {% elif "token" in key or "password" in key or "secret" in key %}
-                        <input class="form-control" type="password" id="{{ key }}" name="{{ key }}" value="{{ value }}">
+                        <input class="form-control" type="password" id="{{ key }}" name="{{ key }}" value="{{ value }}" readonly>
                         {% else %}
                         <input class="form-control" type="text" id="{{ key }}" name="{{ key }}" value="{{ value }}">
                         {% endif %}
@@ -134,12 +134,11 @@
                 </button>
             </div>
             <div class="modal-body">
-                <!-- Input field in the modal -->
+                <label for="modalInput" id="modalInputLabel"></label>
                 <input type="text" id="modalInput" class="form-control">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="modalSave">Save</button>
+                <button type="button" class="btn btn-primary" id="modalSave">Update</button>
             </div>
         </div>
     </div>
@@ -350,40 +349,82 @@ $(document).ready(function() {
         });
     });
 
-    function shouldOpenModal(value) {
-        return value === "None" || value === "" || /^\[.*\]$/.test(value);
+function shouldOpenModal(value) {
+    return value === "None" || value === "";
+}
+
+var needsUpdates = false;
+
+// Function to open a modal for a specific input field
+function openModalForField(field) {
+    var fieldValue = field.val();
+    var fieldName = field.attr("name");
+
+    if (shouldOpenModal(fieldValue)) {
+        needsUpdates = true;
+
+        var modal = $("#myModal");
+        modal.modal("show");
+
+        // Get the key and value of the field that triggered the modal
+        var key = fieldName;
+
+        // Set the modal label based on the key
+        $("#modalLabel").html("Update Extra Value");
+
+        // Determine the input type based on the key
+        var inputType = "text";
+        if (key.toLowerCase().includes("password") || key.toLowerCase().includes("secret") || key.toLowerCase().includes("token")) {
+            inputType = "password";
+        }
+
+        // Set the input type and value of the modal input
+        $("#modalInput").attr("type", inputType).val("");
+        $("#modalInputLabel").html("<strong>"+key+"</strong>");
+
+        // Save the field element for later use
+        modal.data("targetField", field);
+
+        // Return a promise that resolves when the modal is closed
+        return new Promise(function(resolve) {
+            modal.on("hidden.bs.modal", function() {
+                resolve();
+            });
+        });
     }
 
-    // Iterate over form inputs
-    $("#updateExtrasForm input").each(function() {
-        var fieldValue = $(this).val();
+    // If the modal is not opened, resolve immediately
+    return Promise.resolve();
+}
 
-        if (shouldOpenModal(fieldValue)) {
-            // When a matching field is found, open a modal to fill it in
-            var modal = $("#myModal");
-            modal.modal("show");
+// Use a Promise chain to open modals one by one
+var inputFields = $("#updateExtrasForm input");
+var promiseChain = Promise.resolve();
 
-            // Assuming your modal has an input field with ID "modalInput"
-            // You can set the value of the modal input here
-            // For example:
-            $("#modalInput").val(fieldValue);
+inputFields.each(function() {
+    promiseChain = promiseChain.then(function() {
+        return openModalForField($(this));
+    }.bind(this));
+});
 
-            // Save the field element for later use
-            modal.data("targetField", $(this));
-        }
-    });
+promiseChain.then(function() {
+    if (needsUpdates) {
+        $("#saveExtras").trigger("click");
+    }
+});
 
-    // Handle modal save button click
-    $("#modalSave").click(function() {
-        var modalInputValue = $("#modalInput").val();
-        var targetField = $("#myModal").data("targetField");
+// Handle modal save button click
+$("#modalSave").click(function() {
+    var modalInputValue = $("#modalInput").val();
+    var targetField = $("#myModal").data("targetField");
 
-        // Update the original input field with the modal input value
-        targetField.val(modalInputValue);
+    // Update the original input field with the modal input value
+    targetField.val(modalInputValue);
 
-        // Close the modal
-        $("#myModal").modal("hide");
-    });
+    // Close the modal
+    $("#myModal").modal("hide");
+});
+
     
 });
 </script>

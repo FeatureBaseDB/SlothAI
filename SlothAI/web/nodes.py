@@ -5,9 +5,9 @@ from flask import current_app as app
 import flask_login
 from flask_login import current_user
 
-from SlothAI.web.models import Node, Pipeline
+from SlothAI.web.models import Node, Pipeline, Token
 from SlothAI.lib.template import Template
-from SlothAI.lib.util import merge_extras
+from SlothAI.lib.util import should_be_service_token, merge_extras, callback_extras
 
 node_handler = Blueprint('node_handler', __name__)
 
@@ -63,30 +63,6 @@ def update_name(node_id):
         return jsonify({"error": "Failed to rename node"}), 500
 
 
-@node_handler.route('/nodes/<node_id>/update_extras', methods=['POST'])
-@flask_login.login_required
-def update_extras(node_id):
-    # Parse the JSON data from the request
-    try:
-        json_data = request.get_json()
-        extras = json_data.get("node", {}).get("extras", {})
-    except Exception as e:
-        return jsonify({"error": "Invalid JSON data"}), 400
-
-    # Check if the user has permission to update the node
-    node = Node.get(uid=current_user.uid, node_id=node_id)
-    if not node:
-        return jsonify({"error": "Node not found"}), 404
-
-    # Update the node's extras with the new values
-    updated_node = Node.update_extras(current_user.uid, node_id, extras)
-
-    if updated_node:
-        return jsonify({"message": "Extras updated successfully"}), 200
-    else:
-        return jsonify({"error": "Failed to update extras"}), 500
-
-
 @node_handler.route('/nodes/validate/openai', methods=['POST'])
 @flask_login.login_required
 def validate_openai():
@@ -107,12 +83,16 @@ def validate_openai():
     
     return jsonify({"result": "Token validated. Adding new node..."}), 200
 
+
 # TODO ADD NODE UPDATE
 @node_handler.route('/nodes', methods=['POST'])
 @node_handler.route('/nodes/create', methods=['POST'])
 @flask_login.login_required
 def node_create():
     uid = current_user.uid
+
+    # get current service tokens
+    tokens = Token.get_all_by_uid(uid)
 
     if request.is_json:
         json_data = request.get_json()
@@ -128,11 +108,25 @@ def node_create():
             template = template_service.get_template(template_id=node_data.get('template_id'))
 
             merged_extras = merge_extras(template.get('extras', {}), node_data.get('extras', {}))
-           
+
+            # populate any local callback extras
+            merged_extras, update = callback_extras(merged_extras)
+
+            # process service tokens
+            _extras = {}
+            for _key, _value in merged_extras.items():
+                # try to create all service tokens
+                if should_be_service_token(_key):
+                    Token.create(uid, _key, _value)
+                    _value = f"[{_key}]"
+
+                _extras[_key] = _value
+            
+            # create the node
             created_node = Node.create(
                 name=node_data.get('name'),
                 uid=uid,
-                extras=merged_extras,
+                extras=_extras,
                 processor=node_data.get('processor'),
                 template_id=node_data.get('template_id')
             )
@@ -145,6 +139,41 @@ def node_create():
             return jsonify({"error": "Invalid JSON", "message": "'node' key with dictionary data is required in the request JSON."}), 400
     else:
         return jsonify({"error": "Invalid JSON", "message": "The request body must be valid JSON data."}), 400
+
+
+@node_handler.route('/nodes/<node_id>/update_extras', methods=['POST'])
+@flask_login.login_required
+def update_extras(node_id):
+    # Parse the JSON data from the request
+    try:
+        json_data = request.get_json()
+        extras = json_data.get("node", {}).get("extras", {})
+    except Exception as e:
+        return jsonify({"error": "Invalid JSON data"}), 400
+
+    # Check if the user has permission to update the node
+    node = Node.get(uid=current_user.uid, node_id=node_id)
+    if not node:
+        return jsonify({"error": "Node not found"}), 404
+
+
+    # process service tokens
+    _extras = {}
+    for _key, _value in extras.items():
+        # try to create all service tokens
+        if should_be_service_token(_key):
+            Token.create(current_user.uid, _key, _value)
+            _value = f"[{_key}]"
+
+        _extras[_key] = _value
+
+    # Update the node's extras with the new values
+    updated_node = Node.update_extras(current_user.uid, node_id, _extras)
+
+    if updated_node:
+        return jsonify({"message": "Extras updated successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to update extras"}), 500
 
 
 @node_handler.route('/nodes/<node_id>', methods=['DELETE'])

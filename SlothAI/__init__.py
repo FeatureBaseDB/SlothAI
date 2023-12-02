@@ -1,6 +1,7 @@
 import flask_login
 
 from flask import Flask, render_template, make_response, request, redirect
+from flask_compress import Compress
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -29,7 +30,9 @@ from SlothAI.lib.queue import AppEngineTaskQueue
 def create_app(conf='dev'):
 
     app = Flask(__name__)
-
+    compress = Compress()
+    compress.init_app(app)
+    
     # Enable pretty-printing for JSON responses
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 

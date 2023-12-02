@@ -14,7 +14,7 @@ from flask_login import current_user
 
 from google.cloud import storage
 
-from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage, merge_extras
+from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
 from SlothAI.web.models import Pipeline, Node, Log, User, Token
 
 site = Blueprint('site', __name__)
@@ -294,13 +294,17 @@ def nodes():
 
     name_random = random_name(2).split('-')[1]
 
+    tokens = Token.get_all_by_uid(current_user.uid)
+
+    """
     # hide the tokens and passwords
     for node in nodes:
         extras = node.get('extras', None)
         if extras:
             for key in extras.keys():
-                if 'token' in key or 'password' in key:
-                    extras[key] = '[secret]'
+                if 'token' in key or 'password' in key or 'secret' in key:
+                    extras[key] = f'[{key}]'
+    """
 
     # update the template names
     _nodes = []
@@ -326,10 +330,16 @@ def node_detail(node_id=None, template_id=None):
     username = current_user.name
     uid = current_user.uid
 
+    # get the template service
     template_service = app.config['template_service']
 
+    # get the tokens
+    tokens = Token.get_all_by_uid(current_user.uid)
+
+    # get the node, if any
     node = Node.get(node_id=node_id, uid=uid)
 
+    # new node, if no node
     if not node:
         if not template_id:
             abort(404)
@@ -339,24 +349,43 @@ def node_detail(node_id=None, template_id=None):
         if not template:
             abort(404)
 
+        # processor
         processor = template.get('extras').get('processor')
         if not processor:
             processor = template.get('processor')
             if not processor:
                 processor = "jinja2"
+        if processor in ["read_fb", "write_fb"]:
+            if not current_user.dbid:
+                flash("You need to add a database connection before adding this type of processor.")
+                return redirect(url_for('site.nodes'))
 
-        # patch extras
+        # merge extras
         merged_extras = merge_extras(template.get('extras', {}), {})
 
+        # populate any local callback extras
+        merged_extras, update = callback_extras(merged_extras)
+
+        # build the list and store callback_token if local callback was updated
+        _extras = {}
+        for key, value in merged_extras.items():
+            if "callback_token" in key and update:
+                Token.create(uid, key, value)
+                value = f"[{key}]"
+            _extras[key] = value
+            
         # create a new node
         node = Node.create(
             name=random_name(2).split('-')[1],
             uid=uid,
-            extras=merged_extras,
+            extras=_extras,
             processor=processor,
             template_id=template.get('template_id')
         )
+
+        # redirect to ourselves
         return redirect(url_for('site.node_detail', node_id=node.get('node_id')))
+
 
     pipelines = Pipeline.get_by_uid_node_id(uid, node.get('node_id'))
     if pipelines:

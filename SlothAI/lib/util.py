@@ -387,31 +387,44 @@ def deep_scrub(data):
             deep_scrub(item)
 
 
-# handles merging the extras in from template, user and system definitions
-def merge_extras(template_extras, node_extras):
-    # Make a copy of template_extras to avoid modifying it directly
-    merged_extras = template_extras.copy()
+def should_be_service_token(name):
+    token_strings = ["password", "secret", "token"]
+    for token_string in token_strings:
+        if token_string in name:
+            return True
+    else:
+        return False
 
+
+def callback_extras(extras):
+    # hostname and protocol
     hostname = request.host
     if "localhost" in hostname:
         protocol = "http"
     else:
         protocol = "https"
 
-    # build the new predefined values from the system
-    predefined_values = {
-        "username": current_user.name,
-        "callback_token": current_user.api_token,
-        "callback_uri": protocol + "://" + request.host+"/"+current_user.name+"/callback?token={{callback_token}}"
-    }
+    localCallback = False
+    update = False
+    for key, value in extras.items():
+        if "callback_uri" in key and "[callback_uri]" in value:
 
-    for key, value in merged_extras.items():
-        if value:
-            try:
-                if "[" in value and "]" in value:
-                    merged_extras[key] = predefined_values[key]
-            except:
-                pass
+            localCallback = True
+            extras[key] = protocol + "://" + request.host+"/{{username}}/callback?token={{callback_token}}"
+
+    for key, value in extras.items():
+        if "callback_token" in key and "[callback_token]" in value and localCallback:
+            update = True
+            # we'll set the token, but after callback_extras is called, we need to move it to service tokens
+            extras[key] = current_user.api_token
+
+    return extras, update
+
+
+# handles merging the extras in from template, user and system definitions
+def merge_extras(template_extras, node_extras):
+    # Make a copy of template_extras to avoid modifying it directly
+    merged_extras = template_extras.copy()
 
     if node_extras:
         for key, value in node_extras.items():

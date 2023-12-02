@@ -18,6 +18,8 @@ from google.api_core.client_options import ClientOptions
 from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes, create_audio_chunks
 from SlothAI.lib.template import Template
 
+from SlothAI.web.models import Token
+
 from typing import Dict
 
 import PyPDF2
@@ -77,14 +79,36 @@ def process(task: Task) -> Task:
     if missing_field:
         raise MissingInputFieldError(missing_field, node.get('name'))
 
+    # get tokens from service tokens
+    # and process values for numbers
+    _extras = {}
+
+    for key, value in node.get('extras').items():
+        # cast certain strings to other things
+        if isinstance(value, str):  
+            if key in value:
+                token = Token.get_by_uid_name(task.user_id, key)
+                if not token:
+                    raise NonRetriableError(f"You need a service token created for '{key}'.")
+                value = token.get('value')
+            # convert ints and floats from strings
+            elif value.isdigit():
+                # convert to int
+                value = int(value)
+            elif '.' in value and all(c.isdigit() or c == '.' for c in value):
+                # convert it to a float
+                value = float(value)
+
+        _extras[key] = value
+
+    # update node extras
+    node['extras'] = _extras
+
     # template the extras off the node
     extras = evaluate_extras(node, task)
+
     if extras:
         task.document.update(extras)
-
-    # grab the available token for the node
-    if "openai_token" in node.get('extras'):
-        task.document['OPENAI_TOKEN'] = extras.get('openai_token')
 
     # get the user
     user = User.get_by_uid(uid=task.user_id)
@@ -101,15 +125,13 @@ def process(task: Task) -> Task:
     if task.document.get('error'):
         return task
 
-    if "OPENAI_TOKEN" in task.document.keys():
-        task.document.pop('OPENAI_TOKEN', None)
     if "X-API-KEY" in task.document.keys():
         task.document.pop('X-API-KEY', None)
     if "DATABASE_ID" in task.document.keys():
         task.document.pop('DATABASE_ID', None)
 
     # strip out the sensitive extras
-    clean_extras(extras, task)
+    clean_extras(_extras, task)
     missing_field = validate_document(node, task, DocumentValidator.OUTPUT_FIELDS)
     if missing_field:
         raise MissingOutputFieldError(missing_field, node.get('name'))
@@ -296,6 +318,7 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
     inputs  = [n['name'] for n in input_fields]
     outputs = [n['name'] for n in output_fields] 
 
+    print(node.get('extras'))
     batch_size = node.get('extras', {}).get('batch_size', None)
 
     task_service = app.config['task_service']
@@ -1147,7 +1170,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
             raise NonRetriableError("Processor read_file supports text/plain and application/pdf content types only.")
 
         # update the document
-        task.document[output_field].append(texts)
+        task.document[output_field].extend(texts)
     
     return task
 
@@ -1496,7 +1519,7 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
     table = task.document['table']
     tbl_exists, err = table_exists(table, auth)
     if err:
-        raise RetriableError("issue checking for table in featurebase")
+        raise NonRetriableError("Can't connect to database. Check your FeatureBase connection.")
     
     # if it doesn't exists, create it
     if not tbl_exists:
@@ -1593,6 +1616,9 @@ def evaluate_extras(node, task) -> Dict[str, any]:
     # combine with inputs
     combined_dict = extras.copy()
     combined_dict.update(task.document)
+
+    user = User.get_by_uid(task.user_id)
+    combined_dict['username'] = user.get('name')
 
     # eval the extras from inputs_fields first
     extras_template = env.from_string(str(combined_dict))

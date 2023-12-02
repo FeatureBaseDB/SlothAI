@@ -74,7 +74,7 @@
             <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: inline;">
                 <input id="fileInput" type="file" name="file" style="display: none;" />
                 <button id="uploadPipeline" type="button" class="btn btn-info" style="float: left;">
-                    <i class="fas fa-upload"></i> Upload
+                    <i class="fas fa-upload"></i> Import
                 </button>
                 <input type="submit" value="Submit" hidden/>
             </form>
@@ -146,8 +146,27 @@
     </div>
 </div>
 
-
+<!-- The modal for updating empty secure values -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Fill in Value</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <label for="modalInput" id="modalInputLabel"></label>
+                <input type="text" id="modalInput" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="modalSave">Update</button>
+            </div>
+        </div>
+    </div>
 </div>
+
 {% endblock %}
 
 {% block javascript %}
@@ -478,10 +497,103 @@ $(document).ready(function () {
             });
         }
     });
+
     $('#uploadPipeline').on('click', function() {
         // Trigger the file input click event
         $('#fileInput').click();
     });
+
+    // Function to open a modal for a specific input field
+    function openModalForField(token) {
+        var modal = $("#myModal");
+        modal.modal("show");
+        $("#modalLabel").html("Update Extra Value");
+        var inputType = "password";
+        $("#modalInput").attr("type", inputType).val("");
+        $("#modalInputLabel").html("<strong>"+token+"</strong>");
+        modal.data("targetField", token);
+
+        return new Promise(function(resolve) {
+            // Remove any existing click handlers on modal save button
+            $("#modalSave").off("click");
+
+            // Add a new click handler for the modal save button
+            $("#modalSave").on("click", function() {
+                var enteredValue = $("#modalInput").val();
+                resolve(enteredValue);
+                modal.modal("hide"); // Close the modal
+            });
+
+            // Add a keydown event listener for the Enter/Return key
+            $("#modalInput").on("keydown", function(event) {
+                if (event.key === "Enter") {
+                    var enteredValue = $("#modalInput").val();
+                    resolve(enteredValue);
+                    modal.modal("hide"); // Close the modal
+                }
+            });
+
+            modal.on("hidden.bs.modal", function() {
+                // Resolve with null when the modal is closed without saving
+                resolve(null);
+            });
+        });
+    }
+    
+    function updateValuesWithModals(tokensToUpdate) {
+        var updatedValues = [];
+
+        function handleToken(index) {
+            if (index < tokensToUpdate.length) {
+                return openModalForField(tokensToUpdate[index])
+                    .then(function(enteredValue) {
+                        if (enteredValue !== null) {
+                            updatedValues.push({ name: tokensToUpdate[index], value: enteredValue });
+                        }
+                        return handleToken(index + 1);
+                    });
+            } else {
+                return Promise.resolve();
+            }
+        }
+
+        return handleToken(0)
+            .then(function() {
+                var promises = updatedValues.map(function(tokenData) { // Using map to transform updatedValues into promises
+                    return new Promise(function(resolve, reject) { // Ensure resolve and reject are properly declared
+                        $.ajax({
+                            type: "POST",
+                            url: "/tokens",
+                            contentType: "application/json",
+                            data: JSON.stringify(tokenData),
+                            success: function(response) {
+                                toastr.success("Token added successfully for " + tokenData.name);
+                                resolve(); // Resolve the promise on success
+                            },
+                            error: function(error) {
+                                if (error.responseJSON && error.responseJSON.error) {
+                                    toastr.error("Error adding token for " + tokenData.name + ": " + error.responseJSON.error);
+                                } else {
+                                    toastr.error("System error for " + tokenData.name + ": " + error.statusText);
+                                }
+                                reject(); // Reject the promise on error
+                            }
+                        });
+                    });
+                });
+
+                return Promise.all(promises); // Wait for all promises to resolve
+            })
+            .then(function() {
+                window.location.reload(); // Reload after all AJAX requests complete
+            })
+            .catch(function(error) {
+                // Handle the error
+                toastr.error("An error occurred with saving tokens.");
+            });
+    }
+
+
 
     $('#fileInput').on('change', function() {
         var file = this.files[0];
@@ -500,8 +612,10 @@ $(document).ready(function () {
                         contentType: 'application/json',
                         data: JSON.stringify(json), // Send the JSON content
                         success: function(data) {
+                            if (data.service_tokens_to_update) {
+                                updateValuesWithModals(data.service_tokens_to_update);
+                            }
                             toastr.success("Pipeline uploaded!");
-                            window.location.reload();
                         },
                         error: function(error) {
                             toastr.error(error.responseJSON.error);

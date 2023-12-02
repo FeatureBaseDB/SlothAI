@@ -276,6 +276,7 @@ $(document).ready(function() {
         window.location.href = "/templates/new";
     });
 
+    // build the thing
     $("#addNodeButton").on("click", function() {
         $("#addNodeModalButton").prop("disabled", true);
         $("#nodeProcessor").val("all");
@@ -401,29 +402,44 @@ $(document).ready(function() {
                 url: '/templates/' + selectedTemplateId + '/detail',
                 type: 'GET',
                 success: function (response) {
-                    if (response.extras) {
+                    if (response.template.extras) {
                         var hasRelevantFields = false; // Change the initial value to false
                         
                         $("#dynamicFieldsContainer").empty(); // Clear the container before appending fields
                         
                         $("#dynamicFieldsContainer").append($("<hr>")).append($("<h5>").text("User Extras"));
-                        
-                       for (var key in response.extras) {
-                            if (response.extras.hasOwnProperty(key)) {
-                                var extraValue = response.extras[key];
-                                var fieldType = "text";
 
-                                if (key.toLowerCase().includes("token") || key.toLowerCase().includes("password")) {
-                                    fieldType = "password";
+                        for (var key in response.template.extras) {
+                            if (response.template.extras.hasOwnProperty(key)) {
+                                var extraValue = response.template.extras[key];
+                                var fieldType = "text";
+                                var shouldShow = true;
+
+                                // Check if the key exists in response.tokens
+                                var isToken = false;
+                                for (var i = 0; i < response.tokens.length; i++) {
+                                    if (response.tokens[i].name === key) {
+                                        isToken = true;
+                                        break;
+                                    }
                                 }
 
-                                // Check for conditions (string containing [user_extra], null, or undefined)
-                                if (
-                                    (typeof extraValue === "string" && extraValue.includes("[user_extra]")) ||
-                                    extraValue === null ||
-                                    extraValue === undefined
-                                ) {
+                                // Check if it's not a token and not a string wrapped in square brackets
+                                if (isToken || (typeof extraValue === "string" && !extraValue.match(/^\[.*\]$/))) {
+                                    shouldShow = false;
+                                }
+
+                                // Check for conditions (null or undefined)
+                                if (shouldShow && (extraValue === null || extraValue === undefined)) {
+                                    shouldShow = true;
+                                }
+
+                                if (shouldShow) {
                                     var labelText = "<strong>" + key + "</strong>:";
+                                    if (typeof extraValue === "string" && extraValue !== null && extraValue.match(/^\[.*\]$/)) {
+                                        extraValue = ""; // Clear the value if it's a match
+                                    }
+                                    var fieldType = key.includes("password") || key.includes("token") || key.includes("secret") ? "password" : "text"; // Set the field type
                                     var inputField = $("<input>")
                                         .attr("type", fieldType)
                                         .addClass("form-control")
@@ -432,15 +448,23 @@ $(document).ready(function() {
                                     var label = $("<label>")
                                         .attr("for", key)
                                         .html(labelText);
+                                    
+                                    if (key.includes("password") || key.includes("token") || key.includes("secret")) {
+                                        // If it contains any of those keywords, add a specific class for styling
+                                        inputField.addClass("secure-input");
+                                    }
 
                                     $("#dynamicFieldsContainer").append(label, inputField);
-
                                     hasRelevantFields = true;
                                 }
                             }
                         }
 
+
                         if (hasRelevantFields) {
+                            $("#dynamicFieldsContainer").append($("<hr>"));
+                            $("#dynamicFieldsContainer").append($("<p>").html("<strong>Note:</strong> Any passwords or tokens entered here will be hidden and moved to secure token storage. The values you enter for them will not be shown to you again."));
+
                             $("#dynamicFieldsContainer").show();
                         } else {
                             $("#dynamicFieldsContainer").hide();
@@ -449,15 +473,15 @@ $(document).ready(function() {
 
                     if (response.processor) {
                         // Set the selected processor in the dropdown
-                        $("#nodeProcessor").val(response.processor);
-                        if (!response.processor == current_processor) {
-                            current_processor = response.processor;
+                        $("#nodeProcessor").val(response.template.processor);
+                        if (!response.template.processor == current_processor) {
+                            current_processor = response.template.processor;
                             $("#nodeProcessor").trigger('change');                            
                         }
-                    } else if (response.extras.processor) {
-                        $("#nodeProcessor").val(response.extras.processor);
-                        if (!response.extras.processor == current_processor) {
-                            current_processor = response.extras.processor;
+                    } else if (response.template.extras.processor) {
+                        $("#nodeProcessor").val(response.template.extras.processor);
+                        if (!response.template.extras.processor == current_processor) {
+                            current_processor = response.template.extras.processor;
                             $("#nodeProcessor").trigger('change');                            
                         }
                     }
@@ -512,6 +536,7 @@ $(document).ready(function() {
 
         if (dynamicFieldsAreEmpty) {
             toastr.error("Please fill in all required fields.");
+            $("#addNodeModalButton").prop("disabled", false);
             return;
         }
 
@@ -573,6 +598,7 @@ $(document).ready(function() {
             data: JSON.stringify(nodeData),
             success: function(response) {
                 $("#nodeFormModal").modal('hide');
+                $("#addNodeModalButton").prop("disabled", false);
                 toastr.success('Node added successfully.');
                 window.location.href = '/nodes/'+response.node_id;
             },
@@ -618,6 +644,7 @@ $(document).ready(function() {
             table.search(getUrlParameter('q')).draw();
         }
     }
+    $("#addNodeModalButton").prop("disabled", false);
 });
 </script>
 

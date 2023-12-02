@@ -15,7 +15,7 @@ from flask_login import current_user
 from werkzeug.utils import secure_filename
 
 from SlothAI.lib.tasks import Task, TaskState
-from SlothAI.web.models import Pipeline, Node
+from SlothAI.web.models import Pipeline, Node, Token
 from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub, transform_single_items_to_lists
 from SlothAI.lib.template import Template
 
@@ -323,6 +323,8 @@ def pipeline_upload():
         return jsonify({"error": "Invalid JSON Object", "message": f"The value of the 'nodes' key must be a list of node objects. Got: {type(nodes)}"}), 400
 
     node_ids = []
+    tokens_to_update = []
+
     # Make sure all nodes exist
     for n in nodes:
         node = n.get('node')
@@ -350,21 +352,6 @@ def pipeline_upload():
         if not isinstance(node_extras, dict):
             return jsonify({"error": "Invalid JSON Object", "message": f"extras must be a JSON object"}), 400
 
-        # scan for values enclosed in brackets
-        pattern = r'\[(.*?)\]'
-        
-        for k, v in node.get('extras').items():
-            print(k,v)
-            # extras differ
-            """
-            if k != "processor" and k not in node_extras:
-                return jsonify({"error": "Invalid JSON Object", "message": f"Extras keys must match for template and node: found {k} in template but not node"}), 400
-            """
-            match = re.search(pattern, str(v))
-            if match:
-                value = match.group(1)
-                print(value)
-
         template['user_id'] = current_user.uid
 
         try:
@@ -372,6 +359,21 @@ def pipeline_upload():
         except Exception as e:
             return str(e), 400
         
+        # scan for values enclosed in brackets
+        pattern = r'\[(.*?)\]'
+        
+        for k, v in node.get('extras').items():
+            match = re.search(pattern, str(v))
+            if match:
+                value = match.group(1)
+                token = Token.get_by_uid_name(current_user.uid, value)
+                if not token:
+                    # create the callback token if local
+                    if value == "callback_token" and template.get('extras').get('callback_uri') == "[callback_uri]":
+                        token = Token.create(current_user.uid, "callback_token", current_user.api_token)
+                    else:
+                        tokens_to_update.append(value)
+
         node = Node.create(
             name=node_name,
             uid=current_user.uid,
@@ -389,5 +391,5 @@ def pipeline_upload():
     if not pipeline:
         return jsonify({"error": "Update failed", "message": "Unable to update pipeline."}), 501
     
-    return jsonify(pipeline), 200
+    return jsonify({"pipeline": pipeline, "service_tokens_to_update": tokens_to_update}), 200
 

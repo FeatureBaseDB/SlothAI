@@ -32,6 +32,17 @@ form, label {
   padding: 0;
 }
 
+.btn-group {
+  display: flex;
+  flex-wrap: wrap; /* Adjust this if you don't want wrapping */
+}
+
+.button-node {
+  flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
+  max-width: 120px; /* Set a fixed width */
+}
+
+
 :focus {
   outline: 0;
 }
