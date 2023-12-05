@@ -110,6 +110,7 @@ def handle_quotes(object):
     if isinstance(object, str):
         pattern = r"(?<!')'(?!')"
         object = re.sub(pattern, "''", object)
+        object = object.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
     if isinstance(object, list):
         for i, _ in enumerate(object):
             object[i] = handle_quotes(object[i])
