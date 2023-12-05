@@ -1,6 +1,7 @@
 import json
 import datetime
 import io
+import requests
 
 from google.cloud import ndb
 
@@ -144,6 +145,15 @@ def about():
         username = "anonymous"
 
     return render_template('pages/about.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
+
+@site.route('/cookbooks', methods=['GET'])
+def cookbooks():
+    try:
+        username = current_user.name
+    except:
+        username = "anonymous"
+
+    return render_template('pages/cookbooks.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
 
 
 @site.route('/pipelines', methods=['GET'])
@@ -539,3 +549,20 @@ def serve(name, filename):
     )
 
     return Response(blob)
+
+
+# cookbooks
+@site.route('/cookbooks/<cookbook_name>/<filename>', methods=['GET'])
+def download_file(cookbook_name, filename):
+    base_url = "https://raw.githubusercontent.com/MittaAI/mitta-community/main"
+    file_url = f"{base_url}/cookbooks/{cookbook_name}/{filename}"
+    print(file_url)
+    response = requests.get(file_url)
+    if response.status_code == 200:
+        return Response(
+            response.content,
+            headers={"Content-Disposition": f"attachment;filename={filename}"},
+            mimetype='application/octet-stream'
+        )
+    else:
+        return "File not found", 404

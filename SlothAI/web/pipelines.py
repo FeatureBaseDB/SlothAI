@@ -360,7 +360,7 @@ def pipeline_upload():
             return str(e), 400
         
         # scan for values enclosed in brackets
-        pattern = r'\[(.*?)\]'
+        pattern = r'(?<!\S)\[(.*?)\](?!\S)'
         
         for k, v in node.get('extras').items():
             match = re.search(pattern, str(v))
@@ -372,6 +372,8 @@ def pipeline_upload():
                     if value == "callback_token" and template.get('extras').get('callback_uri') == "[callback_uri]":
                         token = Token.create(current_user.uid, "callback_token", current_user.api_token)
                     else:
+                        print(value)
+                        print(k)
                         tokens_to_update.append(value)
 
         node = Node.create(
