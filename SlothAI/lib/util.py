@@ -459,9 +459,9 @@ def build_mermaid(pipeline, nodes):
     mermaid_string = mermaid_string + f"{pipeline.get('name')} -->|JSON\n{link_list}| {nodes[0].get('name')}[{nodes[0].get('name')}\n{nodes[0].get('processor')}]\n"
 
     if nodes[0].get('extras').get('table'):
-        if node.get('processor') == "write_fb":
+        if nodes[0].get('processor') == "write_fb":
             mermaid_string = mermaid_string + f"{nodes[0].get('name')} --> FB[({nodes[0].get('extras').get('table')}\nFeatureBase)]\n"
-        if node.get('processor') == "read_fb":
+        if nodes[0].get('processor') == "read_fb":
             mermaid_string = mermaid_string + f"FB[({nodes[0].get('extras').get('table')}\nFeatureBase)] --> {nodes[0].get('name')}\n"
 
     if nodes[0].get('output_fields'):

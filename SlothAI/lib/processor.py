@@ -204,7 +204,8 @@ def callback(node: Dict[str, any], task: Task) -> Task:
     data['pipe_id'] = task.pipe_id
 
     try:
-        resp = requests.post(auth_uri, data=json.dumps(data))
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.post(auth_uri, data=json.dumps(data), headers=headers)
         if resp.status_code != 200:
             message = f'got status code {resp.status_code} from callback'
             if resp.status_code in retriable_status_codes:
@@ -546,22 +547,33 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
 
         system_prompt = task.document.get('system_prompt', "You are a helpful assistant.")
 
-        user_history = task.document.get('user_history', [])
+        # we always reverse the lists, so it's easier to do without timestamps
+        message_history = task.document.get('message_history', [])
+        role_history = task.document.get('role_history', [])
+
+        if message_history or role_history:
+            if len(message_history) != len(role_history):
+                raise NonRetriableError("'role_history' length must match 'message_history' length.")
+            else:
+                message_history.reverse()
+                role_history.reverse()
 
         chat_messages = [
             {"role": "system", "content": system_prompt},
         ]
 
         # Iterate through the user history
-        for idx, message in enumerate(user_history):
+        for idx, message in enumerate(message_history):
             # Determine the role (user or assistant) based on the index
-            role = "user" if idx % 2 == 0 else "assistant"
+            role = role_history[idx]
 
             # Create a message object and append it to the chat_messages list
             chat_messages.append({
                 "role": role,
                 "content": message
             })
+
+        # add the user input
         chat_messages.append({"role": "user", "content": prompt})
 
         retries = 3

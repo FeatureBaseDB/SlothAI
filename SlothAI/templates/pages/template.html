@@ -181,8 +181,8 @@ $(document).ready(function() {
                     }
                 },
                 error: function(error) {
-                    toastr.error(error.responseJSON.message);
-                    console.log(error.responseJSON.error);
+                    toastr.error(error);
+                    console.log(error);
                 }
             });
 
