@@ -1476,8 +1476,6 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
     user = User.get_by_uid(task.user_id)
 
     # if the user has a dbid, then use their database
-    print("user dbid")
-    print(user.get('dbid'))
     if user.get('dbid'):    
         doc = {
             "dbid": user.get('dbid'),
@@ -1500,7 +1498,6 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
                     "db_token": app.config['SHARED_FEATUREBASE_TOKEN'],
                     "sql": sql
                 }
-                print(doc)
             except:
                 raise NonRetriableError("Unable to template your SQL to the shared database. Check syntax.")
         else:
