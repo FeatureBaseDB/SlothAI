@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, jsonify
 from flask import current_app as app
 
@@ -15,7 +17,15 @@ def status_handler(box_id="all", cron_key=""):
 
 	if box_id == "all":
 		boxes = box_status()
-	
+	else:
+		boxes = box_status()
+		for box in boxes:
+			if box.get('box_id') == box_id:
+				boxes = [box]
+				break
+		else:
+			boxes = []
+
 	box_list = []
 	for box in boxes:
 		box_list.append(box.get('box_id'))

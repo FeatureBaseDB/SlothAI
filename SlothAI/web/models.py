@@ -530,6 +530,7 @@ class Box(ndb.Model):
         else:
             box.ip_address = ip_address
             box.status = status
+            box.zone = zone
 
         box.put()
         return box.to_dict()
