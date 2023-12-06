@@ -318,7 +318,7 @@ def gpt_dict_completion(document=None, template="just_a_dict", model="gpt-3.5-tu
         return {}
 
     if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
-        system_content = "You write JSON for the user."
+        system_content = "You write JSON for the user. Watch your quoting."
         response_format = {'type': "json_object"}
     else:
         system_content = "You write python dictionaries for the user. You don't write code, use preambles, text markup, or any text other than the output requested, which is a python dictionary."

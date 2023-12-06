@@ -365,11 +365,7 @@ def node_detail(node_id=None, template_id=None):
             processor = template.get('processor')
             if not processor:
                 processor = "jinja2"
-        if processor in ["read_fb", "write_fb"]:
-            if not current_user.dbid:
-                flash("You need to add a database connection before adding this type of processor.")
-                return redirect(url_for('site.nodes'))
-
+        print(processor)
         # merge extras
         merged_extras = merge_extras(template.get('extras', {}), {})
 

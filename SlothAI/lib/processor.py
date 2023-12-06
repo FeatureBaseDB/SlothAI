@@ -86,7 +86,7 @@ def process(task: Task) -> Task:
     for key, value in node.get('extras').items():
         # cast certain strings to other things
         if isinstance(value, str):  
-            if key in value:
+            if f"[{key}]" in value:
                 token = Token.get_by_uid_name(task.user_id, key)
                 if not token:
                     raise NonRetriableError(f"You need a service token created for '{key}'.")
@@ -1342,7 +1342,7 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
         if isinstance(items[0], list):
             raise NonRetriableError(f"Input field {input_field} needs to be a list of strings. Found a list of lists instead.")
     else:
-        raise NonRetriableError(f"Input field {input_field} needs to be a list of strings. Didn't find a list.")
+        items = [task.document.get(input_field)]
 
     task.document['uri'] = []
 
@@ -1474,11 +1474,37 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
 @processer
 def read_fb(node: Dict[str, any], task: Task) -> Task:
     user = User.get_by_uid(task.user_id)
-    doc = {
-        "dbid": user.get('dbid'),
-        "db_token": user.get('db_token'),
-        "sql": task.document['sql']
+
+    # if the user has a dbid, then use their database
+    print("user dbid")
+    print(user.get('dbid'))
+    if user.get('dbid'):    
+        doc = {
+            "dbid": user.get('dbid'),
+            "db_token": user.get('db_token'),
+            "sql": task.document['sql']
         }
+    else:
+        # use a shared database
+        if task.document.get('table'):
+            try:
+                # swap the table name on the fly
+                table = task.document.get('table')
+                sql = task.document.get('sql')
+                username = user.get('name')
+                pattern = f'\\b{table}\\b'
+                sql = re.sub(pattern, f"{username}_{table}", sql)
+
+                doc = {
+                    "dbid": app.config['SHARED_FEATUREBASE_ID'],
+                    "db_token": app.config['SHARED_FEATUREBASE_TOKEN'],
+                    "sql": sql
+                }
+                print(doc)
+            except:
+                raise NonRetriableError("Unable to template your SQL to the shared database. Check syntax.")
+        else:
+            raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
 
     resp, err = featurebase_query(document=doc)
     if err:
@@ -1518,16 +1544,35 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
 from SlothAI.lib.schemar import Schemar
 @processer
 def write_fb(node: Dict[str, any], task: Task) -> Task:
+    user = User.get_by_uid(task.user_id)
 
-    auth = {"dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']}
+    # if the user has a dbid, then use their database
+    if user.get('dbid'):    
+        # auth = {"dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']}
+        auth = {
+            "dbid": user.get('dbid'),
+            "db_token": user.get('db_token')
+        }
+        table = task.document['table']
+    else:
+        # use a shared database
+        if task.document.get('table'):
+            auth = {
+                "dbid": app.config['SHARED_FEATUREBASE_ID'],
+                "db_token": app.config['SHARED_FEATUREBASE_TOKEN']
+            }
+        else:
+            raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
+        table = f"{user.get('name')}_{task.document.get('table')}"
 
+    # create template service
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
     _keys = template.get('input_fields') # must be input fields but not enforced
     keys = [n['name'] for n in _keys]
     data = get_values_by_json_paths(keys, task.document)
 
-    table = task.document['table']
+    # check table
     tbl_exists, err = table_exists(table, auth)
     if err:
         raise NonRetriableError("Can't connect to database. Check your FeatureBase connection.")
@@ -1575,7 +1620,7 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
 
     sql = f"INSERT INTO {table} ({','.join(columns)}) VALUES {','.join(records)};"
 
-    _, err = featurebase_query({"sql": sql, "dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']})
+    _, err = featurebase_query({"sql": sql, "dbid": auth.get('dbid'), "db_token": auth.get('db_token')})
     if err:
         if "exception" in err:
             raise RetriableError(err)

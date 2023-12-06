@@ -6,7 +6,7 @@ from datetime import datetime
 
 from google.cloud import ndb
 
-from flask import Blueprint, jsonify, request, redirect, url_for
+from flask import Blueprint, jsonify, request, redirect, url_for, Response
 from flask import current_app as app
 
 import flask_login
@@ -253,6 +253,14 @@ def ingest_post(pipeline_id):
         return jsonify({"error": "task queue is erroring. site admin needs to setup task queue"})
 
 
+def custom_serializer(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, datetime):
+        # Assuming DatetimeWithNanoseconds is a subclass of datetime.datetime
+        return obj.isoformat()
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+
 @pipeline.route('/pipelines/<pipe_id>/download', methods=['GET'])
 @flask_login.login_required
 def pipelines_download(pipe_id):
@@ -289,15 +297,17 @@ def pipelines_download(pipe_id):
         "nodes": nodes,
     }
 
-    # scrub the data for secrets
+    # scrub the data for secrets Response
     deep_scrub(pipeline_data)
 
-    # Create a JSON response
-    response = jsonify(pipeline_data)
+    # Convert pipeline_data to a pretty formatted JSON string
+    pretty_json_data = json.dumps(pipeline_data, indent=4, default=custom_serializer)
 
-    # Set the headers to force a file download
+    # Create a Response object with the pretty formatted JSON
+    response = Response(pretty_json_data, content_type="application/json")
+
+    # Set the headers to force a file download with a custom filename
     response.headers["Content-Disposition"] = f"attachment; filename=pipeline_{pipeline.get('name')}.json"
-    response.headers["Content-Type"] = "application/json"
 
     return response
 
