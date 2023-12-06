@@ -64,7 +64,7 @@
         <div class="d-flex justify-content-between align-items-center">
             <h5>Extras</h5>
         </div>
-        <p>The following extras are defined for this node. Extras may not be changed in templates once they are linked to a node.</p>
+        <p>The following extras are defined for this node. Secure values are stored as service tokens and are managed from <a href="/settings">settings</a>.</p>
         <form id="updateExtrasForm" action="/nodes/{{ node.node_id }}/update" method="POST">
             <div id="extrasList" class="form-group">
                 {% for key, value in node.extras.items() %}

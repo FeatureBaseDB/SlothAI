@@ -376,12 +376,18 @@ def node_detail(node_id=None, template_id=None):
         # populate any local callback extras
         merged_extras, update = callback_extras(merged_extras)
 
-        # build the list and store callback_token if local callback was updated
+        # deal with service tokens and locally populated callback info
         _extras = {}
         for key, value in merged_extras.items():
             if "callback_token" in key and update:
                 Token.create(uid, key, value)
                 value = f"[{key}]"
+            elif should_be_service_token(key):
+                token = Token.get_by_uid_name(uid, key)
+                if token:
+                    # set it so it can be used later
+                    value = f"[{key}]"
+
             _extras[key] = value
             
         # create a new node

@@ -141,8 +141,7 @@ $(document).ready(function() {
                     $('#renameButton').hide();
                 },
                 error: function(error) {
-                    // Handle error response here
-                    console.error('Error updating template name:', error);
+                    console.error('Error updating template name.');
                 }
             });
         }
@@ -181,8 +180,11 @@ $(document).ready(function() {
                     }
                 },
                 error: function(error) {
-                    toastr.error(error);
-                    console.log(error);
+                    if (error.responseJSON && error.responseJSON.message) {
+                        toastr.error(error.responseJSON.message);
+                    } else {
+                        toastr.error(error.statusText);
+                    }
                 }
             });
 
@@ -237,7 +239,11 @@ $(document).ready(function() {
                 $("#templateName").val(response.name);
             },
             error: function(error) {
-                console.error('Error generating the name:', error);
+                if (error.responseJSON && error.responseJSON.message) {
+                    toastr.error(error.responseJSON.message);
+                } else {
+                    toastr.error(error.statusText);
+                }
             }
         });
     });

@@ -7,5 +7,5 @@ input_fields = [{'name': 'filename', 'type': 'string'},{'name': 'content_type', 
 {# Output Fields #}
 output_fields = [{'name': 'texts', 'type': 'strings'}]
 
-{# Extras 'page_chunk_size' is used for .txt files only, to set page size #}
+{# Extras 'page_chunk_size' is used to set page size #}
 extras = {"openai_token": None, "model": "whisper-1", "processor": "aiaudio", "page_chunk_size": 1536}
