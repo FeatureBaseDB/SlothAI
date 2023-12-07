@@ -15,7 +15,7 @@ from itertools import groupby
 
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
-from SlothAI.lib.util import random_string, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes, create_audio_chunks
+from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes, create_audio_chunks
 from SlothAI.lib.template import Template
 
 from SlothAI.web.models import Token
@@ -1330,11 +1330,22 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     uid = user.get('uid')
 
     # grab the first input field name that isn't the filename
+    uses_filename = False
     for _input_field in input_fields:
         if 'filename' in _input_field.get('name'):
+            wants_filename = True
             continue
         else:
             input_field = _input_field.get('name')
+
+    # set the filename from the document
+    if uses_filename:
+        filename = task.document.get('filename')
+        if isinstance(filename, list):
+            filename = filename[0]
+    else:
+        rand_name = random_name(2)
+        filename = f"{rand_name}-mitta-aispeech.mp3"
 
     # lets support only a list of strings
     if isinstance(task.document.get(input_field), list):
@@ -1345,16 +1356,8 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
         items = [task.document.get(input_field)]
 
     task.document['uri'] = []
-
-    # Call your upload_to_storage_requests function
-    filename = task.document.get('filename')
-    if isinstance(filename, list):
-        filename = filename[0]
-
-    if not filename:
-            rand_name = random_name(2)
-            filename = f"{rand_name}-mitta-aispeech.mp3"
     
+    # loop through items to process
     for index, item in enumerate(items):
         response = openai.audio.speech.create(
             model = model,

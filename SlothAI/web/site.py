@@ -365,7 +365,7 @@ def node_detail(node_id=None, template_id=None):
             processor = template.get('processor')
             if not processor:
                 processor = "jinja2"
-        print(processor)
+
         # merge extras
         merged_extras = merge_extras(template.get('extras', {}), {})
 
