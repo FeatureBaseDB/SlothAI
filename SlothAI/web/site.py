@@ -182,8 +182,10 @@ def pipelines():
                 node['extras'][key] = '[secret]'
 
         _nodes.append(node)
+    
+    _nodes_sorted_by_processor = sorted(_nodes, key=lambda x: x.get('processor'))
 
-    return render_template('pages/pipelines.html', brand=get_brand(app), username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
+    return render_template('pages/pipelines.html', brand=get_brand(app), username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes_sorted_by_processor)
 
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])

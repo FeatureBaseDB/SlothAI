@@ -121,17 +121,6 @@ $(document).ready(function() {
       }
     }
 
-    // Function to generate a color based on the name
-    function getColorFromName(name) {
-        name = name.trim(); // Remove leading and trailing spaces
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
-    }
-
     // Function to change button colors
     function changeButtonColors() {
         const buttons = document.querySelectorAll("#templateTable .btn");

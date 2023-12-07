@@ -1333,7 +1333,7 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     uses_filename = False
     for _input_field in input_fields:
         if 'filename' in _input_field.get('name'):
-            wants_filename = True
+            uses_filename = True
             continue
         else:
             input_field = _input_field.get('name')
@@ -1341,6 +1341,8 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     # set the filename from the document
     if uses_filename:
         filename = task.document.get('filename')
+        if not filename:
+            raise NonRetriableError("If you specify an input field for filename, you must provide one for use in this node.")
         if isinstance(filename, list):
             filename = filename[0]
     else:

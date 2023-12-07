@@ -193,16 +193,6 @@ $(document).ready(function() {
     var nodes = JSON.parse('{{nodes | tojson}}');
     var all_nodes = JSON.parse('{{all_nodes | tojson}}');
 
-    function getColorFromName(name) {
-        name = name.trim(); // Remove leading and trailing spaces
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
-    }
-
     function setButtonColors() {
       const buttons = document.querySelectorAll(".btn-group .btn:not(.ignore-color)");
       buttons.forEach(button => {

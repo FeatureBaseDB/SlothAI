@@ -122,7 +122,7 @@
                         <select class="form-control" id="selectedNode">
                             <optgroup id="nodePulldown" label="Available Nodes">
                                 {% for node in nodes %}
-                                    <option value="{{ node.node_id }}">{{ node.name }} ← {{ node.processor }} ← {{ node.template_name }} </option>
+                                    <option value="{{ node.node_id }}">{{ node.processor }} ← {{ node.name }} ← {{ node.template_name }} </option>
                                 {% endfor %}
                             </optgroup>
                         </select>
@@ -188,16 +188,6 @@ $(document).ready(function () {
     }
     
     var pipelines = JSON.parse('{{pipelines | tojson}}');
-    
-    function getColorFromName(name) {
-        name = name.trim(); // Remove leading and trailing spaces
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
-    }
 
     $(function () {
         $('[data-toggle="tooltip"]').tooltip()

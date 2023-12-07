@@ -251,16 +251,6 @@ $(document).ready(function() {
       }
     }
 
-    function getColorFromName(name) {
-        name = name.trim(); // Remove leading and trailing spaces
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
-    }
-
     $('.btn').on('mouseleave', function () {
         const that = this;
         // Delay hiding the popover to allow time for the mouse to enter the popover

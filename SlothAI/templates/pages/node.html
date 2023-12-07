@@ -26,9 +26,11 @@
         <p></p>
         <h5>Node Template</h5>
         <p>The <strong>{{ node.name }}</strong> node uses the <strong>{{ template.name }}</strong> template with the <strong>{{ node.processor }}</strong> processor.</p>
-        <a class="btn btn-secondary min-button" href="/templates/{{ template.template_id }}"><i class="fas fa-file"></i><br/>{{ template.name }}</a></td>
+        <a class="btn btn-secondary min-button" href="#"><i class="fas fa-box"></i><br/>{{ node.name }}</a>
+        <i class="fas fa-arrow-left"></i>
+        <a class="btn btn-secondary min-button" href="/templates/{{ template.template_id }}"><i class="fas fa-file"></i><br/>{{ template.name }}</a>
         <p></p>
-        <p>Edit the <strong>{{ template.name }}</strong> template to alter this node's input and output fields.</p>
+        <p>Click the <strong>{{ template.name }}</strong> template to edit this node's input and output fields.</p>
         <hr/>
         <div class="d-flex justify-content-between align-items-center">
             <h5>Pipelines</h5>
@@ -54,12 +56,16 @@
                     {% endfor %}
                 </select>
             </div>
-            <button type="button" id="addToPipelineButton" class="btn btn-success mb-2 ml-2">
+            <button type="button" id="addToPipelineButton" class="btn btn-outline-dark mb-2 ml-2">
                 <i class="fas fa-plus"></i> Add to Pipeline
             </button>
         </form>
         {% endif %}
-
+        <form id="pipelineCreateForm" class="form-inline">
+            <div class="form-group">
+                <button type="button" id="createPipelineButton" class="btn btn-primary"data-toggle="modal" data-target="#pipelineName"><i class="fas fa-plus"></i> Add to New Pipeline</button>
+            </div>
+        </form>
         <hr/>
         <div class="d-flex justify-content-between align-items-center">
             <h5>Extras</h5>
@@ -123,6 +129,28 @@
     </div>
 </div>
 
+<!-- The modal for a new pipeline name -->
+<div class="modal fade" id="pipelineName" tabindex="-1" role="dialog" aria-labelledby="pipelineNameLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Enter new pipeline name.</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <label for="pipelineModalInput" id="pipelineModalInputLabel"></label>
+                <input type="text" id="pipelineModalInput" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="pipelineModalCreate">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- The modal for updating empty secure values -->
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -149,16 +177,6 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-    function getColorFromName(name) {
-        name = name.trim(); // Remove leading and trailing spaces
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
-    }
-
     // Function to change button colors
     function changeButtonColors() {
         const buttons = $("a.btn");
@@ -293,6 +311,54 @@ $(document).ready(function() {
         $(this).closest(".input-group").remove();
     });
 
+    $('#pipelineName').on('shown.bs.modal', function () {
+        // Set focus on the input field when the modal is shown
+        $('#pipelineModalInput').focus();
+    });
+    
+    $("#pipelineModalInput").keypress(function (event) {
+        if (event.which === 13) { // 13 is the key code for Enter
+            event.preventDefault(); // Prevent the default behavior of Enter key (e.g., form submission)
+            $("#pipelineModalCreate").click(); // Trigger the click event of the "Save" button
+        }
+    });
+
+    $("#pipelineModalCreate").click(function () {
+        
+        var pipelineName = $("#pipelineModalInput").val(); // Get the name from the modal input
+        var selectedNodes = ["{{node.node_id}}"];
+
+        // Move this to a notice in the form
+        if (!/^[a-z-_]+$/.test(pipelineName)) {
+            toastr.error("Invalid pipeline name. Pipeline name should only contain lowercase letters, '-', and '_'.");
+            $("#createPipelineButton").prop("disabled", false);
+        } else {
+            var pipelineData = {
+                "name": pipelineName,
+                "nodes": selectedNodes
+            };
+
+            $("#pipelineName").modal('hide');
+            $("#createPipelineButton").prop("disabled", true);
+
+            $.ajax({
+                type: "POST",
+                url: "/pipeline",
+                data: JSON.stringify(pipelineData), // Send data as JSON
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    toastr.success("Created pipeline.");
+                    window.location.href = "/pipelines/" + response.pipe_id;
+                },
+                error: function (error) {
+                    $("#createPipelineButton").prop("disabled", false);
+                    toastr.error(error.responseJSON.message);
+                }
+            });
+        }
+    });
+
     $("#updateExtrasForm").submit(function(event) {
         event.preventDefault(); // Prevent the default form submission
 
@@ -349,83 +415,81 @@ $(document).ready(function() {
         });
     });
 
-function shouldOpenModal(value) {
-    return value === "None" || value === "";
-}
+    function shouldOpenModal(value) {
+        return value === "None" || value === "";
+    }
 
-var needsUpdates = false;
+    var needsUpdates = false;
 
-// Function to open a modal for a specific input field
-function openModalForField(field) {
-    var fieldValue = field.val();
-    var fieldName = field.attr("name");
+    // Function to open a modal for a specific input field
+    function openModalForField(field) {
+        var fieldValue = field.val();
+        var fieldName = field.attr("name");
 
-    if (shouldOpenModal(fieldValue)) {
-        needsUpdates = true;
+        if (shouldOpenModal(fieldValue)) {
+            needsUpdates = true;
 
-        var modal = $("#myModal");
-        modal.modal("show");
+            var modal = $("#myModal");
+            modal.modal("show");
 
-        // Get the key and value of the field that triggered the modal
-        var key = fieldName;
+            // Get the key and value of the field that triggered the modal
+            var key = fieldName;
 
-        // Set the modal label based on the key
-        $("#modalLabel").html("Update Extra Value");
+            // Set the modal label based on the key
+            $("#modalLabel").html("Update Extra Value");
 
-        // Determine the input type based on the key
-        var inputType = "text";
-        if (key.toLowerCase().includes("password") || key.toLowerCase().includes("secret") || key.toLowerCase().includes("token")) {
-            inputType = "password";
+            // Determine the input type based on the key
+            var inputType = "text";
+            if (key.toLowerCase().includes("password") || key.toLowerCase().includes("secret") || key.toLowerCase().includes("token")) {
+                inputType = "password";
+            }
+
+            // Set the input type and value of the modal input
+            $("#modalInput").attr("type", inputType).val("");
+            $("#modalInputLabel").html("<strong>"+key+"</strong>");
+
+            // Save the field element for later use
+            modal.data("targetField", field);
+
+            // Return a promise that resolves when the modal is closed
+            return new Promise(function(resolve) {
+                modal.on("hidden.bs.modal", function() {
+                    resolve();
+                });
+            });
         }
 
-        // Set the input type and value of the modal input
-        $("#modalInput").attr("type", inputType).val("");
-        $("#modalInputLabel").html("<strong>"+key+"</strong>");
-
-        // Save the field element for later use
-        modal.data("targetField", field);
-
-        // Return a promise that resolves when the modal is closed
-        return new Promise(function(resolve) {
-            modal.on("hidden.bs.modal", function() {
-                resolve();
-            });
-        });
+        // If the modal is not opened, resolve immediately
+        return Promise.resolve();
     }
 
-    // If the modal is not opened, resolve immediately
-    return Promise.resolve();
-}
+    // Use a Promise chain to open modals one by one
+    var inputFields = $("#updateExtrasForm input");
+    var promiseChain = Promise.resolve();
 
-// Use a Promise chain to open modals one by one
-var inputFields = $("#updateExtrasForm input");
-var promiseChain = Promise.resolve();
+    inputFields.each(function() {
+        promiseChain = promiseChain.then(function() {
+            return openModalForField($(this));
+        }.bind(this));
+    });
 
-inputFields.each(function() {
-    promiseChain = promiseChain.then(function() {
-        return openModalForField($(this));
-    }.bind(this));
-});
+    promiseChain.then(function() {
+        if (needsUpdates) {
+            $("#saveExtras").trigger("click");
+        }
+    });
 
-promiseChain.then(function() {
-    if (needsUpdates) {
-        $("#saveExtras").trigger("click");
-    }
-});
+    // Handle modal save button click
+    $("#modalSave").click(function() {
+        var modalInputValue = $("#modalInput").val();
+        var targetField = $("#myModal").data("targetField");
 
-// Handle modal save button click
-$("#modalSave").click(function() {
-    var modalInputValue = $("#modalInput").val();
-    var targetField = $("#myModal").data("targetField");
+        // Update the original input field with the modal input value
+        targetField.val(modalInputValue);
 
-    // Update the original input field with the modal input value
-    targetField.val(modalInputValue);
-
-    // Close the modal
-    $("#myModal").modal("hide");
-});
-
-    
+        // Close the modal
+        $("#myModal").modal("hide");
+    });
 });
 </script>
 {% endblock %}
