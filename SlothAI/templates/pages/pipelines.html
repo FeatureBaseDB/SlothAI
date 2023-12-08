@@ -46,7 +46,7 @@
                             {% for node_id in pipeline.node_ids %}
                                 {% for node in nodes %}
                                     {% if node.node_id == node_id %}
-                                        <button title="{{ node.processor }}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary button-node btn-sortable"><i class="fas fa-cube"></i><br/>{{ node.name }}</button>
+                                        <button title="{{ node.processor }}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary button-node btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button>
                                     {% endif %}
                                 {% endfor %}
                             {% endfor %}

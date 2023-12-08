@@ -27,7 +27,7 @@
                     {% for node_id in pipeline.node_ids %}
                         {% for node in nodes %}
                             {% if node.node_id == node_id %}
-                                <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable"><i class="fas fa-cube"></i><br/>{{ node.name }}</button></li>
+                                <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button></li>
                             {% endif %}
                         {% endfor %}
                     {% endfor %}
@@ -45,32 +45,32 @@
         <p>The pipeline is used by POST'ing data to the task ingestion endpoint:</p>
 
         <ul class="nav nav-tabs" id="codeTabs" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" id="curl-tab" data-toggle="tab" href="#curl" role="tab" aria-controls="curl" aria-selected="true">cURL</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="python-tab" data-toggle="tab" href="#python" role="tab" aria-controls="python" aria-selected="false">Python</a>
-            </li>
             {% if (nodes[0].processor == 'jinja2' or nodes[0].processor == 'info_file') and nodes[0].extras.get('upload') == True %}
             <li class="nav-item">
-                <a class="nav-link" id="upload-files-tab" data-toggle="tab" href="#upload-files" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
+                <a class="nav-link upload-tab" id="upload-files-tab" data-toggle="tab" href="#upload-files" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
             </li>
-            {% elif nodes[0].processor == 'read_file' %}
+            {% elif nodes[0].processor == 'read_file' or nodes[0].processor == 'read_file' %}
             <li class="nav-item">
-                <a class="nav-link" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
+                <a class="nav-link upload-tab" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
             </li>
             {% elif nodes[0].processor == 'aivision' %}
             <li class="nav-item">
-                <a class="nav-link" id="vision-tab" data-toggle="tab" href="#vision" role="tab" aria-controls="vision" aria-selected="false">Upload Images</a>
+                <a class="nav-link upload-tab" id="vision-tab" data-toggle="tab" href="#vision" role="tab" aria-controls="vision" aria-selected="false">Upload Images</a>
             </li>
             {% elif nodes[0].processor == 'aiaudio' %}
             <li class="nav-item">
                 <a class="nav-link" id="record-tab" data-toggle="tab" href="#record" role="tab" aria-controls="record" aria-selected="false">Record Audio</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="record" aria-selected="false">Upload</a>
+                <a class="nav-link upload-tab" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="record" aria-selected="false">Upload</a>
             </li>
             {% endif %}
+            <li class="nav-item">
+                <a class="nav-link active" id="curl-tab" data-toggle="tab" href="#curl" role="tab" aria-controls="curl" aria-selected="true">cURL</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="python-tab" data-toggle="tab" href="#python" role="tab" aria-controls="python" aria-selected="false">Python</a>
+            </li>
         </ul>
 
         <div class="tab-content" id="codeTabContent">
@@ -145,11 +145,12 @@
                         <div class="input-group">
                             <select class="form-control" id="selectedNode">
                                 <optgroup id="nodePulldown" label="Available Nodes">
-                                    <option value="None">None</option>
                                     {% for node in all_nodes %}
                                         {% if node.node_id not in pipeline.get('node_ids') or node.processor == 'callback' %}
-                                            <option value="{{ node.node_id }}">{{ node.name }} ➔ {{ node.template_name }} ➔ {{ node.processor }}</option>
+                                            <option value="{{ node.node_id }}">{{ node.processor }} ← {{ node.name }} ← {{ node.template_name }} </option>
                                         {% endif %}
+                                    {% else %}
+                                        <option value="None">None</option>
                                     {% endfor %}
                                 </optgroup>
                             </select>
@@ -275,6 +276,9 @@ $(document).ready(function() {
             });
         });
     }
+
+    // upload tab won't show content unless we do this.
+    $('.upload-tab').click();
 
     // set popovers
     var node_buttons = $('button[data-node_id]');
@@ -443,7 +447,7 @@ $(document).ready(function() {
                 // Create a FormData object for file and JSON data
                 var formData = new FormData();
                 formData.append('document', file, file.name); // Add the file
-                formData.append('json', JSON.stringify({})); // Add the JSON data
+                formData.append('data', JSON.stringify({})); // Add the JSON data
                 toastr.info("File upload started.")
                 $.ajax({
                     type: 'POST',

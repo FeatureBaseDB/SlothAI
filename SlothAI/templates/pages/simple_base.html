@@ -8,7 +8,7 @@
   <meta name="description" content='Fast AI Pipelines.' />
   {% endblock %}
   
-  <meta property='og:image' content="{{ url_for('static', filename='sloth.png') }}" />
+  <meta property='og:image' content="/images/sloth.png" />
   <meta property='og:description' content='Blazing Fast AI Pipelines' />
   <meta property='og:url' content="{{ brand.get('service_url') }}" />
 
@@ -17,7 +17,7 @@
   <meta property='og:title' content="{{brand.get('name')}}" />
   {% endblock %}
 
-  <meta property="og:image" content="{{ url_for('static', filename='sloth.png') }}" />
+  <meta property="og:image" content="/images/sloth.png" />
   <meta property="og:description" content="Blazing Fast AI Pipelines" />
   <meta property="og:url" content="{{brand.get('service_url')}}" />
   <meta property="og:title" content="{{brand.get('name')}}" />
@@ -26,17 +26,17 @@
   <meta name="twitter:site" content="{{ brand.get('twitter_handle') }}" /> <!-- Replace with your Twitter handle -->
   <meta name="twitter:title" content="{{ brand.get('name') }}" />
   <meta name="twitter:description" content="Blazing Fast AI Pipelines" />
-  <meta name="twitter:image" content="{{ url_for('static', filename='sloth.png') }}" />
+  <meta name="twitter:image" content="/images/sloth.png" />
 
-  <link rel="shortcut icon" href="{{ url_for('static', filename=brand.get('favicon')) }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="shortcut icon" href="/images/favicon.ico">
+  <link rel="stylesheet" href="/css/style.css">
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
   
   {% block style %}
   {% endblock %}
   
-  <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+  <script src="/js/jquery.min.js"></script>
 
 </head>
 

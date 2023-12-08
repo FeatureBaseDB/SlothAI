@@ -10,16 +10,16 @@
     <title>{{ brand.get('name') }}</title>
     <meta property='og:title' content="{{brand.get('name')}}"/>
     {% endblock %}
-    <link rel="shortcut icon" href="{{ url_for('static', filename=brand.get('favicon')) }}">
+    <link rel="shortcut icon" href="/images/favicon.ico">
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/brands.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/solid.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toastr.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='jquery-ui.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='jquery.dataTables.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
+    <link rel="stylesheet" href="/css/brands.css">
+    <link rel="stylesheet" href="/css/solid.css">
+    <link rel="stylesheet" href="/css/toastr.min.css">
+    <link rel="stylesheet" href="/css/jquery-ui.css">
+    <link rel="stylesheet" href="/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/css/style.css">
     
     {% block style %}
     {% endblock %}
@@ -104,13 +104,13 @@
 
 
 <!-- Bootstrap JS, Popper.js, and jQuery -->
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='jquery-3.6.0.min.js') }}"></script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='popper.min.js') }}"></script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='toastr.min.js') }}"></script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='jquery-ui.js') }}"></script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='jquery.dataTables.min.js') }}"></script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='utils.js') }}"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/popper.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/bootstrap.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/toastr.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery-ui.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/utils.js"></script>
 
 <script type="text/javascript">
 $(document).ready(function() {

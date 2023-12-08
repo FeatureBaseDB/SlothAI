@@ -12,7 +12,7 @@
     <meta property='og:title' content="{{ brand.get('name') }}" />
     {% endblock %}
 
-    <meta property="og:image" content="{{ url_for('static', filename='sloth.png') }}" />
+    <meta property="og:image" content="/images/sloth.png" />
     <meta property="og:description" content="Blazing Fast AI Pipelines" />
     <meta property="og:url" content="{{ brand.get('service_url') }}" />
     <meta property="og:title" content="{{ brand.get('name') }}" />
@@ -22,18 +22,18 @@
     <meta name="twitter:site" content="{{ brand.get('twitter_handle') }}" /> <!-- Replace with your Twitter handle -->
     <meta name="twitter:title" content="{{ brand.get('name') }}" />
     <meta name="twitter:description" content="Blazing Fast AI Pipelines" />
-    <meta name="twitter:image" content="{{ url_for('static', filename='sloth.png') }}" />
+    <meta name="twitter:image" content="/images/sloth.png" />
 
-    <link rel="shortcut icon" href="{{ url_for('static', filename=brand.get('favicon')) }}">
+    <link rel="shortcut icon" href="/images/favicon.ico">
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/brands.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/solid.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toastr.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='jquery-ui.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='jquery.dataTables.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
+    <link rel="stylesheet" href="/css/brands.css">
+    <link rel="stylesheet" href="/css/solid.css">
+    <link rel="stylesheet" href="/css/toastr.min.css">
+    <link rel="stylesheet" href="/css/jquery-ui.css">
+    <link rel="stylesheet" href="/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/css/style.css">
 
     {% block style %}
     {% endblock %}
@@ -100,8 +100,8 @@
   </div>
 </footer>
 
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='jquery-3.6.0.min.js') }}"></script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/bootstrap.min.js"></script>
 
 {% block javascript %}
   <script type="text/javascript">

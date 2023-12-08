@@ -1,4 +1,4 @@
 curl -X POST "$protocol://$hostname/pipeline/$pipe_id/task?token=$token" \
 -H "Content-Type: multipart/form-data" \
 -F "document=@./example.jpg;type=image/jpeg" \
--F 'json=$json_string;type=application/json'
+-F 'data=$json_string;type=application/json'

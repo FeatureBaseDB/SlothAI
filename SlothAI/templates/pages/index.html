@@ -15,7 +15,7 @@
       <div class="container">
         <div class="row align-items-center justify-content-center">
           <div class="col-md-6">
-            <img src="/static/sloth.png" width="420" class="rounded img-fluid" style="border: 8px solid white; max-width: 100%;">
+            <img src="/images/sloth.png" width="420" class="rounded img-fluid" style="border: 8px solid white; max-width: 100%;">
 
           </div>
           <div width="420" class="col-md-4 text-left">
@@ -40,7 +40,7 @@
   	        <h1 style="font-size: 40px; opacity: 100%;">Build <strong>Strong</strong> AI Applications</h1>
   	        <p class="lead">{{brand.get('name')}} is a pipeline management system built for large scale document and data processing. It offers developers a quick and easy way to build AI applications using transformational document chains powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 templates</a>. Documents, and their contents, may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a> and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, in addition to supporting calls to other machine learning models. Document types supported by the system include PDFs, images, audio, text files, webpages, and more.</p>
 
-            <img src="/static/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
+            <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
 
             <h2 style="padding-top: 30px;">Videos</h2>
             <p class="lead">Get started with MittaAI by building a simple pipeline to generate words, make a callback, and write the results into the database.</p>
@@ -86,7 +86,7 @@
 {% endblock %}
 
 {% block javascript %}
-<script src="{{ url_for('static', filename='trianglify.bundle.js') }}"></script>
+<script src="{{ url_for('site.static', filename='js/trianglify.bundle.js') }}"></script>
 <script type="text/javascript">
 $(document).ready(function(){
   function generateGradient(startColor, endColor, steps) {

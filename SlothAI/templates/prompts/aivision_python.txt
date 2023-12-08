@@ -8,7 +8,7 @@ url = "https://kordless.ngrok.dev/pipeline/dh4uNL7voKOsT/task?token=RigL0Y9qoZKa
 # Define the file data
 files = {
     'document': ('pat.jpg', open('pat.jpg', 'rb'), 'image/jpeg'),
-    'json': (None, json.dumps({'filename': ["pat.jpg"]}), 'application/json')
+    'data': (None, json.dumps({'filename': ["pat.jpg"]}), 'application/json')
 }
 
 # Send the request with both file and JSON data

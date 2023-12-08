@@ -33,7 +33,6 @@ form, label {
 }
 
 .btn-group {
-  display: flex;
   flex-wrap: wrap; /* Adjust this if you don't want wrapping */
 }
 

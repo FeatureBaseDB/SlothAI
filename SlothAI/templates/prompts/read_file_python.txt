@@ -8,7 +8,7 @@ url = "$protocol://$hostname/pipeline/$pipe_id/task?token=$token"
 # Define the file data (.txt or .pdf)
 files = {
     'document': ('animate.pdf', open('animate.pdf', 'rb'), 'application/pdf'),
-    'json': (None, json.dumps({'filename': ["animate.pdf"]}), 'application/json')
+    'data': (None, json.dumps({'filename': ["animate.pdf"]}), 'application/json')
 }
 
 # Send the request with both file and JSON data

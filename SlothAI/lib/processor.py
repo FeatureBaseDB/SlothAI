@@ -442,7 +442,7 @@ def sloth_embedding(input_field: str, output_field: str, model: str, task: Task)
     if response.status_code == 200:
         task.document[output_field] = response.json().get("embeddings")
     else:
-        raise NonRetriableError(f"request to sloth_embedding virtual machine failed with status code {response.status_code}: {response.text}")
+        raise NonRetriableError(f"Embedding server is overloaded. Error code: {response.status_code}. The likely reason is that you've asked to embed too many things at once. Try splitting your tasks.")
 
     return task
 

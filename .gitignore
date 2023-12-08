@@ -16,6 +16,7 @@ __pycache__/
 
 /documents/*
 !/documents/animate.pdf
+credentials.json
 
 # C extensions
 *.so

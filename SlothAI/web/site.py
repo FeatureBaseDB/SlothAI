@@ -5,7 +5,7 @@ import requests
 
 from google.cloud import ndb
 
-from flask import Blueprint, render_template, jsonify
+from flask import Blueprint, render_template, jsonify, send_from_directory
 from flask import redirect, url_for, abort
 from flask import request, send_file, Response
 from flask import current_app as app
@@ -18,28 +18,28 @@ from google.cloud import storage
 from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
 from SlothAI.web.models import Pipeline, Node, Log, User, Token
 
-site = Blueprint('site', __name__)
+site = Blueprint('site', __name__, static_folder='static')
 
 # client connection
 client = ndb.Client()
 
 # hard coded, for now
 processors = [
-    {"value": "jinja2", "label": "Jinja2 Processor"},
-    {"value": "callback", "label": "Callback Processor"},
-    {"value": "read_file", "label": "Read Processor (File)"},
-    {"value": "read_uri", "label": "Read Processor (URI)"},
-    {"value": "info_file", "label": "Info Processor (File)"},
-    {"value": "read_fb", "label": "Read Processor (FeatureBase)"},
-    {"value": "split_task", "label": "Split Task Processor"},
-    {"value": "write_fb", "label": "Write Processor (FeatureBase)"},
-    {"value": "aidict", "label": "Generative Completion Processor"},
-    {"value": "aichat", "label": "Generative Chat Processor"},
-    {"value": "aiimage", "label": "Generative Image Processor"},
-    {"value": "embedding", "label": "Embedding Vectors Processor"},
-    {"value": "aivision", "label": "Vision Processor"},
-    {"value": "aiaudio", "label": "Audio Processor"},
-    {"value": "aispeech", "label": "Speech Processor"}   
+    {"value": "jinja2", "label": "Jinja2 Processor", "icon": "file"},
+    {"value": "callback", "label": "Callback Processor", "icon": "ethernet"},
+    {"value": "read_file", "label": "Read Processor (File)", "icon": "book-reader"},
+    {"value": "read_uri", "label": "Read Processor (URI)", "icon": "file-word"},
+    {"value": "info_file", "label": "Info Processor (File)", "icon": "info"},
+    {"value": "read_fb", "label": "Read Processor (FeatureBase)", "icon": "database"},
+    {"value": "split_task", "label": "Split Task Processor", "icon": "columns"},
+    {"value": "write_fb", "label": "Write Processor (FeatureBase)", "icon": "database"},
+    {"value": "aidict", "label": "Generative Completion Processor", "icon": "code"},
+    {"value": "aichat", "label": "Generative Chat Processor", "icon": "comment-dots"},
+    {"value": "aiimage", "label": "Generative Image Processor", "icon": "images"},
+    {"value": "embedding", "label": "Embedding Vectors Processor", "icon": "table"},
+    {"value": "aivision", "label": "Vision Processor", "icon": "glasses"},
+    {"value": "aiaudio", "label": "Audio Processor", "icon": "headphones"},
+    {"value": "aispeech", "label": "Speech Processor", "icon": "volume-down"}
 ]
 
 # template examples
@@ -52,6 +52,7 @@ template_examples = [
     {"name": "Write file chunks to a table", "template_name": "chunks_embeddings_pages_to_table", "processor_type": "write_fb"},
     {"name": "Read from table", "template_name": "read_table", "processor_type": "read_fb"},
     {"name": "Read embedding distance from a table", "template_name": "read_embedding_from_table", "processor_type": "read_fb"},
+    {"name": "Drop a table", "template_name": "drop_table", "processor_type": "read_fb"},
     {"name": "Read PDF or text file and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
     {"name": "Serialize arrays from read file output", "template_name": "serialize_arrays", "processor_type": "jinja2"},
     {"name": "Read file content_type, size, num_pages, ttl", "template_name": "info_file", "processor_type": "info_file"},
@@ -97,12 +98,43 @@ def sitemap():
     brand = get_brand(app)
     return render_template('pages/sitemap.txt', brand=brand)
 
-@site.route('/static/js/<path:filename>')
-def serve_js_module(filename):
-    js_module_path = f'static/js/{filename}'
-    
-    # Set the correct MIME type for JavaScript modules
-    return send_file(js_module_path, mimetype='application/javascript')
+# static handling
+cache_control_max_age = 3600
+@site.route('/css/<path:filename>')
+def serve_css(filename):
+    response = send_from_directory(f"{app.static_folder}/css/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/fonts/<path:filename>')
+def serve_fonts(filename):
+    response = send_from_directory(f"{app.static_folder}/fonts/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/images/<path:filename>')
+def serve_images(filename):
+    response = send_from_directory(f"{app.static_folder}/images/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/js/<path:filename>')
+def serve_js(filename):
+    response = send_from_directory(f"{app.static_folder}/js/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/templates/<path:filename>')
+def serve_templates(filename):
+    response = send_from_directory(f"{app.static_folder}/templates/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/webfonts/<path:filename>')
+def serve_webfonts(filename):
+    response = send_from_directory(f"{app.static_folder}/webfonts/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
 
 
 @site.route('/logs', methods=['GET'])
@@ -185,7 +217,7 @@ def pipelines():
     
     _nodes_sorted_by_processor = sorted(_nodes, key=lambda x: x.get('processor'))
 
-    return render_template('pages/pipelines.html', brand=get_brand(app), username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes_sorted_by_processor)
+    return render_template('pages/pipelines.html', brand=get_brand(app), username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes_sorted_by_processor, processors=processors)
 
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
@@ -260,7 +292,7 @@ def pipeline_view(pipe_id):
         substitution_values['protocol'] = "https"
 
     # Loop over the input fields and add them to the substitution dictionary
-    ai_dict = gpt_dict_completion(substitution_values, template = 'form_example')
+    ai_dict = gpt_dict_completion(substitution_values, template='form_example')
 
     if not ai_dict:
         ai_dict = {"texts": ["There was a knock at the door, then silence.","Bob was there, wanting to tell Alice about an organization."]}
@@ -288,8 +320,10 @@ def pipeline_view(pipe_id):
     python_code = python_template.substitute(substitution_values)
     curl_code = curl_template.substitute(substitution_values)
 
+    _nodes_sorted_by_processor = sorted(nodes, key=lambda x: x.get('processor'))
+
     # render the page
-    return render_template('pages/pipeline.html', brand=get_brand(app), username=username, pipeline=pipeline, nodes=_nodes, all_nodes=nodes,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string)
+    return render_template('pages/pipeline.html', brand=get_brand(app), username=username, pipeline=pipeline, nodes=_nodes, all_nodes=_nodes_sorted_by_processor,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string, processors=processors)
 
 
 @site.route('/nodes', methods=['GET'])
@@ -311,7 +345,7 @@ def nodes():
     """
     # hide the tokens and passwords
     for node in nodes:
-        extras = node.get('extras', None)
+        extras = node.get('extras', None)  
         if extras:
             for key in extras.keys():
                 if 'token' in key or 'password' in key or 'secret' in key:
@@ -524,7 +558,6 @@ def settings():
         'pages/settings.html', username=username, brand=get_brand(app), api_token=api_token, dbid=dbid, tokens=tokens
     )
 
-
 # image serving
 @site.route('/d/<name>/<filename>')
 @flask_login.login_required
@@ -560,7 +593,7 @@ def serve(name, filename):
 def download_file(cookbook_name, filename):
     base_url = "https://raw.githubusercontent.com/MittaAI/mitta-community/main"
     file_url = f"{base_url}/cookbooks/{cookbook_name}/{filename}"
-    print(file_url)
+
     response = requests.get(file_url)
     if response.status_code == 200:
         return Response(

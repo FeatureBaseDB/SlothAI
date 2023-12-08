@@ -204,7 +204,7 @@ def ingest_post(pipeline_id):
     # Check if we have a file upload
     if file_field_names:
         try:
-            json_data = request.form.get('json')
+            json_data = request.form.get('data')
             if not json_data:
                 return jsonify({"error": "When using mixed mode POSTs, you must supply a 'json' key with a JSON object."}), 400
             json_data_dict = transform_single_items_to_lists(json.loads(json_data))
@@ -212,8 +212,8 @@ def ingest_post(pipeline_id):
             if not isinstance(json_data_dict, dict):
                 return jsonify({"error": "The 'json' data is not a dictionary"}), 400
 
-            json_data_dict['filename'] = filename
-            json_data_dict['content_type'] = uploaded_file.content_type
+            json_data_dict['filename'] = [filename]
+            json_data_dict['content_type'] = [uploaded_file.content_type]
         except Exception as ex:
             return jsonify({"error": f"Error getting or transforming JSON data."}), 400
     else:
