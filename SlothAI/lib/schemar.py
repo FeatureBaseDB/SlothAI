@@ -99,7 +99,7 @@ class Schemar:
                     raise InvalidData("must have at least one non-empty list in value of lists")
 
             else:
-                raise UnhandledDataType()
+                raise UnhandledDataType("The data you are sending to FeatureBase isn't able to be auto-detected. Ensure you are only sending in arrays or arrays of arrays that match length.")
                 
 
         return schema

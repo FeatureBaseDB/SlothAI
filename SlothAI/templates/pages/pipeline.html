@@ -14,57 +14,63 @@
             <div class="col text-left">
                 <h3 class="mb-3">{{pipeline.name}}</h3>
             </div>
-            <div class="col text-right">
-                <button id="SavePipeline" class="btn btn-success ignore-color"><i class="fas fa-save"></i> Save</button>
-                <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary ignore-color"><i class="fas fa-download"></i> Download</button>
-                <button class="btn btn-danger delete-button" data-pipe-id="{{pipeline.pipe_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
+            <div class="col text-right h-25">
+                <button id="SavePipeline" class="btn btn-success btn-bottoms"><i class="fas fa-save"></i> Save</button>
+                <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary btn-bottoms"><i class="fas fa-download"></i> Download</button>
+                <button class="btn btn-danger delete-button btn-bottoms" data-pipe-id="{{pipeline.pipe_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
             </div>
         </div>
         <p>The pipeline '{{pipeline.name}}' contains the following nodes. Nodes may be reordered, added or deleted.</p>
         <div class="row">
-        <div class="col text-left">
-        <ul id="buttonSortable" class="btn-group">
-            {% for node_id in pipeline.node_ids %}
-                {% for node in nodes %}
-                    {% if node.node_id == node_id %}
-                        <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable" style="border-radius: 0 !important;"><i class="fas fa-cube"></i><br/>{{ node.name }}</button></li>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-        </ul>
+            <div class="col text-left">
+                <ul id="buttonSortable" class="btn-group">
+                    {% for node_id in pipeline.node_ids %}
+                        {% for node in nodes %}
+                            {% if node.node_id == node_id %}
+                                <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button></li>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
         </div>
-        <div class="col text-right">
-            <button id="addNode" class="btn btn-success"><i class="fas fa-plus"></i> Add Node</button>
-        </div>
+        <p></p>
+        <div class="row">
+            <div class="col text-left">
+                <button id="addNode" class="btn btn-outline-dark"><i class="fas fa-plus"></i> Add Node</button>
+            </div>
         </div>
         <hr/>
         <h4>Send Data</h4>
         <p>The pipeline is used by POST'ing data to the task ingestion endpoint:</p>
 
         <ul class="nav nav-tabs" id="codeTabs" role="tablist">
+            {% if (nodes[0].processor == 'jinja2' or nodes[0].processor == 'info_file') and nodes[0].extras.get('upload') == True %}
+            <li class="nav-item">
+                <a class="nav-link upload-tab" id="upload-files-tab" data-toggle="tab" href="#upload-files" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
+            </li>
+            {% elif nodes[0].processor == 'read_file' or nodes[0].processor == 'read_file' %}
+            <li class="nav-item">
+                <a class="nav-link upload-tab" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
+            </li>
+            {% elif nodes[0].processor == 'aivision' %}
+            <li class="nav-item">
+                <a class="nav-link upload-tab" id="vision-tab" data-toggle="tab" href="#vision" role="tab" aria-controls="vision" aria-selected="false">Upload Images</a>
+            </li>
+            {% elif nodes[0].processor == 'aiaudio' %}
+            <li class="nav-item">
+                <a class="nav-link" id="record-tab" data-toggle="tab" href="#record" role="tab" aria-controls="record" aria-selected="false">Record Audio</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link upload-tab" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="record" aria-selected="false">Upload</a>
+            </li>
+            {% endif %}
             <li class="nav-item">
                 <a class="nav-link active" id="curl-tab" data-toggle="tab" href="#curl" role="tab" aria-controls="curl" aria-selected="true">cURL</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="python-tab" data-toggle="tab" href="#python" role="tab" aria-controls="python" aria-selected="false">Python</a>
             </li>
-            {% if (nodes[0].processor == 'jinja2' or nodes[0].processor == 'info_file') and nodes[0].extras.get('upload') == True %}
-            <li class="nav-item">
-                <a class="nav-link" id="upload-files-tab" data-toggle="tab" href="#upload-files" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
-            </li>
-            {% elif nodes[0].processor == 'read_file' %}
-            <li class="nav-item">
-                <a class="nav-link" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
-            </li>
-            {% elif nodes[0].processor == 'aivision' %}
-            <li class="nav-item">
-                <a class="nav-link" id="vision-tab" data-toggle="tab" href="#vision" role="tab" aria-controls="vision" aria-selected="false">Upload Images</a>
-            </li>
-            {% elif nodes[0].processor == 'aiaudio' %}
-            <li class="nav-item">
-                <a class="nav-link" id="record-tab" data-toggle="tab" href="#record" role="tab" aria-controls="record" aria-selected="false">Record Audio</a>
-            </li>
-            {% endif %}
         </ul>
 
         <div class="tab-content" id="codeTabContent">
@@ -108,6 +114,12 @@
                 <button id="stopRecord" class="btn btn-secondary" disabled><i class="fas fa-stop"></i> Stop</button>
                 <button id="uploadRecord" class="btn btn-success"><i class="fas fa-upload"></i> Upload</button>
             </div>
+            <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="record-tab">
+                <p></p>
+                <p>You may upload single audio files (<strong>.mp3, .mp3, .mp3, .mp3, .mp3, .wav, .webm, .mp4, .m4a, .m4a, .wav</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+                <input type="file" id="fileInput" style="display: none;" accept=".mp3, .mp3, .mp3, .mp3, .mp3, .wav, .webm, .mp4, .m4a, .m4a, .wav">
+                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+            </div>
             {% endif %}
         </div>
 
@@ -133,11 +145,12 @@
                         <div class="input-group">
                             <select class="form-control" id="selectedNode">
                                 <optgroup id="nodePulldown" label="Available Nodes">
-                                    <option value="None">None</option>
                                     {% for node in all_nodes %}
                                         {% if node.node_id not in pipeline.get('node_ids') or node.processor == 'callback' %}
-                                            <option value="{{ node.node_id }}">{{ node.name }} ➔ {{ node.template_name }} ➔ {{ node.processor }}</option>
+                                            <option value="{{ node.node_id }}">{{ node.processor }} ← {{ node.name }} ← {{ node.template_name }} </option>
                                         {% endif %}
+                                    {% else %}
+                                        <option value="None">None</option>
                                     {% endfor %}
                                 </optgroup>
                             </select>
@@ -181,16 +194,6 @@ $(document).ready(function() {
     var nodes = JSON.parse('{{nodes | tojson}}');
     var all_nodes = JSON.parse('{{all_nodes | tojson}}');
 
-    function getColorFromName(name) {
-        name = name.trim(); // Remove leading and trailing spaces
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
-    }
-
     function setButtonColors() {
       const buttons = document.querySelectorAll(".btn-group .btn:not(.ignore-color)");
       buttons.forEach(button => {
@@ -231,7 +234,7 @@ $(document).ready(function() {
 
                 // Process inputs (green)
                 inputFields.forEach(function(field) {
-                    var badgeText = "input:" + field.name;
+                    var badgeText = "input: " + field.name;
                     var badge = $('<span>', {
                         class: 'badge badge-success',
                         text: badgeText,
@@ -243,7 +246,7 @@ $(document).ready(function() {
 
                 // Process outputs (blue)
                 outputFields.forEach(function(field) {
-                    var badgeText = 'output:' + field.name;
+                    var badgeText = 'output: ' + field.name;
                     var badge = $('<span>', {
                         class: 'badge badge-primary',
                         text: badgeText,
@@ -263,6 +266,7 @@ $(document).ready(function() {
             }
             var pipe_id = "{{pipeline.get('pipe_id')}}";
             container.append($('<a href="/templates/'+nodeTemplateID+'">Edit Template</a><br/>'));
+            container.append($('<a href="/nodes/'+nodeID+'">Edit Node</a><br/>'));
             container.append($('<a href="/pipelines/'+pipe_id+'/'+nodeID+'/delete">Delete Node</a>'));
             nodeButton.popover({
                 content: container.html(),
@@ -272,6 +276,9 @@ $(document).ready(function() {
             });
         });
     }
+
+    // upload tab won't show content unless we do this.
+    $('.upload-tab').click();
 
     // set popovers
     var node_buttons = $('button[data-node_id]');
@@ -382,7 +389,7 @@ $(document).ready(function() {
     // download the pipeline
     $('#DownloadPipeline').on('click', function() {
         $(this).prop('disabled', true);
-        toastr.info("Download request sent. Standby...");
+        toastr.info("Download request sent.");
 
         // Get the pipe_id from the data attribute
         var pipe_id = $(this).data('pipe_id');
@@ -440,7 +447,7 @@ $(document).ready(function() {
                 // Create a FormData object for file and JSON data
                 var formData = new FormData();
                 formData.append('document', file, file.name); // Add the file
-                formData.append('json', JSON.stringify({})); // Add the JSON data
+                formData.append('data', JSON.stringify({})); // Add the JSON data
                 toastr.info("File upload started.")
                 $.ajax({
                     type: 'POST',
@@ -453,7 +460,7 @@ $(document).ready(function() {
                         location.reload();
                     },
                     error: function(xhr, status, error) {
-                        toastr.error('Upload failed: ' + error);
+                        toastr.error('Upload failed. ' + error.responseJSON.error);
                     }
                 });
             };

@@ -1,40 +1,45 @@
 import json
 import datetime
+import io
+import requests
 
 from google.cloud import ndb
 
-from flask import Blueprint, render_template, jsonify
-from flask import redirect, url_for
-from flask import request
+from flask import Blueprint, render_template, jsonify, send_from_directory
+from flask import redirect, url_for, abort
+from flask import request, send_file, Response
 from flask import current_app as app
 
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template
-from SlothAI.web.models import Pipeline, Node, Log
+from google.cloud import storage
 
-site = Blueprint('site', __name__)
+from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
+from SlothAI.web.models import Pipeline, Node, Log, User, Token
+
+site = Blueprint('site', __name__, static_folder='static')
 
 # client connection
 client = ndb.Client()
 
 # hard coded, for now
 processors = [
-    {"value": "jinja2", "label": "Jinja2 Processor"},
-    {"value": "callback", "label": "Callback Processor"},
-    {"value": "read_file", "label": "Read Processor (File)"},
-    {"value": "read_uri", "label": "Read Processor (URI)"},
-    {"value": "info_file", "label": "Info Processor (File)"},
-    {"value": "read_fb", "label": "Read Processor (FeatureBase)"},
-    {"value": "split_task", "label": "Split Task Processor"},
-    {"value": "write_fb", "label": "Write Processor (FeatureBase)"},
-    {"value": "aidict", "label": "Generative Completion Processor"},
-    {"value": "aichat", "label": "Generative Chat Processor"},
-    {"value": "aiimage", "label": "Generative Image Processor"},
-    {"value": "embedding", "label": "Embedding Vectors Processor"},
-    {"value": "aivision", "label": "Vision Processor"},
-    {"value": "aiaudio", "label": "Audio Processor"}
+    {"value": "jinja2", "label": "Jinja2 Processor", "icon": "file"},
+    {"value": "callback", "label": "Callback Processor", "icon": "ethernet"},
+    {"value": "read_file", "label": "Read Processor (File)", "icon": "book-reader"},
+    {"value": "read_uri", "label": "Read Processor (URI)", "icon": "file-word"},
+    {"value": "info_file", "label": "Info Processor (File)", "icon": "info"},
+    {"value": "read_fb", "label": "Read Processor (FeatureBase)", "icon": "database"},
+    {"value": "split_task", "label": "Split Task Processor", "icon": "columns"},
+    {"value": "write_fb", "label": "Write Processor (FeatureBase)", "icon": "database"},
+    {"value": "aidict", "label": "Generative Completion Processor", "icon": "code"},
+    {"value": "aichat", "label": "Generative Chat Processor", "icon": "comment-dots"},
+    {"value": "aiimage", "label": "Generative Image Processor", "icon": "images"},
+    {"value": "embedding", "label": "Embedding Vectors Processor", "icon": "table"},
+    {"value": "aivision", "label": "Vision Processor", "icon": "glasses"},
+    {"value": "aiaudio", "label": "Audio Processor", "icon": "headphones"},
+    {"value": "aispeech", "label": "Speech Processor", "icon": "volume-down"}
 ]
 
 # template examples
@@ -47,7 +52,9 @@ template_examples = [
     {"name": "Write file chunks to a table", "template_name": "chunks_embeddings_pages_to_table", "processor_type": "write_fb"},
     {"name": "Read from table", "template_name": "read_table", "processor_type": "read_fb"},
     {"name": "Read embedding distance from a table", "template_name": "read_embedding_from_table", "processor_type": "read_fb"},
+    {"name": "Drop a table", "template_name": "drop_table", "processor_type": "read_fb"},
     {"name": "Read PDF or text file and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
+    {"name": "Serialize arrays from read file output", "template_name": "serialize_arrays", "processor_type": "jinja2"},
     {"name": "Read file content_type, size, num_pages, ttl", "template_name": "info_file", "processor_type": "info_file"},
     {"name": "Deserialize a PDF to pages and convert to text", "template_name": "deserialized_pdf_to_text", "processor_type": "read_file"},
     {"name": "Download file from URI with GET", "template_name": "uri_to_file", "processor_type": "read_uri"},
@@ -65,8 +72,10 @@ template_examples = [
     {"name": "Generate chat from texts", "template_name": "text_to_chat", "processor_type": "aichat"},
     {"name": "Generate an image from text", "template_name": "text_to_image", "processor_type": "aiimage"},
     {"name": "Find objects in image (Google Vision)", "template_name": "image_to_objects", "processor_type": "aivision"},
+    {"name": "Find text in image (Google Vision)", "template_name": "image_to_text", "processor_type": "aivision"},
     {"name": "Generate scene text from image (OpenAI GPT)", "template_name": "image_to_scene", "processor_type": "aivision"},
     {"name": "Transcribe audio to text pages", "template_name": "audio_to_text", "processor_type": "aiaudio"},
+    {"name": "Convert text to speech audio", "template_name": "text_to_speech", "processor_type": "aispeech"},
 ]
 
 def get_brand(app):
@@ -83,10 +92,49 @@ def get_brand(app):
     brand['youtube_url'] = app.config['BRAND_YOUTUBE_URL']
     return brand
 
+
 @site.route('/sitemap.txt')
 def sitemap():
     brand = get_brand(app)
     return render_template('pages/sitemap.txt', brand=brand)
+
+# static handling
+cache_control_max_age = 3600
+@site.route('/css/<path:filename>')
+def serve_css(filename):
+    response = send_from_directory(f"{app.static_folder}/css/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/fonts/<path:filename>')
+def serve_fonts(filename):
+    response = send_from_directory(f"{app.static_folder}/fonts/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/images/<path:filename>')
+def serve_images(filename):
+    response = send_from_directory(f"{app.static_folder}/images/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/js/<path:filename>')
+def serve_js(filename):
+    response = send_from_directory(f"{app.static_folder}/js/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/templates/<path:filename>')
+def serve_templates(filename):
+    response = send_from_directory(f"{app.static_folder}/templates/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
+
+@site.route('/webfonts/<path:filename>')
+def serve_webfonts(filename):
+    response = send_from_directory(f"{app.static_folder}/webfonts/", filename)
+    response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
+    return response
 
 
 @site.route('/logs', methods=['GET'])
@@ -109,6 +157,35 @@ def home():
         username = "anonymous"
 
     return render_template('pages/index.html', username=username, brand=get_brand(app))
+
+
+@site.route('/legal', methods=['GET'])
+def legal():
+    try:
+        username = current_user.name
+    except:
+        username = "anonymous"
+
+    return render_template('pages/privacy.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
+
+
+@site.route('/about', methods=['GET'])
+def about():
+    try:
+        username = current_user.name
+    except:
+        username = "anonymous"
+
+    return render_template('pages/about.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
+
+@site.route('/cookbooks', methods=['GET'])
+def cookbooks():
+    try:
+        username = current_user.name
+    except:
+        username = "anonymous"
+
+    return render_template('pages/cookbooks.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
 
 
 @site.route('/pipelines', methods=['GET'])
@@ -137,8 +214,10 @@ def pipelines():
                 node['extras'][key] = '[secret]'
 
         _nodes.append(node)
+    
+    _nodes_sorted_by_processor = sorted(_nodes, key=lambda x: x.get('processor'))
 
-    return render_template('pages/pipelines.html', brand=get_brand(app), username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes)
+    return render_template('pages/pipelines.html', brand=get_brand(app), username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes_sorted_by_processor, processors=processors)
 
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
@@ -213,7 +292,7 @@ def pipeline_view(pipe_id):
         substitution_values['protocol'] = "https"
 
     # Loop over the input fields and add them to the substitution dictionary
-    ai_dict = gpt_dict_completion(substitution_values, template = 'form_example')
+    ai_dict = gpt_dict_completion(substitution_values, template='form_example')
 
     if not ai_dict:
         ai_dict = {"texts": ["There was a knock at the door, then silence.","Bob was there, wanting to tell Alice about an organization."]}
@@ -241,8 +320,10 @@ def pipeline_view(pipe_id):
     python_code = python_template.substitute(substitution_values)
     curl_code = curl_template.substitute(substitution_values)
 
+    _nodes_sorted_by_processor = sorted(nodes, key=lambda x: x.get('processor'))
+
     # render the page
-    return render_template('pages/pipeline.html', brand=get_brand(app), username=username, pipeline=pipeline, nodes=_nodes, all_nodes=nodes,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string)
+    return render_template('pages/pipeline.html', brand=get_brand(app), username=username, pipeline=pipeline, nodes=_nodes, all_nodes=_nodes_sorted_by_processor,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string, processors=processors)
 
 
 @site.route('/nodes', methods=['GET'])
@@ -259,13 +340,17 @@ def nodes():
 
     name_random = random_name(2).split('-')[1]
 
+    tokens = Token.get_all_by_uid(current_user.uid)
+
+    """
     # hide the tokens and passwords
     for node in nodes:
-        extras = node.get('extras', None)
+        extras = node.get('extras', None)  
         if extras:
             for key in extras.keys():
-                if 'token' in key or 'password' in key:
-                    extras[key] = '[secret]'
+                if 'token' in key or 'password' in key or 'secret' in key:
+                    extras[key] = f'[{key}]'
+    """
 
     # update the template names
     _nodes = []
@@ -280,6 +365,95 @@ def nodes():
 
     return render_template(
         'pages/nodes.html', username=username, brand=get_brand(app), dev=app.config['DEV'], nodes=_nodes, name_random=name_random, templates=templates, processors=processors
+    )
+
+
+@site.route('/nodes/new/<template_id>', methods=['GET'])
+@site.route('/nodes/<node_id>', methods=['GET'])
+@flask_login.login_required
+def node_detail(node_id=None, template_id=None):
+    # get the user
+    username = current_user.name
+    uid = current_user.uid
+
+    # get the template service
+    template_service = app.config['template_service']
+
+    # get the tokens
+    tokens = Token.get_all_by_uid(current_user.uid)
+
+    # get the node, if any
+    node = Node.get(node_id=node_id, uid=uid)
+
+    # new node, if no node
+    if not node:
+        if not template_id:
+            abort(404)
+
+        # get the template
+        template = template_service.get_template(template_id=template_id, user_id=current_user.uid)
+        if not template:
+            abort(404)
+
+        # processor
+        processor = template.get('extras').get('processor')
+        if not processor:
+            processor = template.get('processor')
+            if not processor:
+                processor = "jinja2"
+
+        # merge extras
+        merged_extras = merge_extras(template.get('extras', {}), {})
+
+        # populate any local callback extras
+        merged_extras, update = callback_extras(merged_extras)
+
+        # deal with service tokens and locally populated callback info
+        _extras = {}
+        for key, value in merged_extras.items():
+            if "callback_token" in key and update:
+                Token.create(uid, key, value)
+                value = f"[{key}]"
+            elif should_be_service_token(key):
+                token = Token.get_by_uid_name(uid, key)
+                if token:
+                    # set it so it can be used later
+                    value = f"[{key}]"
+
+            _extras[key] = value
+            
+        # create a new node
+        node = Node.create(
+            name=random_name(2).split('-')[1],
+            uid=uid,
+            extras=_extras,
+            processor=processor,
+            template_id=template.get('template_id')
+        )
+
+        # redirect to ourselves
+        return redirect(url_for('site.node_detail', node_id=node.get('node_id')))
+
+
+    pipelines = Pipeline.get_by_uid_node_id(uid, node.get('node_id'))
+    if pipelines:
+        pipelines_ids = [pipeline['pipe_id'] for pipeline in pipelines]
+    else:
+        pipeline_ids = []
+
+    add_pipelines = Pipeline.fetch(uid=uid)
+
+    # Filter out pipelines already in `pipelines`, unless it's a callback
+    if "callback" in node.get('processor') or not pipelines:
+        filtered_pipelines = add_pipelines
+    else:
+        filtered_pipelines = [pipeline for pipeline in add_pipelines if pipeline['pipe_id'] not in pipelines_ids]
+
+    # we have a node, so get the template
+    template = template_service.get_template(template_id=node.get('template_id'), user_id=current_user.uid)
+
+    return render_template(
+        'pages/node.html', username=username, brand=get_brand(app), dev=app.config['DEV'], node=node, template=template, processors=processors, pipelines=pipelines, filtered_pipelines=filtered_pipelines
     )
 
 
@@ -324,7 +498,7 @@ def template_detail(template_id="new"):
         if len(name_random) < 9:
             break
 
-    empty_template = '{# New Template #}\n\n{# Extras are required. #}\nextras = {"static_extra": "hello", "user_extra": None}'
+    empty_template = '{# This is a reference jinja2 processor template #}\n\n{# Input Fields #}\ninput_fields = [{"name": "input_key", "type": "strings"}]\n\n{# Output Fields #}\noutput_fields = [{"name": "output_key", "type": "strings"}]\n\n{# Extras are required. #}\nextras = {"processor": "jinja2", "static_value": "String for static value.", "dynamic_value": None, "referenced_value": "{{static_value}}"}\n\n{"dict_key": "{{dynamic_value}}"}'
 
     return render_template(
         'pages/template.html', username=username, brand=get_brand(app), dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random, template_examples=template_examples, empty_template=empty_template
@@ -378,8 +552,54 @@ def settings():
     api_token = current_user.api_token
     dbid = current_user.dbid
 
+    tokens = Token.get_all_by_uid(current_user.uid)
+
     return render_template(
-        'pages/settings.html', username=username, brand=get_brand(app), api_token=api_token, dbid=dbid
+        'pages/settings.html', username=username, brand=get_brand(app), api_token=api_token, dbid=dbid, tokens=tokens
     )
 
+# image serving
+@site.route('/d/<name>/<filename>')
+@flask_login.login_required
+def serve(name, filename):
+    if name != current_user.name:
+        abort(404) 
 
+    user = User.get_by_uid(current_user.uid)
+    if not user:
+        abort(404)
+
+    # set up bucket on google cloud
+    gcs = storage.Client()
+    bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+    blob = bucket.blob("%s/%s" % (current_user.uid, filename))
+    
+    buffer = io.BytesIO()
+    blob.download_to_file(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer, 
+        download_name=filename,
+        as_attachment=False,
+        mimetype=blob.content_type # and there it is
+    )
+
+    return Response(blob)
+
+
+# cookbooks
+@site.route('/cookbooks/<cookbook_name>/<filename>', methods=['GET'])
+def download_file(cookbook_name, filename):
+    base_url = "https://raw.githubusercontent.com/MittaAI/mitta-community/main"
+    file_url = f"{base_url}/cookbooks/{cookbook_name}/{filename}"
+
+    response = requests.get(file_url)
+    if response.status_code == 200:
+        return Response(
+            response.content,
+            headers={"Content-Disposition": f"attachment;filename={filename}"},
+            mimetype='application/octet-stream'
+        )
+    else:
+        return "File not found", 404

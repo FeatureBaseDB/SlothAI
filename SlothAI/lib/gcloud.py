@@ -1,3 +1,4 @@
+import re
 import random
 import string
 import requests
@@ -23,12 +24,18 @@ def box_status(box_id="", zone=""):
 			boxes = []
 
 			for box in response.json():
+				zone_url = box.get('zone')
+				pattern = r"/zones/([^/]+)$"
+				match = re.search(pattern, zone_url)
+				zone = match.group(1) if match else None
+
 				boxes.append({
 					"box_id": box.get('name'),
 					"ip_address": box.get('networkInterfaces')[0].get('accessConfigs')[0].get('natIP', None),
 					"status": box.get('status'),
-					"zone": box.get('zone').replace("https://www.googleapis.com/compute/v1/projects/sloth-compute/zones/", "") # just get the zone string
+					"zone": zone
 				})
+				print(boxes)
 
 			return boxes
 		except Exception as ex:
@@ -45,13 +52,18 @@ def box_status(box_id="", zone=""):
 		response = requests.get(url, headers=headers)
 
 		box = response.json()
+		zone_url = box.get('zone')
+		pattern = r"/zones/([^/]+)$"
+		match = re.search(pattern, zone_url)
+		zone = match.group(1) if match else None
 
 		boxes = [{
 					"box_id": box.get('name'),
 					"ip_address": box.get('networkInterfaces')[0].get('accessConfigs')[0].get('natIP', None),
 					"status": box.get('status'),
-					"zone": box.get('zone').replace("https://www.googleapis.com/compute/v1/projects/sloth-compute/zones/", "") # just get the zone string
+					"zone": zone
 				}]
+		print(boxes)
 				
 		return boxes
 

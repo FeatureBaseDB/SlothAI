@@ -15,14 +15,15 @@
       <div class="container">
         <div class="row align-items-center justify-content-center">
           <div class="col-md-6">
-            <img src="/static/sloth.png" width="420" class="rounded img-fluid" style="border: 8px solid white; max-width: 100%;">
+            <img src="/images/sloth.png" width="420" class="rounded img-fluid" style="border: 8px solid white; max-width: 100%;">
 
           </div>
-          <div width="420" class="col-md-6 text-left">
-            <h1 style="font-family: Roboto; font-weight: 700; font-size: 48px; opacity: 100%;">Build blazingly fast, low code AI pipelines.</h1>
-            <p class="homelead">Powered by <a href="{{ brand.get('github_url') }}">SlothAI</a> and <a href="https://mitta.us/">Mitta</a>.</p>
+          <div width="420" class="col-md-4 text-left">
+            <h1 style="font-family: Roboto; font-weight: 700; font-size: 48px; opacity: 100%;">Build fast AI pipelines and bots, like a beast.</h1>
+            <p class="homelead">Powered by <a href="{{ brand.get('github_url') }}">SlothAI</a>.</p>
             <div style="padding-bottom: 23px;">
               <a href="/pipelines" class="btn btn-outline-light" type="button">Get Started</a>
+              <a href="https://discord.gg/dZPH8JFxvY" class="btn btn-outline-light" type="button">Talk to SlothBot</a>
             </div>
           </div>
         </div>
@@ -32,32 +33,38 @@
 
     <div style="padding-top: 79px;"></div>
 
-  	<div style="background-color: #EEE; border-top: 2px dotted #BBB; border-bottom: 2px dotted #BBB; padding-top: 83px; padding-bottom: 83px;">
+  	<div style="background-color: #EEE; border-top: 2px dotted #BBB; border-bottom: 2px dotted #BBB; padding-bottom: 83px;">
   	  <div style="max-width: 900px;" class="container">
   	    <div class="row">
   	      <div style="padding-right: 100px;" class="col-lg-12">
-  	        <h1 style="font-family: 'Roboto'; font-size: 40px; opacity: 100%;">Build <strong>Strong</strong> AI Applications</h1>
-  	        <p class="lead">Harness AI's potential with {{brand.get('name')}}, a gateway to constructing efficient AI pipelines that transform your data and the way you do business. Explore a world of use cases where tasks like PDF content extraction, audio transcription search, audio document rewriting for customer support augmentation, and PDF ingestion for dynamic product guides are streamlined and accelerated by the <a href="https://github.com/kordless/SlothAI">SlothAI</a> Open Source framework.</p>
+  	        <h1 style="font-size: 40px; opacity: 100%;">Build <strong>Strong</strong> AI Applications</h1>
+  	        <p class="lead">{{brand.get('name')}} is a pipeline management system built for large scale document and data processing. It offers developers a quick and easy way to build AI applications using transformational document chains powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 templates</a>. Documents, and their contents, may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a> and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, in addition to supporting calls to other machine learning models. Document types supported by the system include PDFs, images, audio, text files, webpages, and more.</p>
 
-            <h2>One Database to Rule Them All</h2>
-            <p class="lead">SlothAI is built from the ground up to focus on a single managed datastore, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> is the only database in the world to effortlessly manage all three functions, allowing users, including AI, to execute complex SQL queries against their data. No more hassling with separate vector and SQL database setups!</p>
+            <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
 
-            <img src="/static/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
-            <h2 style="padding-top: 30px;">Use Cases</h2>
-            <p class="lead">Downloads coming soon!</p>
+            <h2 style="padding-top: 30px;">Videos</h2>
+            <p class="lead">Get started with MittaAI by building a simple pipeline to generate words, make a callback, and write the results into the database.</p>
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/ntLqz38hC60?si=67DC_FEEnEwHNXhk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+            <h3 style="padding-top: 30px;">Integrated Storage</h3>
+            <p class="lead">{{brand.get('name')}} currently uses a single managed database, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> can execute complex SQL queries against analytical, tabular, or vector data. These queries can also be generated using AI models.  Secure support for file storage is provided by <a href="https://cloud.google.com/">Google Cloud</a>.</p>
+
             <h3 style="padding-top: 30px;">Retreival Augmented Generation</h3>
-            <p class="lead">Accelerate your AI's learning curve with RAG-based pipelines. Tap into and upload a vast data reservoir of PDFs and text files to help refine and ground your AI's responses to achieve unparalleled accuracy for all sorts of use cases. Use OpenAI's <a href="https://platform.openai.com/docs/guides/embeddings">text-embedding-ada-002</a> embeddings, or our free embeddings using <a href="https://instructor-embedding.github.io/">Instructor</a>, to make your content AI ready.</p>
+            <p class="lead">{{brand.get('name')}}'s' framework can be used to build customized <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG">RAG</a>-based pipelines. It also provides tools for chunking PDFs, text files, and other types of documents, like images. Use OpenAI's <a href="https://platform.openai.com/docs/guides/embeddings">text-embedding-ada-002</a> embeddings or our free embeddings powered by <a href="https://instructor-embedding.github.io/">Instructor</a> to make your content AI-ready.</p>
+            <a href="/cookbooks#pdf-indexing" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View RAG Cookbook</a>
+        
+            <h3 style="padding-top: 30px;">Innovative Bot Building</h3>
+            <p class="lead">Bots, or artificial intelligence powered agents, can be built with {{brand.get('name')}} by creating indexing and querying pipelines for documents, webpages, or other types of document media and then referencing those document fragments in prompt templates built for discussion using vector search. AI agents are more useful when their data is up-to-date, or they have the ability to reference material found on the Web, through searching. {{brand.get('name')}} provides real-time web content retrieval, document storage, indexing, agent history (memory) operations, and more.</p>
+            <a href="/cookbooks#pirate-bot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Bot Cookbook</a>
 
             <h3 style="padding-top: 30px;">Intelligent Enterprise Search</h3>
-            <p class="lead">Revolutionize data discovery within your organization! Build a cutting-edge search pipeline that goes beyond the norm, seamlessly integrating machine learning to provide swift and precise information retrieval and augmentation. Indexing PDFs and web pages becomes a breeze, empowering your team to effortlessly navigate and extract valuable insights.</p>
-            <p class="lead">In enterprise search, the integration of vector search and embeddings takes your queries beyond normal search queries. This means more accurate, contextually relevant results by understanding the semantic relationships within your data. Elevate your search pipeline precision with the power of vectors and creation of keywords and categories for organizing data.</p>
+            <p class="lead">In enterprise search use cases, the integration of vector search with documents provides more accurate and contextually relevant results from LLMs by extracting or generating semantic relationships within a set of documents, and then using that generative data to augment the prompts sent to the AI for assembly. These relationships can be extracted from documents automatically using prompts built with {{brand.get('name')}}'s templating system.</p>
 
             <h3 style="padding-top: 30px;">Effortless ETL</h3>
-            <p class="lead">Organizations grapple with the task of efficiently managing and moving data. Traditional ETL models fall short, underscoring the demand for a user-friendly, open-source solution for constructing ELTP data pipelines. With {{brand.get('name')}}, you can build transformational pipelines which leverage AI to load and transform your data seamlessly, and they can utilizing asynchronous tasks for unparalleled performance.</p>
-            <p class="lead">Augmentation of missing data and incorporation of new data can be done with conversational language in SlothAI's templating system, enhancing capabilities for advanced reporting use cases.</p>
+            <p class="lead">We know firsthand that managing, moving, and transforming data can be a difficult undertaking. {{brand.get('name')}} was designed from the ground up to build and run pipelines which load and transform data seamlessly and automatically using AI agents. The system provides a simple and powerful UI for building AI pipelines quickly and easily, and was built for speed and scale.</p>
 
-            <h3 style="padding-top: 30px;">Storytelling</h3>
-            <p class="lead">Build a dynamic stories based on historic customer data and interactions. Take data from dashboards, PDFs, Slack, and more and use AI to make things more explainable to more people. Analyze alerting systems for faster time to resolution, create dynamic content for websites, instructions for use of a product, or even blurbs for homepages, like this one. Yup, you guessed it, this is dynamic content at its finest.</p>
+            <h3 style="padding-top: 30px;">Grounded Storytelling</h3>
+            <p class="lead">Stories based on historic customer data and interactions can be used to tell a more efficient and dynamic story about the health of a business and its customers. Take data from dashboards, PDFs, Slack, and more and use AI to make things more explainable to more people. Analyze alerting systems for faster time to resolution, create dynamic content for websites, instructions for use of a product, summarize Slack conversations, get in front of outage issues, or even build dynamic blurbs for homepages, like this one.</p>
 
   	        <div style="padding-bottom: 23px;">
   	          {% if uid != "anonymous" %}
@@ -75,8 +82,11 @@
 
 {% endblock %}
 
+{% block footer %}
+{% endblock %}
+
 {% block javascript %}
-<script src="{{ url_for('static', filename='trianglify.bundle.js') }}"></script>
+<script src="{{ url_for('site.static', filename='js/trianglify.bundle.js') }}"></script>
 <script type="text/javascript">
 $(document).ready(function(){
   function generateGradient(startColor, endColor, steps) {

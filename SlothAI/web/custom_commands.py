@@ -37,10 +37,36 @@ def random_sentence():
 
 @custom_commands.app_template_global()
 def chunk_with_page_filename(texts, filename, length=512, start_page=1, overlap=0):
+
+    # Check if texts is a string
+    if isinstance(texts, str):
+        raise TypeError("The value for 'texts' needs to be an array of strings.")
+
+    # Check if texts is a list
+    if isinstance(texts, list):
+        # Check if the list contains strings
+        if all(isinstance(item, str) for item in texts):
+            pass  # This is a valid case
+        # Check if the list contains a single list of strings
+        elif len(texts) == 1 and isinstance(texts[0], list) and all(isinstance(item, str) for item in texts[0]):
+            texts = texts[0]
+        else:
+            raise TypeError("The value for 'texts' should be a list of strings or a list containing a single list of strings.")
+
+    # main object
+    texts_chunks = []
+    
+    if isinstance(filename, list):
+        if len(filename) > 1:
+            raise TypeError("The value for filename can be a string, or a list with a single string in it.")
+        filename = filename[0]
+    
+
     # main object
     texts_chunks = []
 
     # loop over page's texts
+
     for text in texts:
         # lists for page_chunks and sub_chunks
         page_chunks = []
@@ -129,6 +155,7 @@ def chunk_with_page_filename(texts, filename, length=512, start_page=1, overlap=
         "chunk_nums": chunk_numbers,
         "filenames": filenames
     })
+
 
 def find_last_strings(data, num):
     last_strings = []

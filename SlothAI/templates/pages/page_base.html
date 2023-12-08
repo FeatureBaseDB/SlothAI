@@ -10,17 +10,17 @@
     <title>{{ brand.get('name') }}</title>
     <meta property='og:title' content="{{brand.get('name')}}"/>
     {% endblock %}
-    <link rel="shortcut icon" href="{{ url_for('static', filename=brand.get('favicon')) }}">
+    <link rel="shortcut icon" href="/images/favicon.ico">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
+    <link rel="stylesheet" href="/css/brands.css">
+    <link rel="stylesheet" href="/css/solid.css">
+    <link rel="stylesheet" href="/css/toastr.min.css">
+    <link rel="stylesheet" href="/css/jquery-ui.css">
+    <link rel="stylesheet" href="/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/css/style.css">
     
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     {% block style %}
     {% endblock %}
 </head>
@@ -30,7 +30,7 @@
 <nav class="navbar navbar-expand-lg fixed-top" style="opacity: 90%;">
     <h2 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">
         <i class="fas fa-chevron-right"></i> <!-- Nice ">" Icon -->
-        {{brand.get('name')}}
+        <a href="/">{{brand.get('name')}}</a>
         <a href="{{brand.get('github_url')}}" target="_blank" style="text-decoration: none; color: white; margin-left: 12px;">
             <i class="fab fa-github"></i>
         </a>
@@ -47,8 +47,8 @@
         <div style="z-index: 10000;" class="dropdown ml-auto">
             <button style="color: white;" class="btn btn-outline-dark dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{username}}</button>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+                <a class="dropdown-item" href="/settings">Settings</a>
                 <a class="dropdown-item" href="/logout">Logout</a>
-                <a class="dropdown-item" href="/settings">Tokens</a>
             </div>
         </div>
     </div>
@@ -74,6 +74,9 @@
     <a href="/settings" {% if 'setting' in request.endpoint %}class="highlighted-link"{% endif %}>
         <i class="fas fa-cog"></i> <span>Settings</span>
     </a>
+    <a href="/cookbooks">
+        <i class="fas fa-book-open"></i> <span>Cookbooks</span>
+    </a>
 </div>
 
 {% macro generate_regular_badge(field_name, field_type) %}
@@ -98,13 +101,16 @@
 {% block content %}
 {% endblock %}
 
+
+
 <!-- Bootstrap JS, Popper.js, and jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
-<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
-<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/popper.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/bootstrap.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/toastr.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery-ui.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/utils.js"></script>
 
 <script type="text/javascript">
 $(document).ready(function() {
@@ -112,7 +118,7 @@ $(document).ready(function() {
       "positionClass": "toast-bottom-right",
     }
     {% for message in get_flashed_messages() %}
-    toastr.info(message);
+    toastr.info("{{message}}");
     {% endfor %}
 });
 </script>

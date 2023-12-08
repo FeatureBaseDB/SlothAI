@@ -5,8 +5,8 @@ from flask import Blueprint, flash, jsonify, request
 import flask_login
 from flask_login import current_user
 
-from SlothAI.lib.util import random_name
-from SlothAI.web.models import Node
+from SlothAI.lib.util import random_name, callback_extras
+from SlothAI.web.models import Node, Token
 
 from datetime import datetime
 
@@ -33,8 +33,32 @@ def get_template(template_id):
     template_service = app.config['template_service']
     template = template_service.get_template(user_id=current_user.uid, template_id=template_id)
 
+    template['extras'], update = callback_extras(template.get('extras'))
+
+    # build the list and store callback_token if local callback was updated
+    _extras = {}
+    for key, value in template.get('extras').items():
+        if "callback_token" in key and update:
+            Token.create(current_user.uid, key, value)
+            value = f"[{key}]"
+            template['extras'][key] = value
+
+    # always replace the actual token with a holder
+    tokens = Token.get_all_by_uid(current_user.uid)
+    _tokens = []
+    for token in tokens:
+        token['value'] = f"[{token.get('name')}]"
+        _tokens.append(token)
+
+    # _tokens MUST be used to secure tokens
+    data = {
+        "template": template,
+        "tokens": _tokens
+    }
+
+    print(data)
     if template:
-        return jsonify(template)
+        return jsonify(data)
     else:
         return jsonify({"error": "Not found", "message": "The requested template was not found."}), 404
 
@@ -70,7 +94,7 @@ def template_update(template_id):
 
     nodes = Node.fetch(template_id=template_id)
     if nodes and not sorted(template.get('extras')) == sorted(_template.extras):
-        return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node."}), 500
+        return jsonify({"error": "Update failed", "message": "Extras may not be changed while in use by a node. Edit the node's extras instead."}), 500
 
     updated_template = template_service.update_template(
         template_id=template_id,
@@ -126,8 +150,10 @@ def template_create():
     if 'created' not in template_data:
         template_data['created'] = datetime.utcnow()
 
-    template = Template.from_dict(template_data)
-
+    try:
+        template = Template.from_dict(template_data)
+    except:
+        return jsonify({"error": "Invalid JSON.", "message": "Invalid JSON syntax. Check your definitions."}), 400
     created_template = template_service.create_template(
         name=template.name,
         user_id=template.user_id,

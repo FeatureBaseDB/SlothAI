@@ -12,28 +12,30 @@
     <div class="instructions">
         <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. Use upload and download to manage your template versions.</p>
     </div>
-    <form class="form-inline">
-        <div class="form-group">
-            <input type="text" class="form-control" id="templateName" value="{% if template %}{{ template.name }}{% else %}{{name_random}}{% endif %}">
+    <div class="row">
+        <div class="col text-left">
+            <form class="form-inline">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="templateName" value="{% if template %}{{ template.name }}{% else %}{{name_random}}{% endif %}">
+                </div>
+
+                <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
+            </form>
         </div>
-
-        <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
-
-    </form>
+        <div class="col text-right">
+            <a id="saveButton" href class="btn btn-success"><i class="fas fa-save"></i> Save</a>
+        </div>
+    </div>
     <p></p>
-    <div class="container">
+    <div class="p-3">
         <div class="row">
             <div class="text-left">
-                <button id="goBack" class="btn btn-danger"><i class="fas fa-arrow-left"></i> Back</button>
-                <a id="saveButton" href class="btn btn-success"><i class="fas fa-save"></i> Save</a>
-                <a id="downloadButton" href class="btn btn-info" download="template.txt"><i class="fas fa-download"></i> Download</a>
-                <input type="file" id="fileInput" style="display: none;" accept=".txt">
-                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+                <button id="goBack" class="btn btn-danger btn-bottoms"><i class="fas fa-arrow-left"></i> Back</button>
                 <div class="dropdown d-inline">
-                    <button class="btn btn-warning dropdown-toggle" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button class="btn btn-warning dropdown-toggle btn-bottoms" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-cogs"></i> Choose Template
                     </button>
-                    <div class="dropdown-menu" aria-labelledby="generateTemplateDropdown">
+                    <div class="dropdown-menu btn-bottoms" aria-labelledby="generateTemplateDropdown">
                         {% for item in template_examples %}
                             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generativeTemplateModal" data-template-name="{{ item.template_name }}" data-processor-type="{{ item.processor_type }}">{{ item.name }}</a>
                             {% if not loop.last and item.processor_type != template_examples[loop.index].processor_type %}
@@ -41,7 +43,11 @@
                             {% endif %}
                         {% endfor %}
                     </div>
-                </div>  
+                </div>
+                <a id="downloadButton" href class="btn btn-info btn-bottoms" download="template.txt"><i class="fas fa-download"></i> Download</a>
+                <input type="file" id="fileInput" style="display: none;" accept=".txt">
+                <button id="loadButton" class="btn btn-primary btn-bottoms"><i class="fas fa-upload"></i> Upload</button>
+                <button id="createNode" class="btn btn-outline-dark btn-bottoms"><i class="fas fa-plus"></i> Create Node</button>
             </div>
         </div>
     </div>
@@ -66,13 +72,13 @@ $(document).ready(function() {
     editor.resize()
     editor.setOptions({
         autoScrollEditorIntoView: true,
-        copyWithEmptySelection: true,
+        copyWithEmptySelection: true
     });
     editor.setShowPrintMargin(false);
-    editor.getSession().setUseWrapMode(true)
+    editor.getSession().setUseWrapMode(true);
 
-    editor.setOptions({
-        enableBasicAutocompletion: true
+    editor.getSession().on('change', function() { 
+        $('#createNode').prop('disabled', true);
     });
 
     {% if template %}$('#renameButton').hide();{% endif %}
@@ -80,7 +86,7 @@ $(document).ready(function() {
     {% if not has_templates %}
     $.get('/static/templates/get_started_callback.txt', function(response) {
         editor.setValue(response);
-        toastr.info('Loaded getting started template.');
+        toastr.success('Loaded getting started template.');
     });
     {% endif %}
 
@@ -95,6 +101,13 @@ $(document).ready(function() {
     var originalTemplateName = $("#templateName").val();
     var originalTemplateText = editor.getValue();
     var templateNameChanged = false;
+    
+    const currentURL = window.location.href;
+
+    // Check if the current URL ends with "/new"
+    if (currentURL.endsWith('/new')) {
+        $('#createNode').prop('disabled', true);
+    }
 
     {% if template %}
     var selectedProcessorType = "{{ template.processor }}";
@@ -128,8 +141,7 @@ $(document).ready(function() {
                     $('#renameButton').hide();
                 },
                 error: function(error) {
-                    // Handle error response here
-                    console.error('Error updating template name:', error);
+                    console.error('Error updating template name.');
                 }
             });
         }
@@ -143,7 +155,10 @@ $(document).ready(function() {
         var selectedTemplate = $("#generateTemplateDropdown .dropdown-item.active");
         var newTemplateText = editor.getValue();
 
-        if (newTemplateText !== originalTemplateText) {
+        const currentURL = window.location.href;
+        
+        if (newTemplateText !== originalTemplateText || currentURL.endsWith('/new')) {
+
             var data = {
                 "template": {
                     "name": $("#templateName").val(),
@@ -159,17 +174,23 @@ $(document).ready(function() {
                 success: function(response) {
                     toastr.info("Template saved.");
                     if (window.location.pathname === '/templates/new') {
-                        window.location.href = '/templates';
+                        window.location.href = '/templates?q=' + response.name;
+                    } else {
+                        $('#createNode').prop('disabled', false);
                     }
                 },
                 error: function(error) {
-                    toastr.error(error.responseJSON.message);
-                    console.log(error.responseJSON.error);
+                    if (error.responseJSON && error.responseJSON.message) {
+                        toastr.error(error.responseJSON.message);
+                    } else {
+                        toastr.error(error.statusText);
+                    }
                 }
             });
 
         } else {
             toastrWarningCount++;
+
             if (toastrWarningCount < maxToastrWarnings) {
                 toastr.warning("Edit the template before saving it.");
             }
@@ -218,7 +239,11 @@ $(document).ready(function() {
                 $("#templateName").val(response.name);
             },
             error: function(error) {
-                console.error('Error generating the name:', error);
+                if (error.responseJSON && error.responseJSON.message) {
+                    toastr.error(error.responseJSON.message);
+                } else {
+                    toastr.error(error.statusText);
+                }
             }
         });
     });
@@ -235,7 +260,7 @@ $(document).ready(function() {
 
     // Event listener for changes in the templateName field
     $("#templateName").on("input", function() {
-        var currentTemplateName = $(this).val();
+        var currentTemplateName = $("#templateName").val();
         templateNameChanged = currentTemplateName !== originalTemplateName;
 
         if (templateNameChanged) {
@@ -291,6 +316,12 @@ $(document).ready(function() {
             }
         });
     });
+
+    {% if template %}
+    $('#createNode').on('click', function() {
+        window.location.href = "/nodes/new/{{template.get('template_id')}}";
+    });
+    {% endif %}
 });
 </script>
 {% endblock %}

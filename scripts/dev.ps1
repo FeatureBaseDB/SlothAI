@@ -1,6 +1,8 @@
 # Get your public IP address
 $MY_IP = Invoke-RestMethod -Uri "https://ipinfo.io/ip"
 
+$env:GOOGLE_APPLICATION_CREDENTIALS="./credentials.json"
+
 # Replace periods with hyphens to create a valid name
 $FIREWALL_RULE_NAME = "allow-sloth-$($MY_IP -replace '\.', '-')"
 
@@ -21,4 +23,4 @@ if (-not $existingRule) {
 }
 
 # Start the Flask application
-flask --app SlothAI run --port 8080 --debug
+flask --app SlothAI run --with-threads --port 8080 --debug

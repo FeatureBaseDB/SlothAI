@@ -130,7 +130,7 @@ def delete_task(name):
 	pass
 
 # probaby not the best place for this, so welcome to agile!
-def box_required(pipeline_models):
+def box_required():
 	from ping3 import ping
 	from SlothAI.lib.util import check_webserver_connection
 
@@ -139,31 +139,25 @@ def box_required(pipeline_models):
 
 	_box_required = False
 
-	# get the models in the pipeline
-	for model in pipeline_models:
-		# get the model name by the pipeline kind (we only do two kinds right now)
-		_model = Models.get_by_name(model['name'])
+	active_t4s = []
+	halted_t4s = []
+	if boxes:
+		for box in boxes:
+			# if the box is START, PROVISIONING, STAGING, RUNNING
+			if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
+				# can we ping it?
+				response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
 
-		if _model.get('gpu') == "t4":
-			active_t4s = []
-			halted_t4s = []
-			if boxes:
-				for box in boxes:
-					# if the box is START, PROVISIONING, STAGING, RUNNING
-					if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
-						# can we ping it?
-						response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
-
-						if response_time and check_webserver_connection(box.get('ip_address'), 9898):
-							print("pinging", box.get('ip_address'), response_time, box.get('status'))
-							# ping worked and the server responded
-							active_t4s.append(box)
-						else:
-							print("box is not running")
-							halted_t4s.append(box)
-					else:
-						# box wasn't RUNNING or at START
-						halted_t4s.append(box)
+				if response_time and check_webserver_connection(box.get('ip_address'), 9898):
+					print("pinging", box.get('ip_address'), response_time, box.get('status'))
+					# ping worked and the server responded
+					active_t4s.append(box)
+				else:
+					print("box is not running")
+					halted_t4s.append(box)
+			else:
+				# box wasn't RUNNING or at START
+				halted_t4s.append(box)
 
 			if active_t4s:
 				# If there are active boxes, select one at random
@@ -171,12 +165,12 @@ def box_required(pipeline_models):
 				_box_required = False
 				break
 			else:
-				# pick a random startable box
+				# pick a random startable box - this probably starts a lot of boxes, if we have em
 				alternate_box = random.choice(halted_t4s)
 
 				# start the box and set the new status
-				if box.get('status') != "START":
-					print("starting box ", box.get('box_id'))
+				if alternate_box.get('status') != "START":
+					print("starting box ", alternate_box.get('box_id'))
 					box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
 					Box.start_box(alternate_box.get('box_id'), "START") # sets status to 'START'
 				

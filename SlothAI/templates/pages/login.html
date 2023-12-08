@@ -17,30 +17,46 @@
           <h3 style="font-family: Roboto,sans-serif;">{{brand.get('name')}}</h3>
         </div>
 
+        {% if op == "1" %}
+        <form autocomplete="off" id="form-{{app_id}}" action="/login?op=1" method="post">
+        {% else %}
         <form autocomplete="off" id="{{app_id}}" action="/login" method="post">
+        {% endif %}
           <div class="form-group">
-            <label for="dbid">Get your <a href="https://cloud.featurebase.com/databases" target="_blank">database ID</a>...</label>
-            <input autocomplete="off" id="dbid-{{app_id}}" name="dbid" type="text" class="form-control" placeholder="Enter your database ID" data-1p-ignore>
-          </div>
-          <div class="form-group">
-            <label for="db_token">Get your <a href="https://cloud.featurebase.com/configuration/api-keys" target="_blank">API token</a>...</label>
-            <input autocomplete="off" id="token-{{app_id}}" name="db_token" type="password" class="form-control" placeholder="Enter your API key (token)" data-1p-ignore>
-          </div>
-          {% if next %}
-          <input type="hidden" name="next" value="{{next}}">
+          {% if op == "1" %}
+            <label>Enter your email address to get a registration token.</label>
+          {% elif session %}
+            <label>Verify your email address, again.</label>
+          {% elif email %}
+            <label>Hit enter or click submit to get a login token by email.</label>
+          {% else %}
+            <label>Enter your email address to get a login token.</label>
           {% endif %}
-          <input type="hidden" name="transaction_id" value="{{transaction_id}}">
-
-          <small class="form-text text-muted">
-            {% for message in get_flashed_messages() %}
-            <div class="flash">{{ message }}</div>
-            {% endfor %}
-          </small>
-
-          <button type="submit" class="btn btn-primary" title="Verify your token.">Authenticate</button>
+            <input autofocus id="email-{{app_id}}" type="email" class="form-control" name="email" placeholder="example@gmail.com">
+            <input id="password" type="password" class="form-control" name="password" placeholder="************">
+            {% if next %}
+            <input type="hidden" name="next" value="{{next}}">
+            {%endif%}
+            <input type="hidden" name="op" value="0">
+            {% if use_token == "1" %}
+            <input type="hidden" name="use_token" value="1">
+            {% endif %}
+            <input type="hidden" name="transaction_id" value="{{transaction_id}}">
+            <small class="form-text text-muted">
+              {% for message in get_flashed_messages() %}
+              <div class="flash">{{ message }}</div>
+              {% endfor %}
+            </small>
+          </div>
+          {% if op == "1" %}
+          <button type="submit" class="btn btn-primary" title="Next is to enter your phone number.">Next</button>
+          {% elif session %}
+          <button type="submit" class="btn btn-primary" title="Time to login.">Log In</button>
+          {% else %}
+          <button type="submit" class="btn btn-primary" title="Get a link to login via email.">Submit</button>
+          {% endif %}
           <a href="/" class="btn btn-outline-dark" title="Leave this place.">Cancel</a>
         </form>
-
       </div>
     </div>
     <div class="col-sm-3">
@@ -54,9 +70,21 @@
 {% endblock %}
 
 {% block javascript %}
-<script src="{{ url_for('static', filename='trianglify.bundle.js') }}"></script>
+<script src="{{ url_for('site.static', filename='js/trianglify.bundle.js') }}"></script>
 <script type="text/javascript">
 $(document).ready(function() {
+
+  $('#password').remove();
+  $(window).keydown(function(event){
+    if(event.keyCode == 13) {
+      console.log("default triggered");
+      $("{{app_id}}").submit();
+      prevent = setTimeout(function() {
+        event.preventDefault();
+      }, 1000);
+    }
+  });
+  
   $(window).keydown(function(event){
     if(event.keyCode == 13) {
       console.log("default triggered");

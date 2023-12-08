@@ -1,6 +1,7 @@
 import flask_login
 
-from flask import Flask, render_template, make_response, request
+from flask import Flask, render_template, make_response, request, redirect
+from flask_compress import Compress
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -13,6 +14,7 @@ from SlothAI.web.tasks import tasks
 
 from SlothAI.web.pipelines import pipeline
 from SlothAI.web.nodes import node_handler
+from SlothAI.web.settings import settings_handler
 from SlothAI.web.templates import template_handler
 from SlothAI.web.custom_commands import custom_commands
 from SlothAI.web.callback import callback
@@ -28,6 +30,11 @@ from SlothAI.lib.queue import AppEngineTaskQueue
 def create_app(conf='dev'):
 
     app = Flask(__name__)
+    compress = Compress()
+    compress.init_app(app)
+    
+    # Enable pretty-printing for JSON responses
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
     if conf == 'testing':
         app.config.from_object(config.TestingConfig)
@@ -107,6 +114,7 @@ def create_app(conf='dev'):
     with app.app_context():
         app.register_blueprint(site)
         app.register_blueprint(auth)
+        app.register_blueprint(settings_handler)
         app.register_blueprint(cron)
         app.register_blueprint(tasks)
         app.register_blueprint(pipeline)
@@ -121,7 +129,25 @@ def create_app(conf='dev'):
 
     @app.before_request
     def before_request():
-        pass
+        forwarded_proto = request.headers.get('X-Forwarded-Proto')
+
+        if app.config['DEV'] == "True":
+            return
+
+        # Check if the request is already secure (HTTPS)
+        if forwarded_proto == 'https':
+            return
+
+        # Disable redirects for URLs that contain "tasks" to avoid a loop
+        if "tasks" in request.url:
+            return
+
+        if forwarded_proto == 'http':
+            url = request.url.replace("http", "https", 1)
+            return redirect(url, code=302)
+
+        return
+
     @app.errorhandler(404)
     def f404_notfound(e):
         # Check if the request URL contains "/static/templates/"

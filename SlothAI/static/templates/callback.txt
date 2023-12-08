@@ -4,4 +4,4 @@
 output_fields = []
 
 {# Define the callback URI and any tokens or extra parameters #}
-extras = [{'callback_uri': "https://yoursite.com/callback?token={{callback_token}}"}, {'callback_token': "SECRET"}]
+extras = {'callback_uri': "https://yoursite.com/callback?token={{custom_callback_token}}", 'custom_callback_token': None}

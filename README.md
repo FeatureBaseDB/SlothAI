@@ -53,11 +53,11 @@ The following graph outlines a typical RAG-based *ingestion pipeline* for data w
 * Set storage layer for PostgreSQL/pgvector is in the works.
 
 ## Authentication
-Authentication is currently limited to FeatureBase Cloud tokens ONLY. You must have a [FeatureBase Cloud](https://cloud.featurebase.com/) account to use the application.
+Authentication is done via email and tokens using Twilio. Instructions for setup is coming soon.
 
 Security to the Laminoid controller is done through box tokens assigned to network tags in Google Compute. This secures the deployment somewhat, but could be better.
 
-It would be quite easy to add email authentication to the system, so this project could be run in a VPC-like setup.
+This project could be run in a VPC-like setup and use private models. We'll need to do work to get it there.
 
 ## Configuration
 Create a `config.py` configuration file in the root directory. Use `config.py.example` to populate.

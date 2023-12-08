@@ -19,7 +19,7 @@
         </div>
         <p></p>
         <div>
-        <table width="100%" id="nodesTable" class="table table-striped">
+        <table width="100%" id="nodesTable" class="stripe hover">
             <thead>
                 <tr>
                     <th>Node</th>
@@ -27,13 +27,13 @@
                     <th>Inputs</th>
                     <th>Outputs</th>
                     <th>Extras</th>
-                    <th>Edit</th>
+                    <th>Remove</th>
                 </tr>
             </thead>
             <tbody id="nodeTable">
                 {% for node in nodes %}
-                <tr>
-                    <td><button type="button" class="btn btn-secondary min-button" disabled><i class="fas fa-cube"></i><br/>{{ node.name }}</button></td>
+                <tr id="tr_{{ node.node_id }}">
+                    <td><a href="/nodes/{{ node.node_id }}" type="button" class="btn btn-secondary min-button" disabled><i class="fas fa-cube"></i><br/>{{ node.name }}</a></td>
                     <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors min-button" title="{{ node.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i><br/>{{ node.processor }}</a></td>
 
                     <td>
@@ -63,11 +63,8 @@
                     </td>
 
                     <td>
-                        <div class="btn-group">
-                            <a data-toggle="popover" data-placement="top" data-content="{{ node.get('template').get('name') }}" title="{{ node.get('template').get('name') }}" class="btn btn-secondary" href="/templates/{{ node.get('template_id') }}"><i class="fas fa-pen"></i></a>
-                            <a class="delete-button btn btn-danger" data-node-id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></a>
-                            <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
-                        </div>
+                        <a class="delete-button btn btn-danger btn-sm" data-node_id="{{ node.node_id }}"><i class="fas fa-trash-alt"></i></a>
+                        <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -82,7 +79,6 @@
         <div class="rounded-lg border p-3">
             <h4 class="mb-3">Create a Node</h4>
             <p>You have no nodes defined. Click the "Add Node" button below to create your first node from one of your templates. </p>
-            <p>Templates use variables and those variables may be set in the template itself. If a variable's value is set to <strong>"generate"</strong> or <strong>None</strong>, you will be prompted for the variable's value when you create the node. </p>
             <button type="button" id="addNodeButton" class="btn btn-success" data-toggle="modal" data-target="#nodeFormModal">
                 <i class="fas fa-plus"></i> Create Node
             </button>
@@ -93,10 +89,10 @@
         <div class="rounded-lg border p-3">
             <h4 class="mb-3">Create Node</h4>
             <p>You don't have any templates. You will need to create a template before you can create a node.</p>
-            <p>Once you create a new node, you can add it to a pipeline.</p>
             <p></p>
             <h5 class="mb-3">Task: Create a New Template</h5>
             <p>Click the "Create Template" button below to create your first template. </p>
+            <p>Once you create a new template, you can create a node from it.</p>
             <button type="button" id="addTemplateButton" class="btn btn-success" data-toggle="modal">
                 <i class="fas fa-plus"></i> Create Template
             </button>
@@ -107,49 +103,49 @@
 
 
 <div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Create Node</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Create Node</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Add your node form fields here -->
+                <div class="form-group">
+                    <label for="nodeName">Node Name</label>
+                    <input type="text" class="form-control" id="nodeName">
                 </div>
-                <div class="modal-body">
-                    <!-- Add your node form fields here -->
-                    <div class="form-group">
-                        <label for="nodeName">Node Name:</label>
-                        <input type="text" class="form-control" id="nodeName">
-                    </div>
-                    <div class="form-group">
-                        <label for="nodeProcessor">Node Processor:</label>
-                        <select class="form-control" id="nodeProcessor">
-                        <option value="all">All</option>
-                        {% for processor in processors %}
-                        <option value="{{ processor['value'] }}">{{ processor['label'] }}</option>
-                        {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group" style="display: none;" id="nodeTemplateContainer">
-                        <label for="nodeTemplate">Node Template:</label>
-                        <select class="form-control" id="nodeTemplate">
-                        </select>
-                    </div>
-                    <div class="spinner-grow" role="status" id="nodeTemplateSpinner">
-                        <span class="sr-only"></span>
-                    </div>
-                <div class="form-group" style="display: none;" id="dynamicFieldsContainer">
-                    <!-- JavaScript will populate this container with new fields -->
+                <div class="form-group">
+                    <label for="nodeProcessor">Node Processor</label>
+                    <select class="form-control" id="nodeProcessor">
+                    <option value="all">All</option>
+                    {% for processor in processors %}
+                    <option value="{{ processor['value'] }}">{{ processor['label'] }}</option>
+                    {% endfor %}
+                    </select>
                 </div>
+                <div class="form-group" style="display: none;" id="nodeTemplateContainer">
+                    <label for="nodeTemplate">Node Template</label>
+                    <select class="form-control" id="nodeTemplate">
+                    </select>
+                </div>
+                <div class="spinner-grow" role="status" id="nodeTemplateSpinner">
+                    <span class="sr-only"></span>
+                </div>
+            <div class="form-group" style="display: none;" id="dynamicFieldsContainer">
+                <!-- JavaScript will populate this container with new fields -->
+            </div>
 
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" id="addNodeModalButton"><i class="fas fa-plus"></i> Create Node</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="addNodeModalButton"><i class="fas fa-plus"></i> Create Node</button>
             </div>
         </div>
     </div>
+</div>
 
 
 {% endblock %}
@@ -157,16 +153,6 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-    function getRowCount() {
-        const tbody = document.querySelector('table tbody');
-        if (tbody) {
-            const rowCount = tbody.getElementsByTagName('tr').length;
-            return rowCount;
-        } else {
-            return 0;
-        }
-    }
-
     // badge popovers
     $('.extras').popover({
       trigger: 'focus'
@@ -176,7 +162,7 @@ $(document).ready(function() {
     });
 
     $(".delete-button").on("click", function () {
-        var node_id = $(this).data("node-id");
+        var node_id = $(this).data("node_id");
         var $this = $(this);
         var spinner = $this.siblings(".spinner-border");
         
@@ -188,7 +174,7 @@ $(document).ready(function() {
             type: 'DELETE',
             success: function (response) {
                 toastr.success('Node deleted.');
-                $this.closest("tr").remove();
+                table.row($('#tr_'+node_id)).remove().draw();  
             },
             error: function (error) {
                 toastr.error(error.responseJSON.message);
@@ -196,7 +182,7 @@ $(document).ready(function() {
             complete: function () {
                 $this.show();
                 spinner.hide();
-                if (getRowCount() === 0) {
+                if (table.row().count() === 0) {
                     window.location.href = '/nodes';
                 }
             }.bind(this)
@@ -238,17 +224,6 @@ $(document).ready(function() {
         });
     }
 
-    // Function to run after both changeButtonColors and changeBadgeColors are done
-    function sortTable() {
-        // sort table
-        $('#nodesTable').DataTable({
-            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
-            "order": [[0, "asc"]],
-            "pageLength": 25,
-            "responsive": true
-        });
-    }
-
     // Run changeButtonColors and changeBadgeColors functions using Promises
     const buttonColorsPromise = new Promise((resolve) => {
         changeButtonColors();
@@ -262,6 +237,7 @@ $(document).ready(function() {
 
     // Wait for both promises to resolve, and then execute anotherFunction
     Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
+        $("th").css("border-bottom-color","white");
         sortTable();
     });
 
@@ -273,16 +249,6 @@ $(document).ready(function() {
       } else {
         return inputString;
       }
-    }
-
-    function getColorFromName(name) {
-        name = name.trim(); // Remove leading and trailing spaces
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
     }
 
     $('.btn').on('mouseleave', function () {
@@ -300,6 +266,7 @@ $(document).ready(function() {
         window.location.href = "/templates/new";
     });
 
+    // build the thing
     $("#addNodeButton").on("click", function() {
         $("#addNodeModalButton").prop("disabled", true);
         $("#nodeProcessor").val("all");
@@ -328,7 +295,7 @@ $(document).ready(function() {
 
                     // Check if the processor is available, and append
                     if (template.processor) {
-                        optionText += " ➔ " + template.processor;
+                        optionText += " → " + template.processor;
                     }
 
                     if (Array.isArray(template.input_fields) && template.input_fields.length > 0) {
@@ -339,11 +306,11 @@ $(document).ready(function() {
                     }
 
                     if (Array.isArray(template.output_fields) && template.output_fields.length > 0) {
-                        optionText += " ➔ " + template.output_fields.map(function (outputField) {
+                        optionText += " →  return (" + template.output_fields.map(function (outputField) {
                             return outputField.name;
-                        }).join(', ');
+                        }).join(', ') + ")";
                     } else if (!Array.isArray(template.input_fields) || template.input_fields.length === 0) {
-                        optionText += " ➔ passthrough";
+                        optionText += " → passthrough";
                     }
 
                     templateSelect.append($('<option>', {
@@ -425,29 +392,44 @@ $(document).ready(function() {
                 url: '/templates/' + selectedTemplateId + '/detail',
                 type: 'GET',
                 success: function (response) {
-                    if (response.extras) {
+                    if (response.template.extras) {
                         var hasRelevantFields = false; // Change the initial value to false
                         
                         $("#dynamicFieldsContainer").empty(); // Clear the container before appending fields
                         
                         $("#dynamicFieldsContainer").append($("<hr>")).append($("<h5>").text("User Extras"));
-                        
-                       for (var key in response.extras) {
-                            if (response.extras.hasOwnProperty(key)) {
-                                var extraValue = response.extras[key];
-                                var fieldType = "text";
 
-                                if (key.toLowerCase().includes("token") || key.toLowerCase().includes("password")) {
-                                    fieldType = "password";
+                        for (var key in response.template.extras) {
+                            if (response.template.extras.hasOwnProperty(key)) {
+                                var extraValue = response.template.extras[key];
+                                var fieldType = "text";
+                                var shouldShow = true;
+
+                                // Check if the key exists in response.tokens
+                                var isToken = false;
+                                for (var i = 0; i < response.tokens.length; i++) {
+                                    if (response.tokens[i].name === key) {
+                                        isToken = true;
+                                        break;
+                                    }
                                 }
 
-                                // Check for conditions (string containing [user_extra], null, or undefined)
-                                if (
-                                    (typeof extraValue === "string" && extraValue.includes("[user_extra]")) ||
-                                    extraValue === null ||
-                                    extraValue === undefined
-                                ) {
+                                // Check if it's not a token and not a string wrapped in square brackets
+                                if (isToken || (typeof extraValue === "string" && !extraValue.match(/^\[.*\]$/))) {
+                                    shouldShow = false;
+                                }
+
+                                // Check for conditions (null or undefined)
+                                if (shouldShow && (extraValue === null || extraValue === undefined)) {
+                                    shouldShow = true;
+                                }
+
+                                if (shouldShow) {
                                     var labelText = "<strong>" + key + "</strong>:";
+                                    if (typeof extraValue === "string" && extraValue !== null && extraValue.match(/^\[.*\]$/)) {
+                                        extraValue = ""; // Clear the value if it's a match
+                                    }
+                                    var fieldType = key.includes("password") || key.includes("token") || key.includes("secret") ? "password" : "text"; // Set the field type
                                     var inputField = $("<input>")
                                         .attr("type", fieldType)
                                         .addClass("form-control")
@@ -456,15 +438,23 @@ $(document).ready(function() {
                                     var label = $("<label>")
                                         .attr("for", key)
                                         .html(labelText);
+                                    
+                                    if (key.includes("password") || key.includes("token") || key.includes("secret")) {
+                                        // If it contains any of those keywords, add a specific class for styling
+                                        inputField.addClass("secure-input");
+                                    }
 
                                     $("#dynamicFieldsContainer").append(label, inputField);
-
                                     hasRelevantFields = true;
                                 }
                             }
                         }
 
+
                         if (hasRelevantFields) {
+                            $("#dynamicFieldsContainer").append($("<hr>"));
+                            $("#dynamicFieldsContainer").append($("<p>").html("<strong>Note:</strong> Any passwords or tokens entered here will be hidden and moved to secure token storage. The values you enter for them will not be shown to you again."));
+
                             $("#dynamicFieldsContainer").show();
                         } else {
                             $("#dynamicFieldsContainer").hide();
@@ -473,15 +463,15 @@ $(document).ready(function() {
 
                     if (response.processor) {
                         // Set the selected processor in the dropdown
-                        $("#nodeProcessor").val(response.processor);
-                        if (!response.processor == current_processor) {
-                            current_processor = response.processor;
+                        $("#nodeProcessor").val(response.template.processor);
+                        if (!response.template.processor == current_processor) {
+                            current_processor = response.template.processor;
                             $("#nodeProcessor").trigger('change');                            
                         }
-                    } else if (response.extras.processor) {
-                        $("#nodeProcessor").val(response.extras.processor);
-                        if (!response.extras.processor == current_processor) {
-                            current_processor = response.extras.processor;
+                    } else if (response.template.extras.processor) {
+                        $("#nodeProcessor").val(response.template.extras.processor);
+                        if (!response.template.extras.processor == current_processor) {
+                            current_processor = response.template.extras.processor;
                             $("#nodeProcessor").trigger('change');                            
                         }
                     }
@@ -536,6 +526,7 @@ $(document).ready(function() {
 
         if (dynamicFieldsAreEmpty) {
             toastr.error("Please fill in all required fields.");
+            $("#addNodeModalButton").prop("disabled", false);
             return;
         }
 
@@ -597,8 +588,9 @@ $(document).ready(function() {
             data: JSON.stringify(nodeData),
             success: function(response) {
                 $("#nodeFormModal").modal('hide');
+                $("#addNodeModalButton").prop("disabled", false);
                 toastr.success('Node added successfully.');
-                window.location.reload();
+                window.location.href = '/nodes/'+response.node_id;
             },
             error: function(error) {
                 $("#addNodeButton").prop("disabled", false);
@@ -606,10 +598,43 @@ $(document).ready(function() {
             }
         });
     }
+    
     $(function () {
       $('[data-toggle="popover"]').tooltip()
     })
 
+    var getUrlParameter = function getUrlParameter(sParam) {
+        var sPageURL = window.location.search.substring(1),
+            sURLVariables = sPageURL.split('&'),
+            sParameterName,
+            i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            sParameterName = sURLVariables[i].split('=');
+
+            if (sParameterName[0] === sParam) {
+                return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+            }
+        }
+        return false;
+    };
+
+    var table = {};
+
+    // Function to run after both changeButtonColors and changeBadgeColors are done
+    function sortTable() {
+        // sort table
+        table = $('#nodesTable').DataTable({
+            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
+            "order": [[0, "asc"]],
+            "pageLength": 25,
+            "responsive": true
+        });
+        if (getUrlParameter('q')) {
+            table.search(getUrlParameter('q')).draw();
+        }
+    }
+    $("#addNodeModalButton").prop("disabled", false);
 });
 </script>
 

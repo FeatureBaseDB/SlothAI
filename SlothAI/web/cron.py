@@ -1,4 +1,6 @@
-from flask import Blueprint
+import re
+
+from flask import Blueprint, jsonify
 from flask import current_app as app
 
 from SlothAI.lib.gcloud import box_status
@@ -11,11 +13,19 @@ cron = Blueprint('cron', __name__)
 @cron.route('/cron/boxes/<box_id>/<cron_key>', methods=['GET'])
 def status_handler(box_id="all", cron_key=""):
 	if cron_key != app.config['CRON_KEY']:
-		return
+		return jsonify([])
 
 	if box_id == "all":
 		boxes = box_status()
-	
+	else:
+		boxes = box_status()
+		for box in boxes:
+			if box.get('box_id') == box_id:
+				boxes = [box]
+				break
+		else:
+			boxes = []
+
 	box_list = []
 	for box in boxes:
 		box_list.append(box.get('box_id'))
@@ -32,4 +42,4 @@ def status_handler(box_id="all", cron_key=""):
 		if _box.get('box_id') not in box_list:
 			Box.delete(_box.get('box_id'))
 
-	return boxes
+	return _boxes

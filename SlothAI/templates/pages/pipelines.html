@@ -18,7 +18,7 @@
             <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: inline;">
                 <input id="fileInput" type="file" name="file" style="display: none;" />
                 <button id="uploadPipeline" type="button" class="btn btn-info btn-upload" style="float: left;">
-                    <i class="fas fa-upload"></i> Upload
+                    <i class="fas fa-upload"></i> Import
                 </button>
                 <input type="submit" value="Submit" hidden/>
             </form>
@@ -27,17 +27,17 @@
             </button>
         </div>
 
-        <table id="pipelineTable" class="table table-striped">
+        <table id="pipelineTable" class="stripe hover">
             <thead>
                 <tr>
                     <th>Name</th>
                     <th>Nodes</th>
-                    <th>Edit</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for pipeline in pipelines %}
-                <tr>
+                <tr id="tr_{{pipeline.pipe_id}}">
                     <td>
                         <button class="btn btn-secondary" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'"><i class="fas fa-code-branch"></i><br/>{{ pipeline.name }}</button>
                     </td>
@@ -46,16 +46,16 @@
                             {% for node_id in pipeline.node_ids %}
                                 {% for node in nodes %}
                                     {% if node.node_id == node_id %}
-                                        <button title="{{ node.processor }}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary button-node"><i class="fas fa-cube"></i><br/>{{ node.name }}</button>
+                                        <button title="{{ node.processor }}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary button-node btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button>
                                     {% endif %}
                                 {% endfor %}
                             {% endfor %}
                         </div>
                     </td>
                     <td>
-                        <div class="btn-group">
-                            <button data-toggle="tooltip" data-placement="top" title="Download {{ pipeline.name }}" class="download-button btn btn-primary" data-pipe_name="{{ pipeline.name }}" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-download download-button"></i></button>
-                            <button class="delete-button btn btn-danger" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="btn-group btn-group-sm">
+                            <button data-toggle="tooltip" data-placement="top" title="Download {{ pipeline.name }}" class="download-button btn btn-primary btn-action" data-pipe_name="{{ pipeline.name }}" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-download"></i></button>
+                            <button class="delete-button btn btn-danger btn-action" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
                             <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
                         </div>
                     </td>
@@ -69,12 +69,13 @@
 
     <div class="rounded-lg border p-3">
         <h4 class="mb-3">Create a Pipeline</h4>
-        <p>Click on the "Create Pipeline" button to create a new Pipeline. Pipelines run documents through a list of node processors.</p>
+        <p>Click on the <strong>Create Pipeline</strong> button to create a new Pipeline. Pipelines run documents through a list of node processors.</p>
+        <p>You can also import a pipeline using <strong>Import Pipeline</strong> button. Pipelines can be downloaded from the <a href="/cookbooks">cookbooks page</a>.
         <div class="text-left">
             <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: inline;">
                 <input id="fileInput" type="file" name="file" style="display: none;" />
                 <button id="uploadPipeline" type="button" class="btn btn-info" style="float: left;">
-                    <i class="fas fa-upload"></i> Upload
+                    <i class="fas fa-upload"></i> Import
                 </button>
                 <input type="submit" value="Submit" hidden/>
             </form>
@@ -88,9 +89,13 @@
         <div class="code-block">curl -X POST \
     -H "Content-Type: application/json" \
     -d '{"text": ["There was a sudden knock at the door, then silence."]}' \
-    {{ brand.get('service_url') }}/ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
+    {{ brand.get('service_url') }}ingest/&lt;endpoint_id&gt;?token=&lt;token&gt;</div>
         <p></p>
         <p>The fields in the data you send to a pipeline will depend on the inputs defined in its nodes.</p>
+        <hr/>
+        <h4 class="mb-3">Video Guide</h4>
+        <p>Get started by following along and building your first pipeline.</p>
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/ntLqz38hC60?si=67DC_FEEnEwHNXhk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     </div>
     {% endif %}
 </div>
@@ -116,9 +121,8 @@
                     <div class="input-group">
                         <select class="form-control" id="selectedNode">
                             <optgroup id="nodePulldown" label="Available Nodes">
-                                <option value="None">None</option>
                                 {% for node in nodes %}
-                                    <option value="{{ node.node_id }}">{{ node.name }} ➔ {{ node.template_name }} ➔ {{ node.processor }}</option>
+                                    <option value="{{ node.node_id }}">{{ node.processor }} ← {{ node.name }} ← {{ node.template_name }} </option>
                                 {% endfor %}
                             </optgroup>
                         </select>
@@ -143,8 +147,27 @@
     </div>
 </div>
 
-
+<!-- The modal for updating empty secure values -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Fill in Value</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <label for="modalInput" id="modalInputLabel"></label>
+                <input type="text" id="modalInput" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="modalSave">Update</button>
+            </div>
+        </div>
+    </div>
 </div>
+
 {% endblock %}
 
 {% block javascript %}
@@ -165,32 +188,6 @@ $(document).ready(function () {
     }
     
     var pipelines = JSON.parse('{{pipelines | tojson}}');
-    
-    function getRowCount() {
-        const tbody = document.querySelector('table tbody');
-        if (tbody) {
-            const rowCount = tbody.getElementsByTagName('tr').length;
-            return rowCount;
-        } else {
-            return 0;
-        }
-    }
-    
-    // sort table
-    $('#pipelineTable').DataTable({
-        "columnDefs": [{ "orderable": false, "targets": [2] }],
-        "order": [[0, "asc"]]
-    });
-
-    function getColorFromName(name) {
-        name = name.trim(); // Remove leading and trailing spaces
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
-    }
 
     $(function () {
         $('[data-toggle="tooltip"]').tooltip()
@@ -311,7 +308,7 @@ $(document).ready(function () {
 
             // Process inputs (green)
             inputFields.forEach(function(field) {
-                var badgeText = "input:" + field.name;
+                var badgeText = "input: " + field.name;
                 var badge = $('<span>', {
                     class: 'badge badge-success',
                     text: badgeText,
@@ -323,7 +320,7 @@ $(document).ready(function () {
 
             // Process outputs (blue)
             outputFields.forEach(function(field) {
-                var badgeText = 'output:' + field.name;
+                var badgeText = 'output: ' + field.name;
                 var badge = $('<span>', {
                     class: 'badge badge-primary',
                     text: badgeText,
@@ -342,7 +339,8 @@ $(document).ready(function () {
                 container.append('<br>');
             }
         }
-        container.append($('<a href="/templates/'+nodeTemplateID+'">edit template</a>'));
+        container.append($('<a href="/templates/'+nodeTemplateID+'">edit template</a><br/>'));
+        container.append($('<a href="/nodes/'+nodeID+'">edit node</a>'));
         nodeButton.popover({
             content: container.html(),
             trigger: 'focus',
@@ -405,8 +403,9 @@ $(document).ready(function () {
         deleteButton.append($('<i class="fas fa-trash-alt"></i>'));
 
         buttonGroup.append(createButton(getNodeInfo(selectedNode).name, "Node Input", getNodeInfo(selectedNode).input_fields));
-        buttonGroup.append(createButton(getNodeInfo(selectedNode).template_name, "Template", getNodeInfo(selectedNode).extras, true));
         buttonGroup.append(createButton(getNodeInfo(selectedNode).processor, "Processor Output", getNodeInfo(selectedNode).output_fields));
+        buttonGroup.append(createButton(getNodeInfo(selectedNode).template_name, "Template", getNodeInfo(selectedNode).extras, true));
+
         buttonGroup.on('mouseleave', function() {
             buttonGroup.find('[data-toggle="popover"]').popover('hide');
             buttonGroup.find('[data-toggle="popover"]').blur(); // Remove focus from the button
@@ -420,7 +419,7 @@ $(document).ready(function () {
     });
 
     $("#createPipeline").on("click", function() {
-        if ($("#nodePulldown").find('option').length > 1) {
+        if ($("#nodePulldown").find('option').length > 0) {
             $("#nodeFormModal").modal("show");
             $("#selectedNodesContainer").hide();
             $("#selectedNodesContainer").empty();
@@ -432,7 +431,7 @@ $(document).ready(function () {
 
     // Attach a click event handler to the delete buttons
     $(".delete-button").on("click", function () {
-        var pipelineId = $(this).data("pipe_id");
+        var pipe_id = $(this).data("pipe_id");
         var $this = $(this);
         var spinner = $this.siblings(".spinner-border");
         
@@ -441,19 +440,19 @@ $(document).ready(function () {
 
         // Send an AJAX request to delete the pipeline with the DELETE method
         $.ajax({
-            url: '/pipeline/' + pipelineId,
+            url: '/pipeline/' + pipe_id,
             type: 'DELETE',
             success: function (response) {
                 toastr.success('Pipeline deleted.');
-                $this.closest("tr").remove();
+                table.row($('#tr_'+pipe_id)).remove().draw();
             },
             error: function (error) {
-                toastr.error(error.responseJSON.message);
+                toastr.error(error.responseJSON.error);
             },
             complete: function() {
                 $this.show();
                 spinner.hide();
-                if (getRowCount() === 0) {
+                if (table.row().count() === 0) {
                     window.location.href = '/pipelines';
                 }
             }.bind(this)
@@ -489,10 +488,103 @@ $(document).ready(function () {
             });
         }
     });
+
     $('#uploadPipeline').on('click', function() {
         // Trigger the file input click event
         $('#fileInput').click();
     });
+
+    // Function to open a modal for a specific input field
+    function openModalForField(token) {
+        var modal = $("#myModal");
+        modal.modal("show");
+        $("#modalLabel").html("Update Extra Value");
+        var inputType = "password";
+        $("#modalInput").attr("type", inputType).val("");
+        $("#modalInputLabel").html("<strong>"+token+"</strong>");
+        modal.data("targetField", token);
+
+        return new Promise(function(resolve) {
+            // Remove any existing click handlers on modal save button
+            $("#modalSave").off("click");
+
+            // Add a new click handler for the modal save button
+            $("#modalSave").on("click", function() {
+                var enteredValue = $("#modalInput").val();
+                resolve(enteredValue);
+                modal.modal("hide"); // Close the modal
+            });
+
+            // Add a keydown event listener for the Enter/Return key
+            $("#modalInput").on("keydown", function(event) {
+                if (event.key === "Enter") {
+                    var enteredValue = $("#modalInput").val();
+                    resolve(enteredValue);
+                    modal.modal("hide"); // Close the modal
+                }
+            });
+
+            modal.on("hidden.bs.modal", function() {
+                // Resolve with null when the modal is closed without saving
+                resolve(null);
+            });
+        });
+    }
+    
+    function updateValuesWithModals(tokensToUpdate) {
+        var updatedValues = [];
+
+        function handleToken(index) {
+            if (index < tokensToUpdate.length) {
+                return openModalForField(tokensToUpdate[index])
+                    .then(function(enteredValue) {
+                        if (enteredValue !== null) {
+                            updatedValues.push({ name: tokensToUpdate[index], value: enteredValue });
+                        }
+                        return handleToken(index + 1);
+                    });
+            } else {
+                return Promise.resolve();
+            }
+        }
+
+        return handleToken(0)
+            .then(function() {
+                var promises = updatedValues.map(function(tokenData) { // Using map to transform updatedValues into promises
+                    return new Promise(function(resolve, reject) { // Ensure resolve and reject are properly declared
+                        $.ajax({
+                            type: "POST",
+                            url: "/tokens",
+                            contentType: "application/json",
+                            data: JSON.stringify(tokenData),
+                            success: function(response) {
+                                toastr.success("Token added successfully for " + tokenData.name);
+                                resolve(); // Resolve the promise on success
+                            },
+                            error: function(error) {
+                                if (error.responseJSON && error.responseJSON.error) {
+                                    toastr.error("Error adding token for " + tokenData.name + ": " + error.responseJSON.error);
+                                } else {
+                                    toastr.error("System error for " + tokenData.name + ": " + error.statusText);
+                                }
+                                reject(); // Reject the promise on error
+                            }
+                        });
+                    });
+                });
+
+                return Promise.all(promises); // Wait for all promises to resolve
+            })
+            .then(function() {
+                window.location.reload(); // Reload after all AJAX requests complete
+            })
+            .catch(function(error) {
+                // Handle the error
+                toastr.error("An error occurred with saving tokens.");
+            });
+    }
+
+
 
     $('#fileInput').on('change', function() {
         var file = this.files[0];
@@ -505,18 +597,19 @@ $(document).ready(function () {
                     // Try to parse the file content as JSON
                     var json = JSON.parse(event.target.result);
 
-                    // Send the JSON to the Flask backend using jQuery's $.ajax
                     $.ajax({
                         url: '/pipeline/upload',
                         type: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify(json), // Send the JSON content
                         success: function(data) {
+                            if (data.service_tokens_to_update) {
+                                updateValuesWithModals(data.service_tokens_to_update);
+                            }
                             toastr.success("Pipeline uploaded!");
-                            window.location.reload();
                         },
-                        error: function(jqXHR, textStatus, errorThrown) {
-                            toastr.error(jqXHR.responseJSON.message);
+                        error: function(error) {
+                            toastr.error(error.responseJSON.error);
                         }
                     });
                 } catch (e) {
@@ -528,6 +621,35 @@ $(document).ready(function () {
         }
     });
 
+    var getUrlParameter = function getUrlParameter(sParam) {
+        var sPageURL = window.location.search.substring(1),
+            sURLVariables = sPageURL.split('&'),
+            sParameterName,
+            i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            sParameterName = sURLVariables[i].split('=');
+
+            if (sParameterName[0] === sParam) {
+                return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+            }
+        }
+        return false;
+    };
+
+    // sort table
+    var table = {}
+    function sortTable() {
+        table = $('#pipelineTable').DataTable({
+            "columnDefs": [{ "orderable": false, "targets": [2] }],
+            "order": [[0, "asc"]]
+        });
+        if (getUrlParameter('q')) {
+            table.search(getUrlParameter('q')).draw();
+        }
+    }
+    $("th").css("border-bottom-color","white");
+    sortTable();
 });
 </script>
 {% endblock %}

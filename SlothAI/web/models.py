@@ -61,6 +61,16 @@ class Template(ndb.Model):
     processor = ndb.StringProperty()
     created = ndb.DateTimeProperty()
 
+    @classmethod
+    @ndb_context_manager
+    def delete_by_uid(cls, uid):
+        templates = cls.query(cls.uid == uid).fetch()
+        if templates:
+            for template in templates:
+                template.key.delete()
+            return True
+        return False
+
     @staticmethod
     def compress_text(text):
         compressed_bytes = zlib.compress(text.encode('utf-8'))
@@ -101,7 +111,6 @@ class Template(ndb.Model):
     def update(cls, template_id, uid, name, text, input_fields=[], output_fields=[], extras=[], processor="jinja2"):
         template = cls.query(cls.template_id == template_id, cls.uid == uid).get()
         if not template:
-            print("didn't find template")
             return None
 
         template.name = name
@@ -201,7 +210,46 @@ class Node(ndb.Model):
     processor = ndb.StringProperty()
     template_id = ndb.StringProperty()
     extras = ndb.JsonProperty() # holds model flavor, tokens, etc.
-    
+
+    @classmethod
+    @ndb_context_manager
+    def delete_by_uid(cls, uid):
+        nodes = cls.query(cls.uid == uid).fetch()
+        if nodes:
+            for node in nodes:
+                node.key.delete()
+            return True
+        return False
+
+    @classmethod
+    @ndb_context_manager
+    def rename(cls, uid, node_id, new_name):
+        node = cls.query(cls.uid == uid, cls.node_id == node_id).get()
+        node.name = new_name
+        node.put()
+        return node.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def update_extras(cls, uid, node_id, new_extras):
+        node = cls.query(cls.uid == uid, cls.node_id == node_id).get()
+        
+        # Clear the existing extras dictionary
+        node.extras = {}
+        
+        # Check if the "processor" key is present in new_extras
+        if "processor" in new_extras:
+            node.processor = new_extras["processor"]
+        
+        # Update the extras with the new data
+        for key, value in new_extras.items():
+            node.extras[key] = value
+        
+        # Save the updated node
+        node.put()
+        
+        return node.to_dict()
+
     @classmethod
     @ndb_context_manager
     def create(cls, name, uid, extras, processor, template_id):
@@ -325,6 +373,15 @@ class Node(ndb.Model):
         else:
             return False
 
+    @classmethod
+    @ndb_context_manager
+    def delete_by_pipe_id(cls, pipe_id):
+        pipe = cls.query(cls.pipe_id == pipe_id).get()
+        if pipe:
+            pipe.key.delete()
+            return True
+        return False
+
 
 class Pipeline(ndb.Model):
     pipe_id = ndb.StringProperty()
@@ -332,6 +389,16 @@ class Pipeline(ndb.Model):
     name = ndb.StringProperty()
     node_ids = ndb.JsonProperty()
     created = ndb.DateTimeProperty()
+
+    @classmethod
+    @ndb_context_manager
+    def delete_by_uid(cls, uid):
+        pipes = cls.query(cls.uid == uid).fetch()
+        if pipes:
+            for pipe in pipes:
+                pipe.key.delete()
+            return True
+        return False
 
     @classmethod
     @ndb_context_manager
@@ -355,6 +422,36 @@ class Pipeline(ndb.Model):
             pipeline.put()
 
         return pipeline.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def add_node(cls, uid, pipe_id, node_id):
+        # Fetch the pipeline by pipe_id
+        pipeline = cls.query(cls.pipe_id == pipe_id).get()
+
+        if pipeline:
+            # Update the node_ids
+            pipeline.node_ids.append(node_id)
+
+            # Save the changes
+            pipeline.put()
+
+            return pipeline.to_dict()  # Return the updated pipeline as a dictionary
+        else:
+            # Handle the case where the pipeline doesn't exist
+            return None 
+
+    @classmethod
+    @ndb_context_manager
+    def get_by_uid_node_id(cls, uid, node_id):
+        pipelines = cls.query(cls.uid == uid).fetch()
+        
+        node_pipelines = []
+        for pipeline in pipelines:
+            if node_id in pipeline.to_dict().get('node_ids'):
+                node_pipelines.append({"name": pipeline.name, "pipe_id": pipeline.pipe_id})
+
+        return node_pipelines if node_pipelines else None
 
     @classmethod
     @ndb_context_manager
@@ -411,6 +508,7 @@ class Pipeline(ndb.Model):
             return True
         return False
 
+
 # this needs to go to Laminoid
 class Box(ndb.Model):
     box_id = ndb.StringProperty()
@@ -432,6 +530,7 @@ class Box(ndb.Model):
         else:
             box.ip_address = ip_address
             box.status = status
+            box.zone = zone
 
         box.put()
         return box.to_dict()
@@ -479,15 +578,27 @@ class User(flask_login.UserMixin, ndb.Model):
     updated = ndb.DateTimeProperty()
     expires = ndb.DateTimeProperty()
 
-    # auth settings and log
+    # phone settings
+    phone = ndb.StringProperty()
+    phone_code = ndb.StringProperty(default=False)
+    failed_2fa_attempts = ndb.IntegerProperty(default=0)
+
+    # email actions
+    email = ndb.StringProperty()
+    mail_token = ndb.StringProperty()
+    mail_confirm = ndb.BooleanProperty(default=False)
+    mail_tries = ndb.IntegerProperty(default=0)
+
+    # database settings
     dbid = ndb.StringProperty()
     db_token = ndb.StringProperty()
-    admin = ndb.BooleanProperty()
 
     # status
     authenticated = ndb.BooleanProperty(default=False)
     active = ndb.BooleanProperty(default=True)
     anonymous = ndb.BooleanProperty(default=False)
+    admin = ndb.BooleanProperty()
+    account_type = ndb.StringProperty(default="free")
 
     # API use
     api_token = ndb.StringProperty()
@@ -505,6 +616,11 @@ class User(flask_login.UserMixin, ndb.Model):
     def is_anonymous(self):
         return self.anonymous
 
+    def has_phone(self):
+        if self.phone != "+1":
+            return True
+        return False
+
     @classmethod
     @ndb_context_manager
     def token_reset(cls, uid):
@@ -515,22 +631,42 @@ class User(flask_login.UserMixin, ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def create(cls, dbid="", db_token=""):
+    def create(cls, email="noreply@mitta.ai", phone="+1"):
         name = random_name(3)
         uid = random_string(size=17)
         user = cls(
-            uid=uid,
-            name=name,
-            created=datetime.datetime.utcnow(),
-            updated=datetime.datetime.utcnow(),
-            expires=datetime.datetime.utcnow() + datetime.timedelta(days=15),
-            admin=False,
-            dbid=dbid,
-            db_token=db_token,
-            api_token=generate_token()
+            uid = uid,
+            name = name,
+            email = email,
+            account_type = "free",
+            phone = phone,
+            phone_code = generate_token(),
+            created = datetime.datetime.utcnow(),
+            updated = datetime.datetime.utcnow(),
+            expires = datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            admin = False,
+            mail_token = generate_token(),
+            api_token = generate_token()
         )
         user.put()
-        return cls.query(cls.dbid == dbid).get().to_dict()
+        return cls.query(cls.email == email).get()
+
+    @classmethod
+    @ndb_context_manager
+    def bump_mail(cls, uid, tries):
+        user = cls.query(cls.uid == uid).get()
+        user.mail_tries = tries
+        user.put()
+        return user.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def update_db(cls, uid=None, dbid="", db_token=""):
+        user = cls.query(cls.uid == uid).get()
+        user.dbid = dbid
+        user.db_token = db_token
+        user.put()
+        return user.to_dict()
 
     @classmethod
     @ndb_context_manager
@@ -554,6 +690,11 @@ class User(flask_login.UserMixin, ndb.Model):
     def get_by_name(cls, name):
         result = cls.query(cls.name == name).get()
         return result.to_dict() if result else None
+
+    @classmethod
+    def get_by_email(cls, email):
+        with client.context():
+            return cls.query(cls.email == email).get()
 
     @classmethod
     @ndb_context_manager
@@ -582,6 +723,73 @@ class User(flask_login.UserMixin, ndb.Model):
         
         return user.to_dict() if user else None
 
+    @classmethod
+    def get_by_mail_token(cls, mail_token):
+        with client.context():
+            return cls.query(cls.mail_token == mail_token).get()
+
+
+class Token(ndb.Model):
+    token_id = ndb.StringProperty()
+    user_id = ndb.StringProperty()
+    name = ndb.StringProperty()
+    value = ndb.JsonProperty()
+    created = ndb.DateTimeProperty()
+
+    @classmethod
+    @ndb_context_manager
+    def create(cls, user_id, name, value):
+        id = random_string(size=13)
+        token = cls.query(cls.user_id == user_id, cls.name == name).get()
+        if token:
+            return token.to_dict()
+
+        # otherwise, create
+        token = cls(
+            token_id=id,
+            user_id=user_id,
+            name=name,
+            value=value,
+            created=datetime.datetime.utcnow(),
+        )
+        token.put()
+        return token.to_dict()
+
+    @classmethod
+    @ndb_context_manager
+    def get_by_uid_name(cls, user_id, name):
+        token = cls.query(cls.user_id == user_id, cls.name == name).get()
+        if token:
+            return token.to_dict()
+        return None
+
+    @classmethod
+    @ndb_context_manager
+    def get_all_by_uid(cls, user_id):
+        tokens = cls.query(cls.user_id == user_id).fetch()
+        _tokens = []
+        for token in tokens:
+            _tokens.append(token.to_dict())
+        return _tokens
+
+    @classmethod
+    @ndb_context_manager
+    def delete_all(cls, user_id):
+        entities = cls.query(cls.user_id == user_id).fetch()
+        if entities:
+            for entity in entities:
+                entity.key.delete()
+        return True
+
+    @classmethod
+    @ndb_context_manager
+    def delete(cls, user_id, token_id):
+        entity = cls.query(cls.user_id == user_id, cls.token_id == token_id).get()
+        if entity:
+            entity.key.delete()
+            return True
+        else:
+            return False
 
 class Log(flask_login.UserMixin, ndb.Model):
     log_id = ndb.StringProperty()

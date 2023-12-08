@@ -4,7 +4,7 @@
 {# Input Fields #}
 {# The page_number array is a list of page numbers (ints) to read from the PDF #}
 {# The filename and content_type arrays need to be the same length as the page_number array #}
-input_fields = [{"name": "filename", "type": "strings"},{"name": "content_type", "type": "strings"},{"name": "page_number", "type": "strings"}]
+input_fields = [{"name": "filename", "type": "strings"},{"name": "content_type", "type": "strings"},{"name": "page_number", "type": "ints"}]
 
 {# Output Fields #}
 output_fields = [{"name": "texts", "type": "strings"}]

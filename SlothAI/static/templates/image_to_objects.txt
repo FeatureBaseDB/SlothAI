@@ -1,4 +1,4 @@
-{# Use this template to drive a vision processor. #}
+{# Use this template to drive a vision processor that extracts objects from a scene. #}
 
 {# Define the input_fields used in this template; user_history alternates user,assistant,user,assistant.. #}
 input_fields = [{'name': "filename", 'type': "string"},{'name': "content_type", 'type': "string"}]
@@ -6,4 +6,4 @@ input_fields = [{'name': "filename", 'type': "string"},{'name': "content_type", 
 {# The output_fields expected from the node processor using this template %}
 output_fields = [{'name': "objects", 'type': "stringset"}]
 
-extras = {"model": "objects"}
+extras = {"model": "gv-objects"}
